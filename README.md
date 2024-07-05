@@ -1,16 +1,16 @@
-# CodeWF.LogViewer
+ï»¿# CodeWF.LogViewer
 
-¼òµ¥·â×°Ò»Ğ©ÈÕÖ¾¿Ø¼ş
+ç®€å•å°è£…ä¸€äº›æ—¥å¿—æ§ä»¶
 
 ## CodeWF.LogViewer.Avalonia.Log4Net
 
-AvaloniaUIÖĞÊ¹ÓÃµÄSelectableTextBlock×öÎªÈÕÖ¾Õ¹Ê¾¿Ø¼ş£¬NuGet°ü°²×°£º
+AvaloniaUIä¸­ä½¿ç”¨çš„SelectableTextBlockåšä¸ºæ—¥å¿—å±•ç¤ºæ§ä»¶ï¼ŒNuGetåŒ…å®‰è£…ï¼š
 
 ```shell
 Install-Package CodeWF.LogViewer.Avalonia.Log4Net
 ```
 
-`.axaml`Ê¹ÓÃ£º
+`.axaml`ä½¿ç”¨ï¼š
 
 ```html
 xmlns:log="https://codewf.com"
@@ -20,12 +20,14 @@ xmlns:log="https://codewf.com"
 <log:LogView /> 
 ```
 
-´úÂëÖĞÌí¼ÓÈÕÖ¾
+ä»£ç ä¸­æ·»åŠ æ—¥å¿—
 
 ```csharp
-LogFactory.Instance.Log.Debug("µ÷ÊÔÈÕÖ¾");
-LogFactory.Instance.Log.Info("ÆÕÍ¨ÈÕÖ¾");
-LogFactory..Instance.Log.Warn("¾¯¸æÈÕÖ¾");
-LogFactory.Instance.Log.Error("´íÎóÈÕÖ¾");
-LogFactory.Instance.Log.Fatal("ÑÏÖØ´íÎóÈÕÖ¾");
+LogFactory.Instance.Log.Debug("è°ƒè¯•æ—¥å¿—");
+LogFactory.Instance.Log.Info("æ™®é€šæ—¥å¿—");
+LogFactory..Instance.Log.Warn("è­¦å‘Šæ—¥å¿—");
+LogFactory.Instance.Log.Error("é”™è¯¯æ—¥å¿—");
+LogFactory.Instance.Log.Fatal("ä¸¥é‡é”™è¯¯æ—¥å¿—");
 ```
+
+![](doc\imgs\log.gif)

@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Input;
 
 namespace CodeWF.LogViewer.Avalonia.Log4Net
 {
@@ -21,6 +22,7 @@ namespace CodeWF.LogViewer.Avalonia.Log4Net
         private readonly SynchronizationContext _synchronizationContext;
         private SelectableTextBlock _textView;
         private ScrollViewer _scrollViewer;
+        private ContextMenu _contextMenu;
         private IClipboard _clipboard;
 
         private static readonly Dictionary<LogType, IImmutableSolidColorBrush> LogTypeBrushes =
@@ -62,6 +64,7 @@ namespace CodeWF.LogViewer.Avalonia.Log4Net
         {
             _textView = this.Find<SelectableTextBlock>("LogTextView");
             _scrollViewer = this.Find<ScrollViewer>("LogScrollViewer");
+            _contextMenu = this.Find<ContextMenu>("LogContextMenu");
             _textView.Text = string.Empty;
             LogFactory.Instance.Log.LogNotifyEvent -= LogNotifyHandler;
             LogFactory.Instance.Log.LogNotifyEvent += LogNotifyHandler;
@@ -114,7 +117,7 @@ namespace CodeWF.LogViewer.Avalonia.Log4Net
             {
                 if (_textView.SelectedText.Length > 0 && _clipboard != null)
                 {
-                   await _clipboard.SetTextAsync(_textView.SelectedText);
+                    await _clipboard.SetTextAsync(_textView.SelectedText);
                 }
             }
             catch
@@ -122,25 +125,35 @@ namespace CodeWF.LogViewer.Avalonia.Log4Net
                 // ignored
             }
         }
+
         private void Clear_OnClick(object sender, RoutedEventArgs e)
         {
             _textView.Inlines?.Clear();
         }
+
         private void Location_OnClick(object sender, RoutedEventArgs e)
         {
             var logFolder = (LogFactory.Instance.Log as LogManager)?.GetLogFilesDirectory();
-            if (string.IsNullOrWhiteSpace(logFolder))
+            if (string.IsNullOrWhiteSpace(logFolder) || !System.IO.Directory.Exists(logFolder))
             {
                 logFolder = AppDomain.CurrentDomain.BaseDirectory;
             }
 
             try
             {
-                System.Diagnostics.Process.Start(logFolder);
+                System.Diagnostics.Process.Start("explorer.exe", logFolder);
             }
             catch
             {
                 // ignored
+            }
+        }
+
+        private void LogScrollViewer_OnPointerPressed(object sender, PointerPressedEventArgs e)
+        {
+            if (e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
+            {
+                _contextMenu.Open();
             }
         }
     }

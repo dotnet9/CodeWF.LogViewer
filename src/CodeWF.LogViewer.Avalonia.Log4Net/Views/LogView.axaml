@@ -4,10 +4,10 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="CodeWF.LogViewer.Avalonia.Log4Net.LogView">
-	<ScrollViewer x:Name="LogScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+	<ScrollViewer x:Name="LogScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" PointerPressed="LogScrollViewer_OnPointerPressed">
         <SelectableTextBlock x:Name="LogTextView" TextWrapping="Wrap" TextAlignment="Start">
 			<SelectableTextBlock.ContextMenu>
-                <ContextMenu>
+                <ContextMenu x:Name="LogContextMenu">
                     <MenuItem Header="复制" Click="Copy_OnClick"/>
                     <MenuItem Header="清空" Click="Clear_OnClick"/>
                     <MenuItem Header="查看日志" Click="Location_OnClick"/>
