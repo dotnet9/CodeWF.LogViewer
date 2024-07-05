@@ -1,1 +1,3 @@
-# CodeWF.LogViewer.Avalonia.Log4Net
+# CodeWF.LogViewer
+
+简单封装一些日志控件
