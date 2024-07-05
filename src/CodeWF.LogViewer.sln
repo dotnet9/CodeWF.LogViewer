@@ -11,12 +11,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "解决方案项", "解决�
 	ProjectSection(SolutionItems) = preProject
 		Directory.Build.props = Directory.Build.props
 		Package.props = Package.props
-		README.md = README.md
+		..\README.md = ..\README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeWF.LogViewer.Avalonia.Log4Net", "CodeWF.LogViewer.Avalonia.Log4Net\CodeWF.LogViewer.Avalonia.Log4Net.csproj", "{0A3087EE-900B-4425-BDFF-8BF8D877AA9C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeWF.LogViewer.Avalonia.Log4Net", "CodeWF.LogViewer.Avalonia.Log4Net\CodeWF.LogViewer.Avalonia.Log4Net.csproj", "{0A3087EE-900B-4425-BDFF-8BF8D877AA9C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaLog4Net", "AvaloniaLog4Net\AvaloniaLog4Net.csproj", "{F1F422F9-48AB-41B8-999A-6A2595BEC5C4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvaloniaLog4Net", "AvaloniaLog4Net\AvaloniaLog4Net.csproj", "{F1F422F9-48AB-41B8-999A-6A2595BEC5C4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

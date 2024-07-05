@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:log="https://codewf.com"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        Width="600" Height="400"
+        x:Class="AvaloniaLog4Net.Views.MainWindow"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="AvaloniaUI日志组件+Log4Net" Padding="20">
+
+    <Grid RowDefinitions="Auto, *">
+        <UniformGrid Columns="5" HorizontalAlignment="Stretch">
+            <Button Content="Debug" Click="AddDebugLog_OnClick" />
+            <Button Content="Info" Click="AddInfoLog_OnClick" />
+            <Button Content="Warn" Click="AddWarnLog_OnClick" />
+            <Button Content="Error" Click="AddErrorLog_OnClick" />
+            <Button Content="Fatal" Click="AddFatalLog_OnClick" />
+        </UniformGrid>
+        <HeaderedContentControl Grid.Row="1" Header="日志">
+            <log:LogView BorderThickness="1" BorderBrush="BlueViolet" /> 
+        </HeaderedContentControl>
+    </Grid>
+
+</Window>
