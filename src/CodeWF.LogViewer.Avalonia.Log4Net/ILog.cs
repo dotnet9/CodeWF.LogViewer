@@ -12,8 +12,11 @@ namespace CodeWF.LogViewer.Avalonia.Log4Net
         void Debug(object message);
         void Info(object message);
         void Warn(object message);
+        void Warn(object message, Exception exception);
         void Error(object message);
+        void Error(object message, Exception exception);
         void Fatal(object message);
+        void Fatal(object message, Exception exception);
         void AddFormatLog(LogType logType, string format, params object[] args);
         void AddFormatLog(LogType logType, IFormatProvider provider, string format, params object[] args);
         BindingList<LogInfo> GetLogList();

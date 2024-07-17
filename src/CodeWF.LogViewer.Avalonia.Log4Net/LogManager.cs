@@ -125,14 +125,29 @@ namespace CodeWF.LogViewer.Avalonia.Log4Net
             AddLog(LogType.Warn, message);
         }
 
+        public void Warn(object message, Exception exception)
+        {
+            AddLog(LogType.Warn, message, exception);
+        }
+
         public void Error(object message)
         {
             AddLog(LogType.Error, message);
         }
 
+        public void Error(object message, Exception exception)
+        {
+            AddLog(LogType.Error, message, exception);
+        }
+
         public void Fatal(object message)
         {
             AddLog(LogType.Fatal, message);
+        }
+
+        public void Fatal(object message, Exception exception)
+        {
+            AddLog(LogType.Fatal, message, exception);
         }
 
         public void AddFormatLog(LogType logType, string format, params object[] args)
