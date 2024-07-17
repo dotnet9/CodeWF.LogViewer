@@ -4,6 +4,9 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md" Link="README.md" />
+  </ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Avalonia" Version="11.1.0-rc2" />
 		<PackageReference Include="log4net" Version="2.0.17" />
@@ -12,5 +15,15 @@
 	  <None Update="log4net.config">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
+	</ItemGroup>
+	<ItemGroup>
+		<None Include="Resources\logo.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\..\README.md" Link="README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
 	</ItemGroup>
 </Project>
