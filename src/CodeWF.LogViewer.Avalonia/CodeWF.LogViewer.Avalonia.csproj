@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Title>CodeWF.LogViewer.Avalonia.Log4Net</Title>
+		<Title>CodeWF.LogViewer.Avalonia</Title>
 		<TargetFrameworks>netstandard2.0</TargetFrameworks>
 		<Nullable>enable</Nullable>
 		<LangVersion>latest</LangVersion>
@@ -8,7 +8,7 @@
 		<IsPackable>true</IsPackable>
 		<Version>1.0.4</Version>
 		<Authors>沙漠尽头的狼</Authors>
-		<Description>Encapsulate Log4Net into the Avalonia UI and provide a log control to display logs.</Description>
+		<Description>Custom log into the Avalonia UI and provide a log control to display logs.</Description>
 		<RepositoryUrl>https://github.com/dotnet9/CodeWF.LogViewer</RepositoryUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageIcon>logo.png</PackageIcon>
@@ -22,12 +22,6 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Avalonia" Version="11.1.1" />
-		<PackageReference Include="log4net" Version="3.0.0-preview.2" />
-	</ItemGroup>
-	<ItemGroup>
-		<None Update="log4net.config">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
 	</ItemGroup>
 	<ItemGroup>
 		<None Include="..\..\README.md" Pack="true" PackagePath="" />
