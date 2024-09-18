@@ -117,7 +117,6 @@ namespace CodeWF.LogViewer.Avalonia
                         var content =
                             $"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}{Environment.NewLine}";
                         inlines?.Add(new Run(content) { Foreground = LogTypeBrushes[logInfo.Level] });
-                        AddLogToFile(content);
                         _textView.SelectionStart = start;
                         _textView.SelectionEnd = _textView.Text.Length;
                         _scrollViewer.ScrollToEnd();
@@ -128,25 +127,6 @@ namespace CodeWF.LogViewer.Avalonia
                     }
                 }, null);
             });
-        }
-
-        private void AddLogToFile(string msg)
-        {
-            try
-            {
-                var logFolder = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Log");
-                if (!Directory.Exists(logFolder))
-                {
-                    Directory.CreateDirectory(logFolder);
-                }
-
-                var logFileName = System.IO.Path.Combine(logFolder, $"Log_{DateTime.Now:yyyy_MM_dd}.log");
-                File.AppendAllText(logFileName, msg);
-            }
-            catch
-            {
-                // ignored
-            }
         }
 
         private async void Copy_OnClick(object sender, RoutedEventArgs e)

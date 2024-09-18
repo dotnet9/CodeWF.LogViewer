@@ -1,5 +1,9 @@
-﻿using System;
+﻿using Avalonia.Controls.Documents;
+using System;
 using System.Collections.Concurrent;
+using System.IO;
+using System.Threading.Tasks;
+using CodeWF.LogViewer.Avalonia.Extensions;
 
 namespace CodeWF.LogViewer.Avalonia
 {
@@ -7,6 +11,24 @@ namespace CodeWF.LogViewer.Avalonia
     {
         public static LogType Level = LogType.Info;
         internal static readonly ConcurrentQueue<LogInfo> Logs = new();
+
+        public static void RecordToFile()
+        {
+            Task.Run(async () =>
+            {
+                while (true)
+                {
+                    while (TryDequeue(out var log))
+                    {
+                        var content =
+                            $"{log.RecordTime}: {log.Level.Description()} {log.Description}{Environment.NewLine}";
+                        AddLogToFile(content);
+                    }
+
+                    await Task.Delay(TimeSpan.FromMilliseconds(100));
+                }
+            });
+        }
 
         public static bool TryDequeue(out LogInfo info)
         {
@@ -51,6 +73,25 @@ namespace CodeWF.LogViewer.Avalonia
             var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
 
             Logs.Enqueue(new LogInfo(LogType.Fatal, msg));
+        }
+        
+        private static void AddLogToFile(string msg)
+        {
+            try
+            {
+                var logFolder = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Log");
+                if (!Directory.Exists(logFolder))
+                {
+                    Directory.CreateDirectory(logFolder);
+                }
+
+                var logFileName = System.IO.Path.Combine(logFolder, $"Log_{DateTime.Now:yyyy_MM_dd}.log");
+                File.AppendAllText(logFileName, msg);
+            }
+            catch
+            {
+                // ignored
+            }
         }
     }
 }
