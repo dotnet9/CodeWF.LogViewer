@@ -117,6 +117,7 @@ namespace CodeWF.LogViewer.Avalonia
                         var content =
                             $"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}{Environment.NewLine}";
                         inlines?.Add(new Run(content) { Foreground = LogTypeBrushes[logInfo.Level] });
+                        Logger.AddLogToFile(content);
                         _textView.SelectionStart = start;
                         _textView.SelectionEnd = _textView.Text.Length;
                         _scrollViewer.ScrollToEnd();

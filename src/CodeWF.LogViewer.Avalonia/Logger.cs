@@ -75,7 +75,7 @@ namespace CodeWF.LogViewer.Avalonia
             Logs.Enqueue(new LogInfo(LogType.Fatal, msg));
         }
         
-        private static void AddLogToFile(string msg)
+        public static void AddLogToFile(string msg)
         {
             try
             {
