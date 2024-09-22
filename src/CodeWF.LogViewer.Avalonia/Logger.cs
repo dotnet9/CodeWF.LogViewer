@@ -62,6 +62,7 @@ namespace CodeWF.LogViewer.Avalonia
         public static void Error(string content, Exception? ex = null)
         {
             if (Level > LogType.Error) return;
+
             var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
 
             Logs.Enqueue(new LogInfo(LogType.Error, msg));
@@ -70,6 +71,7 @@ namespace CodeWF.LogViewer.Avalonia
         public static void Fatal(string content, Exception? ex = null)
         {
             if (Level > LogType.Fatal) return;
+
             var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
 
             Logs.Enqueue(new LogInfo(LogType.Fatal, msg));

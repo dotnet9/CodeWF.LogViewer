@@ -21,8 +21,8 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Avalonia" Version="11.2.0-beta1" />
-		<PackageReference Include="log4net" Version="3.0.0-preview.4" />
+		<PackageReference Include="Avalonia" Version="11.2.0-beta2" />
+		<PackageReference Include="log4net" Version="3.0.1-preview.2" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Update="log4net.config">
