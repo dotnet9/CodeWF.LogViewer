@@ -18,7 +18,7 @@
             <Button Content="Fatal" Click="AddFatalLog_OnClick" />
         </UniformGrid>
         <HeaderedContentControl Grid.Row="1" Header="日志">
-            <log:LogView BorderThickness="1" BorderBrush="BlueViolet" /> 
+            <log:LogView BorderThickness="1" BorderBrush="BlueViolet" FontSize="12"/> 
         </HeaderedContentControl>
     </Grid>
 
