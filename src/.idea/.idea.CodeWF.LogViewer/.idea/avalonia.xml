@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AvaloniaProject">
+    <option name="projectPerEditor">
+      <map>
+        <entry key="AvaloniaLog4Net/Views/MainWindow.axaml" value="AvaloniaLog4Net/AvaloniaLog4Net.csproj" />
+        <entry key="CodeWF.LogViewer.Avalonia/Views/LogView.axaml" value="AvaloniaLog4Net/AvaloniaLog4Net.csproj" />
+      </map>
+    </option>
+  </component>
+</project>

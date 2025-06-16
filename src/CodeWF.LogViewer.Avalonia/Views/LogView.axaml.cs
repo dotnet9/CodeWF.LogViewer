@@ -1,175 +1,208 @@
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.Documents;
-using Avalonia.Input.Platform;
-using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
-using Avalonia.Media;
-using CodeWF.LogViewer.Avalonia.Extensions;
 using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Controls.Shapes;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Markup.Xaml;
+using Avalonia.Media;
+using CodeWF.LogViewer.Avalonia.Extensions;
 
-namespace CodeWF.LogViewer.Avalonia
+namespace CodeWF.LogViewer.Avalonia;
+
+public partial class LogView : UserControl
 {
-    public partial class LogView : UserControl
+    private const int MaxCount = 1000;
+    private readonly SynchronizationContext _synchronizationContext;
+    private IClipboard _clipboard;
+    private ContextMenu _contextMenu;
+
+    private bool _isRecording;
+    private ScrollViewer _scrollViewer;
+    private SelectableTextBlock _textView;
+
+    public LogView()
     {
-        private const int MaxCount = 1000;
-        private readonly SynchronizationContext _synchronizationContext;
-        private SelectableTextBlock _textView;
-        private ScrollViewer _scrollViewer;
-        private ContextMenu _contextMenu;
-        private IClipboard _clipboard;
+        InitializeComponent();
+        _synchronizationContext = SynchronizationContext.Current;
+        Init();
+    }
 
-        private static readonly Dictionary<LogType, IImmutableSolidColorBrush> LogTypeBrushes =
-            new()
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load(this);
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        var level = TopLevel.GetTopLevel(this);
+        if (level == null) return;
+
+        _clipboard = level.Clipboard;
+    }
+
+    private void Init()
+    {
+        _textView = this.Find<SelectableTextBlock>("LogTextView");
+        _scrollViewer = this.Find<ScrollViewer>("LogScrollViewer");
+        _contextMenu = this.Find<ContextMenu>("LogContextMenu");
+        _textView.Text = string.Empty;
+        RecordLog();
+    }
+
+    private void RecordLog()
+    {
+        if (_isRecording) return;
+
+        _isRecording = true;
+
+        Task.Run(async () =>
+        {
+            while (true)
             {
-                { LogType.Debug, Brushes.LightBlue },
-                { LogType.Info, Brushes.Green },
-                { LogType.Warn, Brushes.DarkOrange },
-                { LogType.Error, Brushes.OrangeRed },
-                { LogType.Fatal, Brushes.Red }
-            };
+                while (Logger.TryDequeue(out var log)) LogNotifyHandler(log);
 
-        public LogView()
-        {
-            InitializeComponent();
-            _synchronizationContext = SynchronizationContext.Current;
-            Init();
-        }
-
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load(this);
-        }
-
-        protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
-        {
-            base.OnAttachedToVisualTree(e);
-            var level = TopLevel.GetTopLevel(this);
-            if (level == null)
-            {
-                return;
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
             }
+        });
+    }
 
-            _clipboard = level.Clipboard;
-        }
+    private void LogNotifyHandler(LogInfo logInfo)
+    {
+        if (Logger.Level > logInfo.Level) return;
 
-        private void Init()
+        Task.Factory.StartNew(() =>
         {
-            _textView = this.Find<SelectableTextBlock>("LogTextView");
-            _scrollViewer = this.Find<ScrollViewer>("LogScrollViewer");
-            _contextMenu = this.Find<ContextMenu>("LogContextMenu");
-            _textView.Text = string.Empty;
-            RecordLog();
-        }
-
-        private bool _isRecording;
-
-        private void RecordLog()
-        {
-            if (_isRecording)
+            _synchronizationContext.Post(o =>
             {
-                return;
-            }
-
-            _isRecording = true;
-
-            Task.Run(async () =>
-            {
-                while (true)
+                var inlines = _textView.Inlines;
+                try
                 {
-                    while (Logger.TryDequeue(out var log))
+                    if (inlines?.Count > MaxCount)
                     {
-                        LogNotifyHandler(log);
-                    }
-
-                    await Task.Delay(TimeSpan.FromMilliseconds(100));
-                }
-            });
-        }
-
-        private void LogNotifyHandler(LogInfo logInfo)
-        {
-            if (Logger.Level > logInfo.Level)
-            {
-                return;
-            }
-
-            Task.Factory.StartNew(() =>
-            {
-                _synchronizationContext.Post(o =>
-                {
-                    var inlines = _textView.Inlines;
-                    try
-                    {
-                        if (inlines?.Count > MaxCount)
+                        for (var i = 0; i < 3; i++)
                         {
-                            inlines.Remove(inlines.First());
+                            var needRemoveElement = inlines.First();
+                            if (needRemoveElement != null)
+                            {
+                                inlines.Remove(needRemoveElement);
+                            }
                         }
-
-                        var start = _textView.Text.Length;
-                        var content =
-                            $"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}{Environment.NewLine}";
-                        inlines?.Add(new Run(content) { Foreground = LogTypeBrushes[logInfo.Level] });
-                        Logger.AddLogToFile(content);
-                        _textView.SelectionStart = start;
-                        _textView.SelectionEnd = _textView.Text.Length;
-                        _scrollViewer.ScrollToEnd();
                     }
-                    catch
-                    {
-                        // ignored
-                    }
-                }, null);
-            });
-        }
 
-        private async void Copy_OnClick(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                if (_textView.SelectedText.Length > 0 && _clipboard != null)
-                {
-                    await _clipboard.SetTextAsync(_textView.SelectedText);
+                    var start = _textView.Text.Length;
+
+                    inlines?.Add(
+                        new Run($"{logInfo.RecordTime}") { Foreground = new SolidColorBrush(Color.Parse("#8C8C8C")) });
+                    inlines?.Add(GetLevelInline(logInfo.Level));
+                    inlines?.Add(new Run(logInfo.Description) { Foreground = new SolidColorBrush(Color.Parse("#262626"))});
+                    inlines?.Add(new Run(Environment.NewLine));
+
+                    Logger.AddLogToFile($"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}{Environment.NewLine}");
+
+                    _textView.SelectionStart = start;
+                    _textView.SelectionEnd = _textView.Text.Length;
+                    _scrollViewer.ScrollToEnd();
                 }
-            }
-            catch
-            {
-                // ignored
-            }
-        }
+                catch
+                {
+                    // ignored
+                }
+            }, null);
+        });
+    }
 
-        private void Clear_OnClick(object sender, RoutedEventArgs e)
+    private Span GetLevelInline(LogType level)
+    {
+        var content = level.Description();
+        var border = new Border
         {
-            _textView.Inlines?.Clear();
-        }
+            BorderBrush = GetLevelForeground(level),
+            Background = GetLevelBackground(level),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(2),
+            Padding = new Thickness(8, 0),
+            Margin = new Thickness(8, 5, 8, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = new TextBlock
+            {
+                Text = content,
+                Foreground = GetLevelForeground(level)
+            }
+        };
+        var levelSpan = new Span();
+        levelSpan.Inlines.Add(border);
+        return levelSpan;
+    }
 
-        private void Location_OnClick(object sender, RoutedEventArgs e)
+    private IBrush GetLevelBackground(LogType level)
+    {
+        return level switch
         {
-            var logFolder = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Log");
+            LogType.Debug => new SolidColorBrush(Color.Parse("#FF4D4F")),
+            LogType.Info => new SolidColorBrush(Color.Parse("#F6FFED")),
+            LogType.Warn => new SolidColorBrush(Color.Parse("#FFF7E6")),
+            LogType.Error => new SolidColorBrush(Color.Parse("#FFF1F0")),
+            LogType.Fatal => new SolidColorBrush(Color.Parse("#FF4D4F")),
+            _ => new SolidColorBrush(Color.Parse("#FFFFFF"))
+        };
+    }
 
-            try
-            {
-                System.Diagnostics.Process.Start("explorer.exe", logFolder);
-            }
-            catch
-            {
-                // ignored
-            }
-        }
-
-        private void LogScrollViewer_OnPointerPressed(object sender, PointerPressedEventArgs e)
+    private IBrush GetLevelForeground(LogType level)
+    {
+        return level switch
         {
-            if (e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
-            {
-                _contextMenu.Open();
-            }
+            LogType.Debug => new SolidColorBrush(Color.Parse("#1890FF")),
+            LogType.Info => new SolidColorBrush(Color.Parse("#52C41A")),
+            LogType.Warn => new SolidColorBrush(Color.Parse("#FAAD14")),
+            LogType.Error => new SolidColorBrush(Color.Parse("#FF4D4F")),
+            LogType.Fatal => new SolidColorBrush(Color.Parse("#FFF1F0")),
+            _ => new SolidColorBrush(Color.Parse("#000000"))
+        };
+    }
+
+    private async void Copy_OnClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_textView.SelectedText.Length > 0 && _clipboard != null)
+                await _clipboard.SetTextAsync(_textView.SelectedText);
         }
+        catch
+        {
+            // ignored
+        }
+    }
+
+    private void Clear_OnClick(object sender, RoutedEventArgs e)
+    {
+        _textView.Inlines?.Clear();
+    }
+
+    private void Location_OnClick(object sender, RoutedEventArgs e)
+    {
+        var logFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Log");
+
+        try
+        {
+            Process.Start("explorer.exe", logFolder);
+        }
+        catch
+        {
+            // ignored
+        }
+    }
+
+    private void LogScrollViewer_OnPointerPressed(object sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsRightButtonPressed) _contextMenu.Open();
     }
 }

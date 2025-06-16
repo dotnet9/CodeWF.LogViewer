@@ -6,20 +6,50 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         Width="600" Height="400"
         x:Class="AvaloniaLog4Net.Views.MainWindow"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/avalonia-logo.ico" Background="Blue"
         Title="AvaloniaUI日志组件+Log4Net" Padding="20">
 
     <Grid RowDefinitions="Auto, *">
-        <UniformGrid Columns="5" HorizontalAlignment="Stretch">
-            <Button Content="Debug" Click="AddDebugLog_OnClick" />
-            <Button Content="Info" Click="AddInfoLog_OnClick" />
-            <Button Content="Warn" Click="AddWarnLog_OnClick" />
-            <Button Content="Error" Click="AddErrorLog_OnClick" />
-            <Button Content="Fatal" Click="AddFatalLog_OnClick" />
-        </UniformGrid>
-        <HeaderedContentControl Grid.Row="1" Header="日志">
-            <log:LogView BorderThickness="1" BorderBrush="BlueViolet" FontSize="12"/> 
-        </HeaderedContentControl>
+        <Border CornerRadius="5" Background="White" Margin="0 0 0 5">
+            <UniformGrid Columns="5" HorizontalAlignment="Stretch">
+                <Button Content="Debug" Click="AddDebugLog_OnClick" />
+                <Button Content="Info" Click="AddInfoLog_OnClick" />
+                <Button Content="Warn" Click="AddWarnLog_OnClick" />
+                <Button Content="Error" Click="AddErrorLog_OnClick" />
+                <Button Content="Fatal" Click="AddFatalLog_OnClick" />
+            </UniformGrid>
+        </Border>
+        <Border Grid.Row="1" CornerRadius="5" Background="White">
+            <Grid RowDefinitions="Auto, *">
+                <TextBlock Text="日志" FontWeight="Bold" Margin="24 20 0 17" VerticalAlignment="Center" FontSize="14"
+                           Foreground="#262626" />
+                <Border CornerRadius="5" Grid.Row="1" Margin="24 0 20 20">
+                    <Grid ColumnDefinitions="*, *">
+                        <Rectangle Height="200" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Top">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="50%,0%" EndPoint="50%,100%">
+                                    <LinearGradientBrush.GradientStops>
+                                        <GradientStop Color="#FFF2E8" Offset="0" />
+                                        <GradientStop Color="#FFFFFF" Offset="1" />
+                                    </LinearGradientBrush.GradientStops>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Rectangle Height="200" Grid.Column="1" VerticalAlignment="Top">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="100%,50%" EndPoint="0%,50%">
+                                    <LinearGradientBrush.GradientStops>
+                                        <GradientStop Color="#FFFFFF" Offset="0" />
+                                        <GradientStop Color="#00FFFFFF" Offset="1" />
+                                    </LinearGradientBrush.GradientStops>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <log:LogView Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Stretch" FontSize="14" Padding="20" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
     </Grid>
 
 </Window>
