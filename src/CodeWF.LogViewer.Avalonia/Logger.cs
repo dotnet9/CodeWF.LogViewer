@@ -1,15 +1,15 @@
-﻿using Avalonia.Controls.Documents;
+﻿using CodeWF.LogViewer.Avalonia.Extensions;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Threading.Tasks;
-using CodeWF.LogViewer.Avalonia.Extensions;
 
 namespace CodeWF.LogViewer.Avalonia
 {
     public static class Logger
     {
         public static LogType Level = LogType.Info;
+        public static string LogDir = AppDomain.CurrentDomain.BaseDirectory;
         internal static readonly ConcurrentQueue<LogInfo> Logs = new();
 
         public static void RecordToFile()
@@ -81,7 +81,7 @@ namespace CodeWF.LogViewer.Avalonia
         {
             try
             {
-                var logFolder = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Log");
+                var logFolder = System.IO.Path.Combine(LogDir, "Log");
                 if (!Directory.Exists(logFolder))
                 {
                     Directory.CreateDirectory(logFolder);
