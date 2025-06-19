@@ -147,7 +147,7 @@ public partial class LogView : UserControl
     {
         return level switch
         {
-            LogType.Debug => new SolidColorBrush(Color.Parse("#FF4D4F")),
+            LogType.Debug => new SolidColorBrush(Color.Parse("#E6F7FF")),
             LogType.Info => new SolidColorBrush(Color.Parse("#F6FFED")),
             LogType.Warn => new SolidColorBrush(Color.Parse("#FFF7E6")),
             LogType.Error => new SolidColorBrush(Color.Parse("#FFF1F0")),

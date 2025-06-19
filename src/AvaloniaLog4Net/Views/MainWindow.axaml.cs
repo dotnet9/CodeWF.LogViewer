@@ -11,7 +11,7 @@ namespace AvaloniaLog4Net.Views
         public MainWindow()
         {
             InitializeComponent();
-            Logger.Level = LogType.Info;
+            Logger.Level = LogType.Debug;
         }
 
         private void InitializeComponent()
