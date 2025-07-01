@@ -35,6 +35,13 @@ namespace CodeWF.LogViewer.Avalonia
             return Logs.TryDequeue(out info);
         }
 
+        public static void Log(int type, string content)
+        {
+            var logType = (LogType)type;
+            if (Level > logType) return;
+            Logs.Enqueue(new LogInfo(logType, content));
+        }
+
         public static void Debug(string content)
         {
             if (Level <= LogType.Debug)
@@ -76,7 +83,7 @@ namespace CodeWF.LogViewer.Avalonia
 
             Logs.Enqueue(new LogInfo(LogType.Fatal, msg));
         }
-        
+
         public static void AddLogToFile(string msg)
         {
             try
