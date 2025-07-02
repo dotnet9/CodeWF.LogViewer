@@ -6,9 +6,12 @@
 		<LangVersion>latest</LangVersion>
 		<OutputType>Library</OutputType>
 		<IsPackable>true</IsPackable>
-		<Version>1.0.10.0</Version>
+		<Version>1.0.10.1</Version>
 		<Authors>沙漠尽头的狼</Authors>
-		<Description>Custom log into the Avalonia UI and provide a log control to display logs.</Description>
+		<Description>自定义 Avalonia 日志组件​
+专为 Avalonia 打造的日志组件，支持将日志同步写入本地文件与 SelectedTextBlock 控件，实现持久化存储与实时界面展示，助力高效调试。​
+Custom Avalonia Log Component​
+A log component tailored for Avalonia. It supports synchronously writing logs to local files and the SelectedTextBlock control, enabling persistent storage and real-time interface display for efficient debugging.</Description>
 		<RepositoryUrl>https://github.com/dotnet9/CodeWF.LogViewer</RepositoryUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageIcon>logo.png</PackageIcon>
@@ -19,6 +22,9 @@
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<Copyright>https://codewf.com</Copyright>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<AssemblyVersion>1.0.10.1</AssemblyVersion>
+		<FileVersion>1.0.10.1</FileVersion>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Avalonia" Version="11.3.2" />
