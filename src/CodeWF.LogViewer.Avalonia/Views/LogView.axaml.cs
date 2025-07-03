@@ -79,54 +79,51 @@ public partial class LogView : UserControl
     {
         if (Logger.Level > logInfo.Level) return;
 
-        Task.Factory.StartNew(() =>
+        _synchronizationContext.Post(o =>
         {
-            _synchronizationContext.Post(o =>
+            var inlines = _textView.Inlines;
+            try
             {
-                var inlines = _textView.Inlines;
-                try
+                if (inlines?.Count > MaxCount)
                 {
-                    if (inlines?.Count > MaxCount)
+                    for (var i = 0; i < 3; i++)
                     {
-                        for (var i = 0; i < 3; i++)
+                        var needRemoveElement = inlines.First();
+                        if (needRemoveElement != null)
                         {
-                            var needRemoveElement = inlines.First();
-                            if (needRemoveElement != null)
-                            {
-                                inlines.Remove(needRemoveElement);
-                            }
+                            inlines.Remove(needRemoveElement);
                         }
                     }
+                }
 
-                    var start = _textView.Text.Length;
+                var start = _textView.Text.Length;
 
-                    inlines?.Add(
-                        new Run($"{logInfo.RecordTime}")
-                        {
-                            Foreground = new SolidColorBrush(Color.Parse("#8C8C8C")),
-                            BaselineAlignment = BaselineAlignment.Center
-                        });
-                    inlines?.Add(GetLevelInline(logInfo.Level));
-                    inlines?.Add(new Run(logInfo.Description)
+                inlines?.Add(
+                    new Run($"{logInfo.RecordTime}")
                     {
-                        Foreground = new SolidColorBrush(Color.Parse("#262626")),
+                        Foreground = new SolidColorBrush(Color.Parse("#8C8C8C")),
                         BaselineAlignment = BaselineAlignment.Center
                     });
-                    inlines?.Add(new Run(Environment.NewLine));
-
-                    Logger.AddLogToFile(
-                        $"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}{Environment.NewLine}");
-
-                    _textView.SelectionStart = start;
-                    _textView.SelectionEnd = _textView.Text.Length;
-                    _scrollViewer.ScrollToEnd();
-                }
-                catch
+                inlines?.Add(GetLevelInline(logInfo.Level));
+                inlines?.Add(new Run(logInfo.Description)
                 {
-                    // ignored
-                }
-            }, null);
-        });
+                    Foreground = new SolidColorBrush(Color.Parse("#262626")),
+                    BaselineAlignment = BaselineAlignment.Center
+                });
+                inlines?.Add(new Run(Environment.NewLine));
+
+                Logger.AddLogToFile(
+                    $"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}{Environment.NewLine}");
+
+                _textView.SelectionStart = start;
+                _textView.SelectionEnd = _textView.Text.Length;
+                _scrollViewer.ScrollToEnd();
+            }
+            catch
+            {
+                // ignored
+            }
+        }, null);
     }
 
     private Span GetLevelInline(LogType level)
