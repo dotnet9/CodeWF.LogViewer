@@ -7,7 +7,7 @@
         Width="600" Height="400"
         x:Class="AvaloniaLog4Net.Views.MainWindow"
         Icon="/Assets/avalonia-logo.ico" Background="Blue"
-        Title="AvaloniaUI日志组件+Log4Net" Padding="20">
+        Title="AvaloniaUI日志组件" Padding="20">
 
     <Grid RowDefinitions="Auto, *">
         <Border CornerRadius="5" Background="White" Margin="0 0 0 5">
