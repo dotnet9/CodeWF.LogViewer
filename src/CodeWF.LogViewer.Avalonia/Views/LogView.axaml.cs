@@ -101,12 +101,21 @@ public partial class LogView : UserControl
                     var start = _textView.Text.Length;
 
                     inlines?.Add(
-                        new Run($"{logInfo.RecordTime}") { Foreground = new SolidColorBrush(Color.Parse("#8C8C8C")) });
+                        new Run($"{logInfo.RecordTime}")
+                        {
+                            Foreground = new SolidColorBrush(Color.Parse("#8C8C8C")),
+                            BaselineAlignment = BaselineAlignment.Center
+                        });
                     inlines?.Add(GetLevelInline(logInfo.Level));
-                    inlines?.Add(new Run(logInfo.Description) { Foreground = new SolidColorBrush(Color.Parse("#262626"))});
+                    inlines?.Add(new Run(logInfo.Description)
+                    {
+                        Foreground = new SolidColorBrush(Color.Parse("#262626")),
+                        BaselineAlignment = BaselineAlignment.Center
+                    });
                     inlines?.Add(new Run(Environment.NewLine));
 
-                    Logger.AddLogToFile($"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}{Environment.NewLine}");
+                    Logger.AddLogToFile(
+                        $"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}{Environment.NewLine}");
 
                     _textView.SelectionStart = start;
                     _textView.SelectionEnd = _textView.Text.Length;
@@ -123,6 +132,15 @@ public partial class LogView : UserControl
     private Span GetLevelInline(LogType level)
     {
         var content = level.Description();
+
+        // 创建宽度为零的透明文本，用于复制使用
+        // TODO：复制还是有问题，会错位
+        var zeroWidthText = new Run($"【{content}】")
+        {
+            Foreground = Brushes.Transparent, FontSize = 0.001
+        };
+
+        // 视觉显示的文本，不会被复制使用
         var border = new Border
         {
             BorderBrush = GetLevelForeground(level),
@@ -130,15 +148,18 @@ public partial class LogView : UserControl
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(2),
             Padding = new Thickness(8, 0),
-            Margin = new Thickness(8, 5, 8, 0),
+            Margin = new Thickness(8, 2),
             VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false,
             Child = new TextBlock
             {
                 Text = content,
-                Foreground = GetLevelForeground(level)
+                Foreground = GetLevelForeground(level),
+                IsHitTestVisible = false
             }
         };
         var levelSpan = new Span();
+        levelSpan.Inlines.Add(zeroWidthText);
         levelSpan.Inlines.Add(border);
         return levelSpan;
     }
