@@ -35,6 +35,11 @@ namespace CodeWF.LogViewer.Avalonia
             return Logs.TryDequeue(out info);
         }
 
+        public static void Flush()
+        {
+            while (TryDequeue(out var log)) AddLogToFile(log);
+        }
+
         public static void Log(int type, string content)
         {
             var logType = (LogType)type;
@@ -82,6 +87,12 @@ namespace CodeWF.LogViewer.Avalonia
             var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
 
             Logs.Enqueue(new LogInfo(LogType.Fatal, msg));
+        }
+
+        public static void AddLogToFile(LogInfo logInfo)
+        {
+            AddLogToFile(
+                $"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}{Environment.NewLine}");
         }
 
         public static void AddLogToFile(string msg)

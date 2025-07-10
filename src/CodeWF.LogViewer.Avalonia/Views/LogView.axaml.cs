@@ -112,8 +112,7 @@ public partial class LogView : UserControl
                 });
                 inlines?.Add(new Run(Environment.NewLine));
 
-                Logger.AddLogToFile(
-                    $"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}{Environment.NewLine}");
+                Logger.AddLogToFile(logInfo);
 
                 _textView.SelectionStart = start;
                 _textView.SelectionEnd = _textView.Text.Length;
