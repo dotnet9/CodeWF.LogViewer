@@ -47,6 +47,12 @@ namespace CodeWF.LogViewer.Avalonia
             Logs.Enqueue(new LogInfo(logType, content));
         }
 
+        public static void Log(LogType type, string content)
+        {
+            if (Level > type) return;
+            Logs.Enqueue(new LogInfo(type, content));
+        }
+
         public static void Debug(string content)
         {
             if (Level <= LogType.Debug)
