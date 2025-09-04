@@ -98,13 +98,20 @@ public partial class LogView : UserControl
 
                 var start = _textView.Text.Length;
 
-                inlines?.Add(
-                    new Run($"{logInfo.RecordTime}")
-                    {
-                        Foreground = new SolidColorBrush(Color.Parse("#8C8C8C")),
-                        BaselineAlignment = BaselineAlignment.Center
-                    });
-                inlines?.Add(GetLevelInline(logInfo.Level));
+                inlines?.Add(new Run($"{logInfo.RecordTime}")
+                {
+                    Foreground = new SolidColorBrush(Color.Parse("#8C8C8C")),
+                    BaselineAlignment = BaselineAlignment.Center
+                });
+                var levelRun = new Run($"【{logInfo.Level.Description()}】")
+                {
+                    Foreground = GetLevelForeground(logInfo.Level),
+                };
+                if (logInfo.Level == LogType.Fatal)
+                {
+                    levelRun.FontWeight = FontWeight.Bold;
+                }
+                inlines?.Add(levelRun);
                 inlines?.Add(new Run(logInfo.Description)
                 {
                     Foreground = new SolidColorBrush(Color.Parse("#262626")),
@@ -125,54 +132,6 @@ public partial class LogView : UserControl
         }, null);
     }
 
-    private Span GetLevelInline(LogType level)
-    {
-        var content = level.Description();
-
-        // 创建宽度为零的透明文本，用于复制使用
-        // TODO：复制还是有问题，会错位
-        var zeroWidthText = new Run($"【{content}】")
-        {
-            Foreground = Brushes.Transparent, FontSize = 0.001
-        };
-
-        // 视觉显示的文本，不会被复制使用
-        var border = new Border
-        {
-            BorderBrush = GetLevelForeground(level),
-            Background = GetLevelBackground(level),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(2),
-            Padding = new Thickness(8, 0),
-            Margin = new Thickness(8, 2),
-            VerticalAlignment = VerticalAlignment.Center,
-            IsHitTestVisible = false,
-            Child = new TextBlock
-            {
-                Text = content,
-                Foreground = GetLevelForeground(level),
-                IsHitTestVisible = false
-            }
-        };
-        var levelSpan = new Span();
-        levelSpan.Inlines.Add(zeroWidthText);
-        levelSpan.Inlines.Add(border);
-        return levelSpan;
-    }
-
-    private IBrush GetLevelBackground(LogType level)
-    {
-        return level switch
-        {
-            LogType.Debug => new SolidColorBrush(Color.Parse("#E6F7FF")),
-            LogType.Info => new SolidColorBrush(Color.Parse("#F6FFED")),
-            LogType.Warn => new SolidColorBrush(Color.Parse("#FFF7E6")),
-            LogType.Error => new SolidColorBrush(Color.Parse("#FFF1F0")),
-            LogType.Fatal => new SolidColorBrush(Color.Parse("#FF4D4F")),
-            _ => new SolidColorBrush(Color.Parse("#FFFFFF"))
-        };
-    }
-
     private IBrush GetLevelForeground(LogType level)
     {
         return level switch
@@ -181,7 +140,7 @@ public partial class LogView : UserControl
             LogType.Info => new SolidColorBrush(Color.Parse("#52C41A")),
             LogType.Warn => new SolidColorBrush(Color.Parse("#FAAD14")),
             LogType.Error => new SolidColorBrush(Color.Parse("#FF4D4F")),
-            LogType.Fatal => new SolidColorBrush(Color.Parse("#FFF1F0")),
+            LogType.Fatal => new SolidColorBrush(Color.Parse("#FF4D4F")),
             _ => new SolidColorBrush(Color.Parse("#000000"))
         };
     }
