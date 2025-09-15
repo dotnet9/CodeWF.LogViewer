@@ -11,12 +11,13 @@
 
     <Grid RowDefinitions="Auto, *">
         <Border CornerRadius="5" Background="White" Margin="0 0 0 5">
-            <UniformGrid Columns="5" HorizontalAlignment="Stretch">
+            <UniformGrid Columns="6" HorizontalAlignment="Stretch">
                 <Button Content="Debug" Click="AddDebugLog_OnClick" />
                 <Button Content="Info" Click="AddInfoLog_OnClick" />
                 <Button Content="Warn" Click="AddWarnLog_OnClick" />
                 <Button Content="Error" Click="AddErrorLog_OnClick" />
                 <Button Content="Fatal" Click="AddFatalLog_OnClick" />
+                <Button Content="性能测试" Click="StartPerformanceTest_OnClick" />
             </UniformGrid>
         </Border>
         <Border Grid.Row="1" CornerRadius="5" Background="White">

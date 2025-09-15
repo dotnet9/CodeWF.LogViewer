@@ -1,17 +1,26 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using CodeWF.LogViewer.Avalonia;
 using System;
+using System.Timers;
 
 namespace AvaloniaLog4Net.Views
 {
     public partial class MainWindow : Window
     {
+        private readonly Timer _performanceTimer;
+        private bool _isPerformanceTesting = false;
+        private int _logCounter = 0;
+        private const int LogTypesCount = 5;
+        
         public MainWindow()
         {
             InitializeComponent();
             Logger.Level = LogType.Debug;
+            _performanceTimer = new Timer(100); // 100æ¯«ç§’é—´éš”
+            _performanceTimer.Elapsed += PerformanceTimer_Elapsed;
         }
 
         private void InitializeComponent()
@@ -22,30 +31,94 @@ namespace AvaloniaLog4Net.Views
         private void AddDebugLog_OnClick(object? sender, RoutedEventArgs e)
         {
             Logger.Debug(
-                $"Ä£¿éÃû³ÆA - {Random.Shared.Next(1, 11)}ºÅÊÂ¼þ£¬´¦ÀíºÄÊ±{Random.Shared.Next(1, 1000)}ºÁÃë");
+                $"æ¨¡æ‹Ÿè¯·æ±‚A - {Random.Shared.Next(1, 11)}æ¡è®°å½•ï¼Œå“åº”è€—æ—¶{Random.Shared.Next(1, 1000)}æ¯«ç§’");
         }
 
         private void AddInfoLog_OnClick(object? sender, RoutedEventArgs e)
         {
-            string GetRandomAction() => new[] { "µÇÂ¼", "ËÑË÷", "ÏÂµ¥" }.RandomChoice();
-            Logger.Info($"·þÎñB - ÓÃ»§ID£º{Guid.NewGuid()}£¬Ö´ÐÐ²Ù×÷£º{GetRandomAction()}");
+            string GetRandomAction() => new[] { "ç™»å½•", "æŸ¥çœ‹", "æ–°å¢ž" }.RandomChoice();
+            Logger.Info($"æ“ä½œB - ç”¨æˆ·IDï¼š{Guid.NewGuid()}ï¼Œæ‰§è¡Œæ“ä½œï¼š{GetRandomAction()}");
         }
 
         private void AddWarnLog_OnClick(object? sender, RoutedEventArgs e)
         {
-            Logger.Warn($"Êý¾Ý¿â - ²éÑ¯[±íÃû]Ê±£¬·¢ÏÖÖØ¸´¼ÇÂ¼ID: {Random.Shared.Next(10000, 99999)}");
+            Logger.Warn($"æ•°æ®åº“ - æŸ¥è¯¢[ç”¨æˆ·]æ—¶å‘çŽ°é‡å¤è®°å½•ID: {Random.Shared.Next(10000, 99999)}");
         }
 
         private void AddErrorLog_OnClick(object? sender, RoutedEventArgs e)
         {
-            Logger.Error($"[½Ó¿Úµ÷ÓÃ] - µ÷ÓÃ[½Ó¿ÚÃû]Ê±³ö´í£¬Òì³£ÐÅÏ¢£º{new Exception("Ëæ»ú´íÎó").Message}");
+            Logger.Error($"[æŽ¥å£è°ƒç”¨] - è®¿é—®[è®¢å•æŽ¥å£]æ—¶å‘ç”Ÿå¼‚å¸¸ä¿¡æ¯ï¼š{new Exception("æœåŠ¡å™¨é”™è¯¯").Message}");
         }
 
         private void AddFatalLog_OnClick(object? sender, RoutedEventArgs e)
         {
             Logger.Fatal(Random.Shared.Next(0, 10) == 0
-                ? $"ÖÂÃü£º[³ÌÐò] - ÏµÍ³±ÀÀ££¬´íÎó´úÂë£º{Random.Shared.Next(1000, 9999)}"
-                : $"ÖÂÃü£º[³ÌÐò] - ·¢ÏÖÑÏÖØÎÊÌâ£¬ÒÑÍ£Ö¹·þÎñ¡£");
+                ? $"ç³»ç»Ÿçº§[é”™è¯¯] - ç³»ç»Ÿå‘ç”Ÿä¸¥é‡æ•…éšœï¼š{Random.Shared.Next(1000, 9999)}"
+                : $"ç³»ç»Ÿçº§[é”™è¯¯] - æ•°æ®åº“è¿žæŽ¥ä¸­æ–­ï¼ŒæœåŠ¡åœæ­¢è¿è¡Œ");
+        }
+        
+        private void StartPerformanceTest_OnClick(object? sender, RoutedEventArgs e)
+        {
+            if (sender is Button button)
+            {
+                if (_isPerformanceTesting)
+                {
+                    // åœæ­¢æµ‹è¯•
+                    _performanceTimer.Stop();
+                    _isPerformanceTesting = false;
+                    button.Content = "æ€§èƒ½æµ‹è¯•";
+                    Logger.Info("æ€§èƒ½æµ‹è¯•å·²åœæ­¢ã€‚");
+                }
+                else
+                {
+                    // å¼€å§‹æµ‹è¯•
+                    _logCounter = 0;
+                    _performanceTimer.Start();
+                    _isPerformanceTesting = true;
+                    button.Content = "åœæ­¢æµ‹è¯•";
+                    Logger.Info("æ€§èƒ½æµ‹è¯•å·²å¼€å§‹ï¼Œå°†å®šæ—¶å¿«é€Ÿè°ƒç”¨ä¸åŒçº§åˆ«çš„æ—¥å¿—æŽ¥å£ã€‚");
+                }
+            }
+        }
+        
+        private void PerformanceTimer_Elapsed(object? sender, ElapsedEventArgs e)
+        {
+            // éšæœºç”Ÿæˆæœ¬æ¬¡è¦å†™å…¥çš„æ—¥å¿—æ•°é‡ï¼ˆ20-300æ¡ä¹‹é—´ï¼‰
+            int logsToWrite = Random.Shared.Next(20, 301);
+            int batchCounter = _logCounter;
+            
+            // ç¡®ä¿åœ¨UIçº¿ç¨‹ä¸Šæ›´æ–°
+            Dispatcher.UIThread.Post(() =>
+            {
+                for (int i = 0; i < logsToWrite; i++)
+                {
+                    batchCounter++;
+                    int logTypeIndex = batchCounter % LogTypesCount;
+                    
+                    switch (logTypeIndex)
+                    {
+                        case 0:
+                            Logger.Debug($"æ€§èƒ½æµ‹è¯•[Debug] - æ‰¹æ¬¡è®¡æ•°: {batchCounter}");
+                            break;
+                        case 1:
+                            Logger.Info($"æ€§èƒ½æµ‹è¯•[Info] - æ‰¹æ¬¡è®¡æ•°: {batchCounter}");
+                            break;
+                        case 2:
+                            Logger.Warn($"æ€§èƒ½æµ‹è¯•[Warn] - æ‰¹æ¬¡è®¡æ•°: {batchCounter}");
+                            break;
+                        case 3:
+                            Logger.Error($"æ€§èƒ½æµ‹è¯•[Error] - æ‰¹æ¬¡è®¡æ•°: {batchCounter}");
+                            break;
+                        case 4:
+                            Logger.Fatal($"æ€§èƒ½æµ‹è¯•[Fatal] - æ‰¹æ¬¡è®¡æ•°: {batchCounter}");
+                            break;
+                    }
+                }
+                
+                // æ›´æ–°å…¨å±€è®¡æ•°å™¨
+                _logCounter = batchCounter;
+                Logger.Info($"æ€§èƒ½æµ‹è¯• - æ‰¹æ¬¡å®Œæˆï¼Œæœ¬æ¬¡å†™å…¥ {logsToWrite} æ¡æ—¥å¿—ï¼Œç´¯è®¡å†™å…¥ {_logCounter} æ¡æ—¥å¿—ã€‚");
+            });
         }
     }
 
