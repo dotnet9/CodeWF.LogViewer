@@ -165,15 +165,19 @@ public partial class LogView : UserControl
 
     private void Location_OnClick(object sender, RoutedEventArgs e)
     {
-        var logFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Log");
+        var logFolder = Path.Combine(Logger.LogDir, "Log");        
 
         try
         {
+            if (!Directory.Exists(logFolder))
+            {
+                Directory.CreateDirectory(logFolder);
+            }
             Process.Start("explorer.exe", logFolder);
         }
-        catch
+        catch(Exception ex)
         {
-            // ignored
+            Logger.Error($"Open log dir exception, the dir is {logFolder}", ex);
         }
     }
 
