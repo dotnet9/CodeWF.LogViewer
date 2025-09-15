@@ -1,19 +1,18 @@
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
-using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using CodeWF.LogViewer.Avalonia.Extensions;
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CodeWF.LogViewer.Avalonia;
 
@@ -27,12 +26,22 @@ public partial class LogView : UserControl
     private bool _isRecording;
     private ScrollViewer _scrollViewer;
     private SelectableTextBlock _textView;
+    private CancellationTokenSource _cancellationTokenSource;
+    private const int BatchProcessSize = 50; // 批量处理的日志数量
 
     public LogView()
     {
         InitializeComponent();
         _synchronizationContext = SynchronizationContext.Current;
+        _cancellationTokenSource = new CancellationTokenSource();
         Init();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        // 清理资源，停止后台任务
+        _cancellationTokenSource?.Cancel();
     }
 
     private void InitializeComponent()
@@ -66,44 +75,112 @@ public partial class LogView : UserControl
 
         Task.Run(async () =>
         {
-            while (true)
+            var logsBatch = new System.Collections.Generic.List<LogInfo>();
+            var token = _cancellationTokenSource.Token;
+            
+            try
             {
-                while (Logger.TryDequeue(out var log)) LogNotifyHandler(log);
-
-                await Task.Delay(TimeSpan.FromMilliseconds(100));
+                while (!token.IsCancellationRequested)
+                {
+                    logsBatch.Clear();
+                    
+                    // 批量收集日志
+                    int count = 0;
+                    while (count < BatchProcessSize && Logger.TryDequeue(out var log))
+                    {
+                        if (Logger.Level <= log.Level) // 提前过滤不符合级别的日志
+                        {
+                            logsBatch.Add(log);
+                        }
+                        count++;
+                    }
+                    
+                    // 有日志需要处理时批量更新UI
+                    if (logsBatch.Count > 0)
+                    {
+                        _synchronizationContext.Post(o =>
+                        {
+                            try
+                            {
+                                UpdateLogUI((System.Collections.Generic.List<LogInfo>)o);
+                            }
+                            catch { /* ignored */ }
+                        }, logsBatch.ToList()); // 传递副本避免并发问题
+                    }
+                    
+                    // 根据队列负载动态调整休眠时间
+                    // 使用一个临时变量来避免丢失日志
+                    bool hasMoreLogs = false;
+                    
+                    if (Logger.TryPeek(out _)) // 使用TryPeek安全检查队列是否有日志而不移除
+                    {
+                        hasMoreLogs = true;
+                    }
+                    
+                    int delayMs = hasMoreLogs ? 10 : 100;
+                    await Task.Delay(TimeSpan.FromMilliseconds(delayMs), token);
+                }
             }
+            catch (OperationCanceledException) { /* 任务被取消，正常退出 */ }
         });
     }
 
     private void LogNotifyHandler(LogInfo logInfo)
     {
+        // 这个方法现在仅作为兼容保留，实际处理已移至批量处理方法
         if (Logger.Level > logInfo.Level) return;
-
+        
         _synchronizationContext.Post(o =>
         {
-            var inlines = _textView.Inlines;
             try
             {
-                if (inlines?.Count > MaxCount)
+                UpdateLogUI(new System.Collections.Generic.List<LogInfo> { (LogInfo)o });
+            }
+            catch { /* ignored */ }
+        }, logInfo);
+    }
+    
+    /// <summary>
+    /// 批量更新日志UI
+    /// </summary>
+    /// <param name="logsBatch">日志批次</param>
+    private void UpdateLogUI(System.Collections.Generic.List<LogInfo> logsBatch)
+    {
+        if (logsBatch == null || logsBatch.Count == 0)
+            return;
+            
+        var inlines = _textView.Inlines;
+        if (inlines == null) return;
+        
+        try
+        {
+            // 批量清理超出限制的日志 - 优化版本：批量删除而不是逐条删除
+            if (inlines.Count > MaxCount)
+            {
+                int removeCount = Math.Min(inlines.Count - MaxCount + logsBatch.Count * 4, inlines.Count / 2); // 一次性删除更多日志
+                // 重要优化：创建新的Inlines集合代替逐条删除
+                var newInlines = new System.Collections.Generic.List<Inline>();
+                for (int i = removeCount; i < inlines.Count; i++)
                 {
-                    for (var i = 0; i < 3; i++)
-                    {
-                        var needRemoveElement = inlines.First();
-                        if (needRemoveElement != null)
-                        {
-                            inlines.Remove(needRemoveElement);
-                        }
-                    }
+                    newInlines.Add(inlines[i]);
                 }
+                inlines.Clear();
+                foreach (var inline in newInlines)
+                {
+                    inlines.Add(inline);
+                }
+            }
 
-                var start = _textView.Text.Length;
-
-                inlines?.Add(new Run($"{logInfo.RecordTime}")
+            // 批量添加日志到UI
+            var runs = new System.Collections.Generic.List<Inline>();
+            foreach (var logInfo in logsBatch)
+            {
+                runs.Add(new Run($"{logInfo.RecordTime}")
                 {
                     Foreground = new SolidColorBrush(Color.Parse("#8C8C8C")),
                     BaselineAlignment = BaselineAlignment.Center
                 });
-                var levelRun = new Run($"��{logInfo.Level.Description()}��")
+                var levelRun = new Run($"[{logInfo.Level.Description()}]") // 修复中文乱码，使用方括号替代
                 {
                     Foreground = GetLevelForeground(logInfo.Level),
                 };
@@ -111,25 +188,42 @@ public partial class LogView : UserControl
                 {
                     levelRun.FontWeight = FontWeight.Bold;
                 }
-                inlines?.Add(levelRun);
-                inlines?.Add(new Run(logInfo.Description)
+                runs.Add(levelRun);
+                runs.Add(new Run(logInfo.Description)
                 {
                     Foreground = new SolidColorBrush(Color.Parse("#262626")),
                     BaselineAlignment = BaselineAlignment.Center
                 });
-                inlines?.Add(new Run(Environment.NewLine));
-
-                Logger.AddLogToFile(logInfo);
-
-                _textView.SelectionStart = start;
-                _textView.SelectionEnd = _textView.Text.Length;
+                runs.Add(new Run(Environment.NewLine));
+            }
+            
+            // 一次性添加所有日志到UI，减少UI更新次数
+            foreach (var run in runs)
+            {
+                inlines.Add(run);
+            }
+            
+            // 批量写入文件 - 重要优化：批量构建日志内容，单次写入文件
+            Task.Run(() =>
+            {
+                try
+                {
+                    Logger.AddLogBatchToFile(logsBatch);
+                }
+                catch { /* ignored */ }
+            });
+            
+            // 只在批次处理完成后滚动一次 - 优化：移除不必要的文本选择操作
+            if (logsBatch.Count > 0 && _scrollViewer != null)
+            {
+                // 避免不必要的文本选择操作
                 _scrollViewer.ScrollToEnd();
             }
-            catch
-            {
-                // ignored
-            }
-        }, null);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     private IBrush GetLevelForeground(LogType level)
