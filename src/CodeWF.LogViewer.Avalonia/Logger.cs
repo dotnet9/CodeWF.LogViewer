@@ -1,24 +1,48 @@
 ﻿using CodeWF.LogViewer.Avalonia.Extensions;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace CodeWF.LogViewer.Avalonia
 {
     public static class Logger
     {
-        public static LogType Level = LogType.Info;
-        public static string LogDir = AppDomain.CurrentDomain.BaseDirectory;
+        /// <summary>
+        /// Gets or sets the current log level used for logging operations.
+        /// </summary>
+        public static LogType Level = LogType.Info; 
+        /// <summary>
+        /// Specifies the directory where log files are stored.
+        /// </summary>
+        /// <remarks>The default value is the application's base directory. Update this field to change
+        /// the log file location as needed.</remarks>
+        public static string LogDir = AppDomain.CurrentDomain.BaseDirectory; 
+        /// <summary>
+        /// Specifies the default number of log entries to process in a single batch operation.
+        /// </summary>
+        public static int BatchProcessSize = 50;  
+        /// <summary>
+        /// Represents a thread-safe queue of log entries for internal use.
+        /// </summary>
         internal static readonly ConcurrentQueue<LogInfo> Logs = new();
 
+        /// <summary>
+        /// Starts a background task that continuously processes log entries in batches and writes them to a file.
+        /// </summary>
+        /// <remarks>This method is intended to be called once during application startup to enable
+        /// asynchronous, batched log file writing. It processes log entries from an internal queue, writing them to the
+        /// file in groups to improve performance. The method does not block the calling thread and returns immediately.
+        /// Multiple invocations may result in multiple background tasks writing logs concurrently, which may not be
+        /// intended.</remarks>
         public static void RecordToFile()
         {
             Task.Run(async () =>
             {
-                var batchSize = 100; // 每批处理的日志数量
-                var logsInBatch = new System.Collections.Generic.List<LogInfo>();
-                var logContentBuilder = new System.Text.StringBuilder();
+                var logsInBatch = new List<LogInfo>();
+                var logContentBuilder = new StringBuilder();
                 
                 while (true)
                 {
@@ -28,7 +52,7 @@ namespace CodeWF.LogViewer.Avalonia
                     
                     // 尝试获取指定数量的日志
                     int count = 0;
-                    while (count < batchSize && TryDequeue(out var log))
+                    while (count < BatchProcessSize && TryDequeue(out var log))
                     {
                         logsInBatch.Add(log);
                         count++;
@@ -76,7 +100,18 @@ namespace CodeWF.LogViewer.Avalonia
 
         public static void Flush()
         {
-            while (TryDequeue(out var log)) AddLogToFile(log);
+            // 批量收集所有日志
+            var logsBatch = new System.Collections.Generic.List<LogInfo>();
+            while (TryDequeue(out var log))
+            {
+                logsBatch.Add(log);
+            }
+            
+            // 使用批量写入方法，减少文件I/O操作
+            if (logsBatch.Count > 0)
+            {
+                AddLogBatchToFile(logsBatch);
+            }
         }
 
         public static void Log(int type, string content)
@@ -144,7 +179,7 @@ namespace CodeWF.LogViewer.Avalonia
         /// 批量将日志写入文件，提高大量日志写入时的性能
         /// </summary>
         /// <param name="logsBatch">日志批次</param>
-        public static void AddLogBatchToFile(System.Collections.Generic.List<LogInfo> logsBatch)
+        public static void AddLogBatchToFile(List<LogInfo> logsBatch)
         {
             if (logsBatch == null || logsBatch.Count == 0)
                 return;
@@ -152,7 +187,7 @@ namespace CodeWF.LogViewer.Avalonia
             try
             {
                 // 使用StringBuilder批量构建日志内容，减少字符串拼接开销
-                var logContentBuilder = new System.Text.StringBuilder();
+                var logContentBuilder = new StringBuilder();
                 
                 foreach (var logInfo in logsBatch)
                 {

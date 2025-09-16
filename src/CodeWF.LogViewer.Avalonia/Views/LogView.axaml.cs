@@ -6,8 +6,10 @@ using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
+using Avalonia.Threading;
 using CodeWF.LogViewer.Avalonia.Extensions;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -27,7 +29,6 @@ public partial class LogView : UserControl
     private ScrollViewer _scrollViewer;
     private SelectableTextBlock _textView;
     private CancellationTokenSource _cancellationTokenSource;
-    private const int BatchProcessSize = 50; // 批量处理的日志数量
 
     public LogView()
     {
@@ -75,8 +76,12 @@ public partial class LogView : UserControl
 
         Task.Run(async () =>
         {
-            var logsBatch = new System.Collections.Generic.List<LogInfo>();
+            var logsBatch = new List<LogInfo>();
             var token = _cancellationTokenSource.Token;
+            
+            // 用于节流UI更新的计数器
+            int uiUpdateThrottleCounter = 0;
+            const int UiUpdateThrottle = 3; // 每3批只更新一次UI
             
             try
             {
@@ -84,40 +89,54 @@ public partial class LogView : UserControl
                 {
                     logsBatch.Clear();
                     
-                    // 批量收集日志
+                    // 批量收集日志 - 增加批次大小，特别是高负载时
+                    int batchSize = Logger.Logs.Count > 500 ? 300 : (Logger.Logs.Count > 200 ? 200 : Logger.BatchProcessSize);
                     int count = 0;
-                    while (count < BatchProcessSize && Logger.TryDequeue(out var log))
+                    while (count < batchSize && Logger.TryDequeue(out var log))
                     {
-                        if (Logger.Level <= log.Level) // 提前过滤不符合级别的日志
+                        if (Logger.Level <= log.Level)
                         {
                             logsBatch.Add(log);
                         }
                         count++;
                     }
                     
-                    // 有日志需要处理时批量更新UI
                     if (logsBatch.Count > 0)
                     {
-                        _synchronizationContext.Post(o =>
+                        // 立即写入文件，避免阻塞UI线程
+                        Task.Run(() =>
                         {
                             try
                             {
-                                UpdateLogUI((System.Collections.Generic.List<LogInfo>)o);
+                                Logger.AddLogBatchToFile(logsBatch);
                             }
                             catch { /* ignored */ }
-                        }, logsBatch.ToList()); // 传递副本避免并发问题
+                        }, token);
+                        
+                        // UI更新节流 - 减少UI更新频率
+                        uiUpdateThrottleCounter++;
+                        if (uiUpdateThrottleCounter >= UiUpdateThrottle || Logger.Logs.Count == 0)
+                        {
+                            uiUpdateThrottleCounter = 0;
+                            _synchronizationContext.Post(o =>
+                            {
+                                try
+                                {
+                                    UpdateLogUI((System.Collections.Generic.List<LogInfo>)o);
+                                }
+                                catch { /* ignored */ }
+                            }, logsBatch.ToList()); // 传递副本避免并发问题
+                        }
                     }
                     
-                    // 根据队列负载动态调整休眠时间
-                    // 使用一个临时变量来避免丢失日志
-                    bool hasMoreLogs = false;
+                    // 智能休眠策略
+                    int queueSize = Logger.Logs.Count;
+                    int delayMs;
+                    if (queueSize > 500) delayMs = 5;      // 大量日志时最小延迟
+                    else if (queueSize > 100) delayMs = 10; // 中等量日志
+                    else if (queueSize > 0) delayMs = 20;   // 少量日志
+                    else delayMs = 100;                     // 无日志时
                     
-                    if (Logger.TryPeek(out _)) // 使用TryPeek安全检查队列是否有日志而不移除
-                    {
-                        hasMoreLogs = true;
-                    }
-                    
-                    int delayMs = hasMoreLogs ? 10 : 100;
                     await Task.Delay(TimeSpan.FromMilliseconds(delayMs), token);
                 }
             }
@@ -148,7 +167,10 @@ public partial class LogView : UserControl
     {
         if (logsBatch == null || logsBatch.Count == 0)
             return;
-            
+        
+        // 减少UI更新频率 - 如果当前批次很小且队列还有大量日志，则跳过更新
+        if (logsBatch.Count < 50 && Logger.Logs.Count > 100) return;
+        
         var inlines = _textView.Inlines;
         if (inlines == null) return;
         
@@ -213,11 +235,18 @@ public partial class LogView : UserControl
                 catch { /* ignored */ }
             });
             
-            // 只在批次处理完成后滚动一次 - 优化：移除不必要的文本选择操作
-            if (logsBatch.Count > 0 && _scrollViewer != null)
+            // 减少滚动频率，使用Dispatcher降低优先级避免阻塞UI线程
+            bool isFinalBatch = Logger.Logs.Count == 0;
+            if ((logsBatch.Count > 0 && _scrollViewer != null) && (isFinalBatch || inlines.Count % 200 == 0))
             {
-                // 避免不必要的文本选择操作
-                _scrollViewer.ScrollToEnd();
+                Dispatcher.UIThread.Post(() =>
+                {
+                    try
+                    {
+                        _scrollViewer.ScrollToEnd();
+                    }
+                    catch { /* ignored */ }
+                }, DispatcherPriority.Background);
             }
         }
         catch
