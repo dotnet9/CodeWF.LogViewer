@@ -191,19 +191,8 @@ public partial class LogView : UserControl
             if (inlines.Count > MaxCount)
             {
                 int removeCount = Math.Min(inlines.Count - MaxCount + logsBatch.Count * 4, inlines.Count / 2); // 一次性删除更多日志
-                // 重要优化：创建新的Inlines集合代替逐条删除
-                //var newInlines = new System.Collections.Generic.List<Inline>();
-                //for (int i = removeCount; i < inlines.Count; i++)
-                //{
-                //    newInlines.Add(inlines[i]);
-                //}
-                //inlines.Clear();
-                //foreach (var inline in newInlines)
-                //{
-                //    inlines.Add(inline);
-                //}
 
-                //修复：释放资源，避免内存泄漏
+                // 释放资源，避免内存泄漏
                 for (int i = 0; i < removeCount; i++)
                 {
                     if (inlines.Count > 0)
