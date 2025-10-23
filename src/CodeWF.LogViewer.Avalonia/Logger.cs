@@ -114,59 +114,59 @@ namespace CodeWF.LogViewer.Avalonia
             }
         }
 
-        public static void Log(int type, string content)
+        public static void Log(int type, string content, string? friendlyContent = default)
         {
             var logType = (LogType)type;
             if (Level > logType) return;
-            Logs.Enqueue(new LogInfo(logType, content));
+            Logs.Enqueue(new LogInfo(logType, content, friendlyContent));
         }
 
-        public static void Log(LogType type, string content)
+        public static void Log(LogType type, string content, string? friendlyContent = default)
         {
             if (Level > type) return;
-            Logs.Enqueue(new LogInfo(type, content));
+            Logs.Enqueue(new LogInfo(type, content, friendlyContent));
         }
 
-        public static void Debug(string content)
+        public static void Debug(string content, string? friendlyContent = default)
         {
             if (Level <= LogType.Debug)
             {
-                Logs.Enqueue(new LogInfo(LogType.Debug, content));
+                Logs.Enqueue(new LogInfo(LogType.Debug, content, friendlyContent));
             }
         }
 
-        public static void Info(string content)
+        public static void Info(string content, string? friendlyContent = default)
         {
             if (Level <= LogType.Info)
             {
-                Logs.Enqueue(new LogInfo(LogType.Info, content));
+                Logs.Enqueue(new LogInfo(LogType.Info, content, friendlyContent));
             }
         }
 
-        public static void Warn(string content)
+        public static void Warn(string content, string? friendlyContent = default)
         {
             if (Level <= LogType.Warn)
             {
-                Logs.Enqueue(new LogInfo(LogType.Warn, content));
+                Logs.Enqueue(new LogInfo(LogType.Warn, content, friendlyContent));
             }
         }
 
-        public static void Error(string content, Exception? ex = null)
+        public static void Error(string content, Exception? ex = null, string? friendlyContent = default)
         {
             if (Level > LogType.Error) return;
 
             var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
 
-            Logs.Enqueue(new LogInfo(LogType.Error, msg));
+            Logs.Enqueue(new LogInfo(LogType.Error, msg, friendlyContent));
         }
 
-        public static void Fatal(string content, Exception? ex = null)
+        public static void Fatal(string content, Exception? ex = null, string? friendlyContent = default)
         {
             if (Level > LogType.Fatal) return;
 
             var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
 
-            Logs.Enqueue(new LogInfo(LogType.Fatal, msg));
+            Logs.Enqueue(new LogInfo(LogType.Fatal, msg, friendlyContent));
         }
 
         public static void AddLogToFile(LogInfo logInfo)

@@ -133,7 +133,7 @@ public partial class LogView : UserControl
                             {
                                 try
                                 {
-                                    UpdateLogUI((System.Collections.Generic.List<LogInfo>)o);
+                                    UpdateLogUI((List<LogInfo>)o);
                                 }
                                 catch { /* ignored */ }
                             }, logsBatch.ToList()); // 传递副本避免并发问题
@@ -229,7 +229,8 @@ public partial class LogView : UserControl
                     levelRun.FontWeight = FontWeight.Bold;
                 }
                 runs.Add(levelRun);
-                runs.Add(new Run(logInfo.Description)
+                var logMessage = string.IsNullOrWhiteSpace(logInfo.FriendlyDescription) ? logInfo.Description : logInfo.FriendlyDescription;
+                runs.Add(new Run(logMessage)
                 {
                     Foreground = _textBrush,
                     BaselineAlignment = BaselineAlignment.Center

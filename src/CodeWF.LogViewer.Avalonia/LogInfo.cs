@@ -1,20 +1,29 @@
 ﻿using System;
 
-namespace CodeWF.LogViewer.Avalonia
+namespace CodeWF.LogViewer.Avalonia;
+
+public readonly struct LogInfo
 {
-    public readonly struct LogInfo
+    public LogInfo(LogType logType, string description, string? friendlyDescription)
     {
-        public LogInfo(LogType logType, string description)
+        RecordTime = DateTime.Now;
+        Level = logType;
+        Description = description;
+        if (string.IsNullOrWhiteSpace(friendlyDescription))
         {
-            RecordTime = DateTime.Now;
-            Level = logType;
-            Description = description;
+            friendlyDescription = description;
         }
-
-        public LogType Level { get; }
-
-        public DateTime RecordTime { get; }
-
-        public string Description { get; }
+        else
+        {
+            FriendlyDescription = friendlyDescription;
+        }
     }
+
+    public LogType Level { get; }
+
+    public DateTime RecordTime { get; }
+
+    public string Description { get; }
+
+    public string FriendlyDescription { get; }
 }
