@@ -1,4 +1,8 @@
-﻿# CodeWF.LogViewer
+﻿# CodeWF.LogViewer.Avalonia
+
+[![NuGet](https://img.shields.io/nuget/v/CodeWF.LogViewer.Avalonia.svg)](https://www.nuget.org/packages/CodeWF.LogViewer.Avalonia/)
+[![NuGet](https://img.shields.io/nuget/dt/CodeWF.LogViewer.Avalonia.svg)](https://www.nuget.org/packages/CodeWF.LogViewer.Avalonia/)
+[![License](https://img.shields.io/github/license/dotnet9/CodeWF.LogViewer)](LICENSE)
 
 简单封装一些日志控件
 
