@@ -115,11 +115,11 @@ public partial class LogView : UserControl
                     if (logsBatch.Count > 0)
                     {
                         // 立即写入文件，避免阻塞UI线程
-                        Task.Run(() =>
+                        Task.Run(async () =>
                         {
                             try
                             {
-                                Logger.AddLogBatchToFile(logsBatch);
+                                await Logger.AddLogBatchToFileAsync(logsBatch);
                             }
                             catch { /* ignored */ }
                         }, token);
@@ -245,11 +245,11 @@ public partial class LogView : UserControl
             }
 
             // 批量写入文件 - 重要优化：批量构建日志内容，单次写入文件
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 try
                 {
-                    Logger.AddLogBatchToFile(logsBatch);
+                    await Logger.AddLogBatchToFileAsync(logsBatch);
                 }
                 catch { /* ignored */ }
             });

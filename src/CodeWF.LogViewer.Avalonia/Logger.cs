@@ -13,17 +13,20 @@ namespace CodeWF.LogViewer.Avalonia
         /// <summary>
         /// Gets or sets the current log level used for logging operations.
         /// </summary>
-        public static LogType Level = LogType.Info; 
+        public static LogType Level = LogType.Info;
+
         /// <summary>
         /// Specifies the directory where log files are stored.
         /// </summary>
         /// <remarks>The default value is the application's base directory. Update this field to change
         /// the log file location as needed.</remarks>
-        public static string LogDir = AppDomain.CurrentDomain.BaseDirectory; 
+        public static string LogDir = AppDomain.CurrentDomain.BaseDirectory;
+
         /// <summary>
         /// Specifies the default number of log entries to process in a single batch operation.
         /// </summary>
-        public static int BatchProcessSize = 50;  
+        public static int BatchProcessSize = 50;
+
         /// <summary>
         /// Represents a thread-safe queue of log entries for internal use.
         /// </summary>
@@ -43,13 +46,13 @@ namespace CodeWF.LogViewer.Avalonia
             {
                 var logsInBatch = new List<LogInfo>();
                 var logContentBuilder = new StringBuilder();
-                
+
                 while (true)
                 {
                     // 收集一批日志
                     logsInBatch.Clear();
                     logContentBuilder.Clear();
-                    
+
                     // 尝试获取指定数量的日志
                     int count = 0;
                     while (count < BatchProcessSize && TryDequeue(out var log))
@@ -57,26 +60,27 @@ namespace CodeWF.LogViewer.Avalonia
                         logsInBatch.Add(log);
                         count++;
                     }
-                    
+
                     // 如果有日志需要写入
                     if (logsInBatch.Count > 0)
                     {
                         // 构建批处理日志内容
                         foreach (var log in logsInBatch)
                         {
-                            logContentBuilder.AppendLine($"{log.RecordTime}: {log.Level.Description()} {log.Description}");
+                            logContentBuilder.AppendLine(
+                                $"{log.RecordTime}: {log.Level.Description()} {log.Description}");
                         }
-                        
+
                         // 批量写入文件（只打开和关闭文件一次）
-                        AddLogToFile(logContentBuilder.ToString());
-                        
+                        await AddLogToFileAsync(logContentBuilder.ToString());
+
                         // 如果队列中还有大量日志，不休眠继续处理
                         if (Logs.Count > 0)
                         {
                             continue;
                         }
                     }
-                    
+
                     // 如果队列为空，适当延长休眠时间减少CPU消耗
                     await Task.Delay(TimeSpan.FromMilliseconds(100));
                 }
@@ -98,7 +102,7 @@ namespace CodeWF.LogViewer.Avalonia
             return Logs.TryPeek(out info);
         }
 
-        public static void Flush()
+        public static async Task FlushAsync()
         {
             // 批量收集所有日志
             var logsBatch = new System.Collections.Generic.List<LogInfo>();
@@ -106,11 +110,11 @@ namespace CodeWF.LogViewer.Avalonia
             {
                 logsBatch.Add(log);
             }
-            
+
             // 使用批量写入方法，减少文件I/O操作
             if (logsBatch.Count > 0)
             {
-                AddLogBatchToFile(logsBatch);
+                await AddLogBatchToFileAsync(logsBatch);
             }
         }
 
@@ -169,33 +173,34 @@ namespace CodeWF.LogViewer.Avalonia
             Logs.Enqueue(new LogInfo(LogType.Fatal, msg, friendlyContent));
         }
 
-        public static void AddLogToFile(LogInfo logInfo)
+        public static async Task AddLogToFileAsync(LogInfo logInfo)
         {
-            AddLogToFile(
+            await AddLogToFileAsync(
                 $"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}{Environment.NewLine}");
         }
-        
+
         /// <summary>
         /// 批量将日志写入文件，提高大量日志写入时的性能
         /// </summary>
         /// <param name="logsBatch">日志批次</param>
-        public static void AddLogBatchToFile(List<LogInfo> logsBatch)
+        public static async Task AddLogBatchToFileAsync(List<LogInfo> logsBatch)
         {
             if (logsBatch == null || logsBatch.Count == 0)
                 return;
-                
+
             try
             {
                 // 使用StringBuilder批量构建日志内容，减少字符串拼接开销
                 var logContentBuilder = new StringBuilder();
-                
+
                 foreach (var logInfo in logsBatch)
                 {
-                    logContentBuilder.AppendLine($"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}");
+                    logContentBuilder.AppendLine(
+                        $"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}");
                 }
-                
+
                 // 只调用一次文件写入，大幅减少I/O操作
-                AddLogToFile(logContentBuilder.ToString());
+                await AddLogToFileAsync(logContentBuilder.ToString());
             }
             catch
             {
@@ -203,7 +208,7 @@ namespace CodeWF.LogViewer.Avalonia
             }
         }
 
-        public static void AddLogToFile(string msg)
+        public static async Task AddLogToFileAsync(string msg)
         {
             try
             {
@@ -217,7 +222,7 @@ namespace CodeWF.LogViewer.Avalonia
                 var logFileName = System.IO.Path.Combine(logFolder, $"Log_{DateTime.Now:yyyy_MM_dd}.log");
                 // 使用File.AppendAllText对于批量内容仍然有效，但可以考虑更高级的文件写入方式
                 // 对于批量写入，这种方式已经比单条写入效率高很多
-                File.AppendAllText(logFileName, msg);
+                await File.AppendAllTextAsync(logFileName, msg);
             }
             catch
             {
