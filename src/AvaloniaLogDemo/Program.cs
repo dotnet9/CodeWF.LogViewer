@@ -1,7 +1,7 @@
 ﻿using Avalonia;
 using System;
 
-namespace AvaloniaLog4Net
+namespace AvaloniaLogDemo
 {
     internal sealed class Program
     {

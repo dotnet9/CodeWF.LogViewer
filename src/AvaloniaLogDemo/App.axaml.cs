@@ -1,9 +1,9 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using AvaloniaLog4Net.Views;
+using AvaloniaLogDemo.Views;
 
-namespace AvaloniaLog4Net
+namespace AvaloniaLogDemo
 {
     public partial class App : Application
     {

@@ -6,7 +6,7 @@ using CodeWF.LogViewer.Avalonia;
 using System;
 using System.Timers;
 
-namespace AvaloniaLog4Net.Views
+namespace AvaloniaLogDemo.Views
 {
     public partial class MainWindow : Window
     {
@@ -19,6 +19,7 @@ namespace AvaloniaLog4Net.Views
         {
             InitializeComponent();
             Logger.Level = LogType.Debug;
+            Logger.MaxLogFileSizeMB = 5;
             _performanceTimer = new Timer(100); // 100毫秒间隔
             _performanceTimer.Elapsed += PerformanceTimer_Elapsed;
         }

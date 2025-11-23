@@ -26,6 +26,13 @@ namespace CodeWF.LogViewer.Avalonia
         /// Specifies the default number of log entries to process in a single batch operation.
         /// </summary>
         public static int BatchProcessSize = 50;
+        
+        /// <summary>
+        /// Gets or sets the maximum size (in MB) for log files before they are rotated.
+        /// </summary>
+        /// <remarks>When a log file exceeds this size, it will be rotated to maintain manageable file sizes. 
+        /// The default value is 500 MB. This value must be greater than 0.</remarks>
+        public static int MaxLogFileSizeMB = 500;
 
         /// <summary>
         /// Represents a thread-safe queue of log entries for internal use.
@@ -219,7 +226,9 @@ namespace CodeWF.LogViewer.Avalonia
                     Directory.CreateDirectory(logFolder);
                 }
 
-                var logFileName = System.IO.Path.Combine(logFolder, $"Log_{DateTime.Now:yyyy_MM_dd}.log");
+                // 动态获取可用的日志文件路径
+                var logFileName = GetAvailableLogFilePath(logFolder, DateTime.Now);
+                
                 // 使用File.AppendAllText对于批量内容仍然有效，但可以考虑更高级的文件写入方式
                 // 对于批量写入，这种方式已经比单条写入效率高很多
                 await File.AppendAllTextAsync(logFileName, msg);
@@ -229,5 +238,47 @@ namespace CodeWF.LogViewer.Avalonia
                 // ignored
             }
         }
+        
+        /// <summary>
+        /// 动态获取可用的日志文件路径，从基础文件名开始检查大小，找到合适的文件
+        /// </summary>
+        /// <param name="logFolder">日志文件目录</param>
+        /// <param name="dateTime">日志日期</param>
+        /// <returns>可用的日志文件路径</returns>
+        private static string GetAvailableLogFilePath(string logFolder, DateTime dateTime)
+        {
+            // 确保MaxLogFileSizeMB为有效值
+            if (MaxLogFileSizeMB <= 0)
+            {
+                MaxLogFileSizeMB = 500; // 默认值
+            }
+            
+            var maxSizeBytes = (long)MaxLogFileSizeMB * 1024 * 1024; // 转换MB为字节
+            string baseName = dateTime.ToString("yyyy_MM_dd");
+            
+            // 先检查基础文件名
+            string logFilePath = Path.Combine(logFolder, $"Log_{baseName}.log");
+            
+            if (!File.Exists(logFilePath) || new FileInfo(logFilePath).Length < maxSizeBytes)
+            {
+                return logFilePath;
+            }
+            
+            // 如果基础文件已达到最大大小，查找下一个可用的序号文件
+            int sequenceNumber = 1;
+            while (true)
+            {
+                logFilePath = Path.Combine(logFolder, $"Log_{baseName}_{sequenceNumber}.log");
+                
+                if (!File.Exists(logFilePath) || new FileInfo(logFilePath).Length < maxSizeBytes)
+                {
+                    return logFilePath;
+                }
+                
+                sequenceNumber++;
+            }
+        }
+        
+
     }
 }
