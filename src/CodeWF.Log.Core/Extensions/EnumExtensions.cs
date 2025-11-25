@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
 
-namespace CodeWF.LogViewer.Avalonia.Extensions
+namespace CodeWF.Log.Core.Extensions
 {
     public static class EnumExtensions
     {

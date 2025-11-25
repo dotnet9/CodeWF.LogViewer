@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace CodeWF.LogViewer.Avalonia;
+namespace CodeWF.Log.Core;
 
 public readonly struct LogInfo
 {

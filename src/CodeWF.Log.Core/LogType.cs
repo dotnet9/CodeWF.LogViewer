@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace CodeWF.LogViewer.Avalonia
+namespace CodeWF.Log.Core
 {
     public enum LogType
     {

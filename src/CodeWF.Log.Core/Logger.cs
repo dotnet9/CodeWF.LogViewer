@@ -1,4 +1,4 @@
-﻿using CodeWF.LogViewer.Avalonia.Extensions;
+﻿using CodeWF.Log.Core.Extensions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CodeWF.LogViewer.Avalonia
+namespace CodeWF.Log.Core
 {
     public static class Logger
     {
@@ -37,7 +37,7 @@ namespace CodeWF.LogViewer.Avalonia
         /// <summary>
         /// Represents a thread-safe queue of log entries for internal use.
         /// </summary>
-        internal static readonly ConcurrentQueue<LogInfo> Logs = new();
+        public static readonly ConcurrentQueue<LogInfo> Logs = new();
 
         /// <summary>
         /// Starts a background task that continuously processes log entries in batches and writes them to a file.
