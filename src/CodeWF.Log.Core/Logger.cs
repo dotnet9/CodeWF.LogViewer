@@ -125,59 +125,59 @@ namespace CodeWF.Log.Core
             }
         }
 
-        public static void Log(int type, string content, string? friendlyContent = default)
+        public static void Log(int type, string content, string? friendlyContent = default, bool log2UI = true, bool log2File = true)
         {
             var logType = (LogType)type;
             if (Level > logType) return;
-            Logs.Enqueue(new LogInfo(logType, content, friendlyContent));
+            Logs.Enqueue(new LogInfo(logType, content, friendlyContent, log2UI, log2File));
         }
 
-        public static void Log(LogType type, string content, string? friendlyContent = default)
+        public static void Log(LogType type, string content, string? friendlyContent = default, bool log2UI = true, bool log2File = true)
         {
             if (Level > type) return;
-            Logs.Enqueue(new LogInfo(type, content, friendlyContent));
+            Logs.Enqueue(new LogInfo(type, content, friendlyContent, log2UI, log2File));
         }
 
-        public static void Debug(string content, string? friendlyContent = default)
+        public static void Debug(string content, string? friendlyContent = default, bool log2UI = true, bool log2File = true)
         {
             if (Level <= LogType.Debug)
             {
-                Logs.Enqueue(new LogInfo(LogType.Debug, content, friendlyContent));
+                Logs.Enqueue(new LogInfo(LogType.Debug, content, friendlyContent, log2UI, log2File));
             }
         }
 
-        public static void Info(string content, string? friendlyContent = default)
+        public static void Info(string content, string? friendlyContent = default, bool log2UI = true, bool log2File = true)
         {
             if (Level <= LogType.Info)
             {
-                Logs.Enqueue(new LogInfo(LogType.Info, content, friendlyContent));
+                Logs.Enqueue(new LogInfo(LogType.Info, content, friendlyContent, log2UI, log2File));
             }
         }
 
-        public static void Warn(string content, string? friendlyContent = default)
+        public static void Warn(string content, string? friendlyContent = default, bool log2UI = true, bool log2File = true)
         {
             if (Level <= LogType.Warn)
             {
-                Logs.Enqueue(new LogInfo(LogType.Warn, content, friendlyContent));
+                Logs.Enqueue(new LogInfo(LogType.Warn, content, friendlyContent, log2UI, log2File));
             }
         }
 
-        public static void Error(string content, Exception? ex = null, string? friendlyContent = default)
+        public static void Error(string content, Exception? ex = null, string? friendlyContent = default, bool log2UI = true, bool log2File = true)
         {
             if (Level > LogType.Error) return;
 
             var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
 
-            Logs.Enqueue(new LogInfo(LogType.Error, msg, friendlyContent));
+            Logs.Enqueue(new LogInfo(LogType.Error, msg, friendlyContent, log2UI, log2File));
         }
 
-        public static void Fatal(string content, Exception? ex = null, string? friendlyContent = default)
+        public static void Fatal(string content, Exception? ex = null, string? friendlyContent = default, bool log2UI = true, bool log2File = true)
         {
             if (Level > LogType.Fatal) return;
 
             var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
 
-            Logs.Enqueue(new LogInfo(LogType.Fatal, msg, friendlyContent));
+            Logs.Enqueue(new LogInfo(LogType.Fatal, msg, friendlyContent, log2UI, log2File));
         }
 
         public static async Task AddLogToFileAsync(LogInfo logInfo)

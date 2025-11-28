@@ -91,10 +91,6 @@ public partial class LogView : UserControl
             var logsBatch = new List<LogInfo>();
             var token = _cancellationTokenSource.Token;
 
-            // 用于节流UI更新的计数器
-            int uiUpdateThrottleCounter = 0;
-            const int UiUpdateThrottle = 3; // 每3批只更新一次UI
-
             try
             {
                 while (!token.IsCancellationRequested)
@@ -115,21 +111,24 @@ public partial class LogView : UserControl
 
                     if (logsBatch.Count > 0)
                     {
-                        // 立即写入文件，避免阻塞UI线程
-                        Task.Run(async () =>
-                        {
-                            try
+                        // 写入文件，避免阻塞UI线程
+                        var toFileLogs = logsBatch.Where(log => log.Log2File).ToList();
+                        if (toFileLogs?.Any() == true)
+                        { 
+                            await Task.Run(async () =>
                             {
-                                await Logger.AddLogBatchToFileAsync(logsBatch);
-                            }
-                            catch { /* ignored */ }
-                        }, token);
+                                try
+                                {
+                                    await Logger.AddLogBatchToFileAsync(toFileLogs);
+                                }
+                                catch { /* ignored */ }
+                            }, token);
+                        }
 
-                        // UI更新节流 - 减少UI更新频率
-                        uiUpdateThrottleCounter++;
-                        if (uiUpdateThrottleCounter >= UiUpdateThrottle || Logger.Logs.Count == 0)
+                        // UI更新
+                        var toUILogs = logsBatch.Where(log => log.Log2UI).ToList();
+                        if (toUILogs?.Any() == true)
                         {
-                            uiUpdateThrottleCounter = 0;
                             _synchronizationContext.Post(o =>
                             {
                                 try
@@ -137,7 +136,7 @@ public partial class LogView : UserControl
                                     UpdateLogUI((List<LogInfo>)o);
                                 }
                                 catch { /* ignored */ }
-                            }, logsBatch.ToList()); // 传递副本避免并发问题
+                            }, toUILogs); // 传递副本避免并发问题
                         }
                     }
 
@@ -156,26 +155,11 @@ public partial class LogView : UserControl
         });
     }
 
-    private void LogNotifyHandler(LogInfo logInfo)
-    {
-        // 这个方法现在仅作为兼容保留，实际处理已移至批量处理方法
-        if (Logger.Level > logInfo.Level) return;
-
-        _synchronizationContext.Post(o =>
-        {
-            try
-            {
-                UpdateLogUI(new System.Collections.Generic.List<LogInfo> { (LogInfo)o });
-            }
-            catch { /* ignored */ }
-        }, logInfo);
-    }
-
     /// <summary>
     /// 批量更新日志UI
     /// </summary>
     /// <param name="logsBatch">日志批次</param>
-    private void UpdateLogUI(System.Collections.Generic.List<LogInfo> logsBatch)
+    private void UpdateLogUI(List<LogInfo> logsBatch)
     {
         if (logsBatch == null || logsBatch.Count == 0)
             return;
@@ -213,7 +197,7 @@ public partial class LogView : UserControl
             }
 
             // 批量添加日志到UI
-            var runs = new System.Collections.Generic.List<Inline>();
+            var runs = new List<Inline>();
             foreach (var logInfo in logsBatch)
             {
                 runs.Add(new Run($"{logInfo.RecordTime}")
@@ -244,16 +228,6 @@ public partial class LogView : UserControl
             {
                 inlines.Add(run);
             }
-
-            // 批量写入文件 - 重要优化：批量构建日志内容，单次写入文件
-            Task.Run(async () =>
-            {
-                try
-                {
-                    await Logger.AddLogBatchToFileAsync(logsBatch);
-                }
-                catch { /* ignored */ }
-            });
 
             // 减少滚动频率，使用Dispatcher降低优先级避免阻塞UI线程
             bool isFinalBatch = Logger.Logs.Count == 0;

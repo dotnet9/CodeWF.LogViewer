@@ -4,7 +4,7 @@ namespace CodeWF.Log.Core;
 
 public readonly struct LogInfo
 {
-    public LogInfo(LogType logType, string description, string? friendlyDescription)
+    public LogInfo(LogType logType, string description, string? friendlyDescription, bool log2UI, bool log2File)
     {
         RecordTime = DateTime.Now;
         Level = logType;
@@ -17,6 +17,8 @@ public readonly struct LogInfo
         {
             FriendlyDescription = friendlyDescription;
         }
+        Log2UI = log2UI;
+        Log2File = log2File;
     }
 
     public LogType Level { get; }
@@ -26,4 +28,6 @@ public readonly struct LogInfo
     public string Description { get; }
 
     public string FriendlyDescription { get; }
+    public bool Log2UI { get; } = true;
+    public bool Log2File { get; } = true;
 }
