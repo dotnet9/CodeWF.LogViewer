@@ -11,42 +11,41 @@ namespace CodeWF.Log.Core
     public static class Logger
     {
         /// <summary>
-        /// Gets or sets the current log level used for logging operations.
+        /// 获取或设置用于日志记录操作的当前日志级别。
         /// </summary>
         public static LogType Level = LogType.Info;
 
         /// <summary>
-        /// Specifies the directory where log files are stored.
+        /// 指定存储日志文件的目录。
         /// </summary>
-        /// <remarks>The default value is the application's base directory. Update this field to change
-        /// the log file location as needed.</remarks>
+        /// <remarks>默认值是应用程序的基目录。根据需要更新此字段以更改日志文件位置。</remarks>
         public static string LogDir = AppDomain.CurrentDomain.BaseDirectory;
 
         /// <summary>
-        /// Specifies the default number of log entries to process in a single batch operation.
+        /// 指定单次批处理操作中要处理的默认日志条目数。
         /// </summary>
         public static int BatchProcessSize = 50;
-        
+
         /// <summary>
-        /// Gets or sets the maximum size (in MB) for log files before they are rotated.
+        /// 获取或设置日志文件在轮换前的最大大小（以MB为单位）。
         /// </summary>
-        /// <remarks>When a log file exceeds this size, it will be rotated to maintain manageable file sizes. 
-        /// The default value is 500 MB. This value must be greater than 0.</remarks>
+        /// <remarks>当日志文件超过此大小时，将进行轮换以保持文件大小可管理。
+        /// 默认值为500 MB。此值必须大于0。</remarks>
         public static int MaxLogFileSizeMB = 500;
 
         /// <summary>
-        /// Represents a thread-safe queue of log entries for internal use.
+        /// 表示内部使用的线程安全日志条目队列。
         /// </summary>
         public static readonly ConcurrentQueue<LogInfo> Logs = new();
 
         /// <summary>
-        /// Starts a background task that continuously processes log entries in batches and writes them to a file.
+        /// 注：非UI项目使用，如果使用了UI项目，则不用调用此方法。
+        /// 启动后台任务，持续批量处理日志条目并将其写入文件。
         /// </summary>
-        /// <remarks>This method is intended to be called once during application startup to enable
-        /// asynchronous, batched log file writing. It processes log entries from an internal queue, writing them to the
-        /// file in groups to improve performance. The method does not block the calling thread and returns immediately.
-        /// Multiple invocations may result in multiple background tasks writing logs concurrently, which may not be
-        /// intended.</remarks>
+        /// <remarks>此方法旨在应用程序启动期间调用一次，以启用异步批量日志文件写入。
+        /// 它从内部队列处理日志条目，将它们分组写入文件以提高性能。
+        /// 该方法不会阻塞调用线程，而是立即返回。
+        /// 多次调用可能导致多个后台任务同时写入日志，这可能不是预期的。</remarks>
         public static void RecordToFile()
         {
             Task.Run(async () =>
@@ -94,6 +93,11 @@ namespace CodeWF.Log.Core
             });
         }
 
+        /// <summary>
+        /// 从队列中移除并返回日志信息
+        /// </summary>
+        /// <param name="info">返回的日志信息</param>
+        /// <returns>如果成功移除并返回日志信息则返回true，否则返回false</returns>
         public static bool TryDequeue(out LogInfo info)
         {
             return Logs.TryDequeue(out info);
@@ -228,7 +232,7 @@ namespace CodeWF.Log.Core
 
                 // 动态获取可用的日志文件路径
                 var logFileName = GetAvailableLogFilePath(logFolder, DateTime.Now);
-                
+
                 // 使用File.AppendAllText对于批量内容仍然有效，但可以考虑更高级的文件写入方式
                 // 对于批量写入，这种方式已经比单条写入效率高很多
                 await File.AppendAllTextAsync(logFileName, msg);
@@ -238,7 +242,7 @@ namespace CodeWF.Log.Core
                 // ignored
             }
         }
-        
+
         /// <summary>
         /// 动态获取可用的日志文件路径，从基础文件名开始检查大小，找到合适的文件
         /// </summary>
@@ -252,33 +256,33 @@ namespace CodeWF.Log.Core
             {
                 MaxLogFileSizeMB = 500; // 默认值
             }
-            
+
             var maxSizeBytes = (long)MaxLogFileSizeMB * 1024 * 1024; // 转换MB为字节
             string baseName = dateTime.ToString("yyyy_MM_dd");
-            
+
             // 先检查基础文件名
             string logFilePath = Path.Combine(logFolder, $"Log_{baseName}.log");
-            
+
             if (!File.Exists(logFilePath) || new FileInfo(logFilePath).Length < maxSizeBytes)
             {
                 return logFilePath;
             }
-            
+
             // 如果基础文件已达到最大大小，查找下一个可用的序号文件
             int sequenceNumber = 1;
             while (true)
             {
                 logFilePath = Path.Combine(logFolder, $"Log_{baseName}_{sequenceNumber}.log");
-                
+
                 if (!File.Exists(logFilePath) || new FileInfo(logFilePath).Length < maxSizeBytes)
                 {
                     return logFilePath;
                 }
-                
+
                 sequenceNumber++;
             }
         }
-        
+
 
     }
 }
