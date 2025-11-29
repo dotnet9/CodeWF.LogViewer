@@ -129,61 +129,252 @@ namespace CodeWF.Log.Core
             }
         }
 
-        public static void Log(int type, string content, string? friendlyContent = default, bool log2UI = true, bool log2File = true)
+        /// <summary>
+        /// 记录日志信息（使用整数类型参数）
+        /// </summary>
+        /// <param name="type">日志类型整数（将转换为LogType枚举）</param>
+        /// <param name="content">日志内容（将写入日志文件）</param>
+        /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
+        /// <param name="log2UI">是否输出到UI界面，默认为true</param>
+        /// <param name="log2File">是否输出到日志文件，默认为true</param>
+        public static void Log(int type, string content, string? uiContent = default, bool log2UI = true, bool log2File = true)
         {
             var logType = (LogType)type;
             if (Level > logType) return;
-            Logs.Enqueue(new LogInfo(logType, content, friendlyContent, log2UI, log2File));
+            Logs.Enqueue(new LogInfo(logType, content, uiContent, log2UI, log2File));
         }
 
-        public static void Log(LogType type, string content, string? friendlyContent = default, bool log2UI = true, bool log2File = true)
+        /// <summary>
+        /// 只往文件输出日志，不输出到UI
+        /// </summary>
+        /// <param name="type">日志类型整数</param>
+        /// <param name="content">日志内容</param>
+        public static void LogToFile(int type, string content)
+        {
+            Log(type, content, null, log2UI: false, log2File: true);
+        }
+
+        /// <summary>
+        /// 只往UI输出日志，不输出到文件
+        /// </summary>
+        /// <param name="type">日志类型整数</param>
+        /// <param name="content">日志内容（同时作为UI显示内容）</param>
+        public static void LogToUI(int type, string content)
+        {
+            Log(type, content, content, log2UI: true, log2File: false);
+        }
+
+        /// <summary>
+        /// 记录日志信息
+        /// </summary>
+        /// <param name="type">日志类型</param>
+        /// <param name="content">日志内容（将写入日志文件）</param>
+        /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
+        /// <param name="log2UI">是否输出到UI界面，默认为true</param>
+        /// <param name="log2File">是否输出到日志文件，默认为true</param>
+        public static void Log(LogType type, string content, string? uiContent = default, bool log2UI = true, bool log2File = true)
         {
             if (Level > type) return;
-            Logs.Enqueue(new LogInfo(type, content, friendlyContent, log2UI, log2File));
+            Logs.Enqueue(new LogInfo(type, content, uiContent, log2UI, log2File));
         }
 
-        public static void Debug(string content, string? friendlyContent = default, bool log2UI = true, bool log2File = true)
+        /// <summary>
+        /// 只往文件输出日志，不输出到UI
+        /// </summary>
+        /// <param name="type">日志类型</param>
+        /// <param name="content">日志内容</param>
+        public static void LogToFile(LogType type, string content)
+        {
+            Log(type, content, null, log2UI: false, log2File: true);
+        }
+
+        /// <summary>
+        /// 只往UI输出日志，不输出到文件
+        /// </summary>
+        /// <param name="type">日志类型</param>
+        /// <param name="content">日志内容（同时作为UI显示内容）</param>
+        public static void LogToUI(LogType type, string content)
+        {
+            Log(type, content, content, log2UI: true, log2File: false);
+        }
+
+        /// <summary>
+        /// 记录调试日志
+        /// </summary>
+        /// <param name="content">日志内容（将写入日志文件）</param>
+        /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
+        /// <param name="log2UI">是否输出到UI界面，默认为true</param>
+        /// <param name="log2File">是否输出到日志文件，默认为true</param>
+        public static void Debug(string content, string? uiContent = default, bool log2UI = true, bool log2File = true)
         {
             if (Level <= LogType.Debug)
             {
-                Logs.Enqueue(new LogInfo(LogType.Debug, content, friendlyContent, log2UI, log2File));
+                Logs.Enqueue(new LogInfo(LogType.Debug, content, uiContent, log2UI, log2File));
             }
         }
 
-        public static void Info(string content, string? friendlyContent = default, bool log2UI = true, bool log2File = true)
+        /// <summary>
+        /// 只往文件输出调试日志，不输出到UI
+        /// </summary>
+        /// <param name="content">日志内容</param>
+        public static void DebugToFile(string content)
+        {
+            Debug(content, null, log2UI: false, log2File: true);
+        }
+
+        /// <summary>
+        /// 只往UI输出调试日志，不输出到文件
+        /// </summary>
+        /// <param name="content">日志内容（同时作为UI显示内容）</param>
+        public static void DebugToUI(string content)
+        {
+            Debug(content, content, log2UI: true, log2File: false);
+        }
+
+        /// <summary>
+        /// 记录信息日志
+        /// </summary>
+        /// <param name="content">日志内容（将写入日志文件）</param>
+        /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
+        /// <param name="log2UI">是否输出到UI界面，默认为true</param>
+        /// <param name="log2File">是否输出到日志文件，默认为true</param>
+        public static void Info(string content, string? uiContent = default, bool log2UI = true, bool log2File = true)
         {
             if (Level <= LogType.Info)
             {
-                Logs.Enqueue(new LogInfo(LogType.Info, content, friendlyContent, log2UI, log2File));
+                Logs.Enqueue(new LogInfo(LogType.Info, content, uiContent, log2UI, log2File));
             }
         }
 
-        public static void Warn(string content, string? friendlyContent = default, bool log2UI = true, bool log2File = true)
+        /// <summary>
+        /// 只往文件输出信息日志，不输出到UI
+        /// </summary>
+        /// <param name="content">日志内容</param>
+        public static void InfoToFile(string content)
+        {
+            Info(content, null, log2UI: false, log2File: true);
+        }
+
+        /// <summary>
+        /// 只往UI输出信息日志，不输出到文件
+        /// </summary>
+        /// <param name="content">日志内容（同时作为UI显示内容）</param>
+        public static void InfoToUI(string content)
+        {
+            Info(content, content, log2UI: true, log2File: false);
+        }
+
+        /// <summary>
+        /// 记录警告日志
+        /// </summary>
+        /// <param name="content">日志内容（将写入日志文件）</param>
+        /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
+        /// <param name="log2UI">是否输出到UI界面，默认为true</param>
+        /// <param name="log2File">是否输出到日志文件，默认为true</param>
+        public static void Warn(string content, string? uiContent = default, bool log2UI = true, bool log2File = true)
         {
             if (Level <= LogType.Warn)
             {
-                Logs.Enqueue(new LogInfo(LogType.Warn, content, friendlyContent, log2UI, log2File));
+                Logs.Enqueue(new LogInfo(LogType.Warn, content, uiContent, log2UI, log2File));
             }
         }
 
-        public static void Error(string content, Exception? ex = null, string? friendlyContent = default, bool log2UI = true, bool log2File = true)
+        /// <summary>
+        /// 只往文件输出警告日志，不输出到UI
+        /// </summary>
+        /// <param name="content">日志内容</param>
+        public static void WarnToFile(string content)
+        {
+            Warn(content, null, log2UI: false, log2File: true);
+        }
+
+        /// <summary>
+        /// 只往UI输出警告日志，不输出到文件
+        /// </summary>
+        /// <param name="content">日志内容（同时作为UI显示内容）</param>
+        public static void WarnToUI(string content)
+        {
+            Warn(content, content, log2UI: true, log2File: false);
+        }
+
+        /// <summary>
+        /// 记录错误日志
+        /// </summary>
+        /// <param name="content">错误日志内容（将写入日志文件）</param>
+        /// <param name="ex">异常信息（可选，若提供，将在日志中包含异常堆栈信息）</param>
+        /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
+        /// <param name="log2UI">是否输出到UI界面，默认为true</param>
+        /// <param name="log2File">是否输出到日志文件，默认为true</param>
+        public static void Error(string content, Exception? ex = null, string? uiContent = default, bool log2UI = true, bool log2File = true)
         {
             if (Level > LogType.Error) return;
 
             var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
 
-            Logs.Enqueue(new LogInfo(LogType.Error, msg, friendlyContent, log2UI, log2File));
+            Logs.Enqueue(new LogInfo(LogType.Error, msg, uiContent, log2UI, log2File));
         }
 
-        public static void Fatal(string content, Exception? ex = null, string? friendlyContent = default, bool log2UI = true, bool log2File = true)
+        /// <summary>
+        /// 只往文件输出错误日志，不输出到UI
+        /// </summary>
+        /// <param name="content">日志内容</param>
+        /// <param name="ex">异常信息</param>
+        public static void ErrorToFile(string content, Exception? ex = null)
+        {
+            Error(content, ex, null, log2UI: false, log2File: true);
+        }
+
+        /// <summary>
+        /// 只往UI输出错误日志，不输出到文件
+        /// </summary>
+        /// <param name="content">日志内容（同时作为UI显示内容）</param>
+        /// <param name="ex">异常信息</param>
+        public static void ErrorToUI(string content, Exception? ex = null)
+        {
+            Error(content, ex, content, log2UI: true, log2File: false);
+        }
+
+        /// <summary>
+        /// 记录致命错误日志
+        /// </summary>
+        /// <param name="content">致命错误日志内容（将写入日志文件）</param>
+        /// <param name="ex">异常信息（可选，若提供，将在日志中包含异常堆栈信息）</param>
+        /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
+        /// <param name="log2UI">是否输出到UI界面，默认为true</param>
+        /// <param name="log2File">是否输出到日志文件，默认为true</param>
+        public static void Fatal(string content, Exception? ex = null, string? uiContent = default, bool log2UI = true, bool log2File = true)
         {
             if (Level > LogType.Fatal) return;
 
             var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
 
-            Logs.Enqueue(new LogInfo(LogType.Fatal, msg, friendlyContent, log2UI, log2File));
+            Logs.Enqueue(new LogInfo(LogType.Fatal, msg, uiContent, log2UI, log2File));
         }
 
+        /// <summary>
+        /// 只往文件输出致命错误日志，不输出到UI
+        /// </summary>
+        /// <param name="content">日志内容</param>
+        /// <param name="ex">异常信息</param>
+        public static void FatalToFile(string content, Exception? ex = null)
+        {
+            Fatal(content, ex, null, log2UI: false, log2File: true);
+        }
+
+        /// <summary>
+        /// 只往UI输出致命错误日志，不输出到文件
+        /// </summary>
+        /// <param name="content">日志内容（同时作为UI显示内容）</param>
+        /// <param name="ex">异常信息</param>
+        public static void FatalToUI(string content, Exception? ex = null)
+        {
+            Fatal(content, ex, content, log2UI: true, log2File: false);
+        }
+
+        /// <summary>
+        /// 将单个日志信息异步写入文件
+        /// </summary>
+        /// <param name="logInfo">日志信息对象</param>
         public static async Task AddLogToFileAsync(LogInfo logInfo)
         {
             await AddLogToFileAsync(
@@ -219,6 +410,13 @@ namespace CodeWF.Log.Core
             }
         }
 
+        /// <summary>
+        /// 将日志内容异步写入文件
+        /// </summary>
+        /// <param name="msg">要写入的日志内容</param>
+        /// <remarks>此方法会自动创建日志目录（如果不存在），
+        /// 并根据当前日期和文件大小动态选择合适的日志文件。
+        /// 如果写入过程中发生异常，异常将被捕获并忽略，以避免影响主程序运行。</remarks>
         public static async Task AddLogToFileAsync(string msg)
         {
             try

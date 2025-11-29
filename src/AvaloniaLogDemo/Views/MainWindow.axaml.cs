@@ -54,7 +54,7 @@ namespace AvaloniaLogDemo.Views
         private void AddErrorLog_OnClick(object? sender, RoutedEventArgs e)
         {
             Logger.Error($"[接口调用] - 访问[订单接口]时发生异常信息：{new Exception("服务器错误").Message}"
-                , friendlyContent: "[友好日志，只显示在UI上]订单接口不正确，请联系管理员", log2UI: _log2UI.IsChecked == true, log2File: _log2File.IsChecked == true);
+                , uiContent: "[友好日志，只显示在UI上]订单接口不正确，请联系管理员", log2UI: _log2UI.IsChecked == true, log2File: _log2File.IsChecked == true);
         }
 
         private void AddFatalLog_OnClick(object? sender, RoutedEventArgs e)
