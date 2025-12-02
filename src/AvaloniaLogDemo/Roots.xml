@@ -1,0 +1,5 @@
+<linker>
+	<assembly fullname="AvaloniaLogDemo" preserve="All" />
+	<assembly fullname="CodeWF.LogViewer.Avalonia" preserve="All" />
+	<assembly fullname="CodeWF.Log.Core" preserve="All" />
+</linker>
