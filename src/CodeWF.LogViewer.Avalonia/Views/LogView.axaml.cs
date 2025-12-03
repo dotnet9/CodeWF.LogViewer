@@ -290,7 +290,10 @@ public partial class LogView : UserControl
             {
                 Directory.CreateDirectory(logFolder);
             }
-            Process.Start("explorer.exe", logFolder);
+            Process.Start(new ProcessStartInfo("explorer.exe", logFolder) 
+            {
+                UseShellExecute = true
+            });
         }
         catch (Exception ex)
         {
