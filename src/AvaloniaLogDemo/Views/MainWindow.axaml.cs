@@ -25,6 +25,7 @@ namespace AvaloniaLogDemo.Views
             _log2File = this.FindControl<CheckBox>("Log2File");
             Logger.Level = LogType.Debug;
             Logger.MaxLogFileSizeMB = 5;
+            Logger.TimeFormat = "yyyy-MM-dd HH:mm:ss.fff";
             _performanceTimer = new Timer(100); // 100毫秒间隔
             _performanceTimer.Elapsed += PerformanceTimer_Elapsed;
         }

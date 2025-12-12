@@ -200,7 +200,7 @@ public partial class LogView : UserControl
             var runs = new List<Inline>();
             foreach (var logInfo in logsBatch)
             {
-                runs.Add(new Run($"{logInfo.RecordTime}")
+                runs.Add(new Run($"{logInfo.RecordTime.ToString(Logger.TimeFormat)}")
                 {
                     Foreground = _grayBrush,
                     BaselineAlignment = BaselineAlignment.Center

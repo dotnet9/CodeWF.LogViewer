@@ -34,6 +34,11 @@ namespace CodeWF.Log.Core
         public static int MaxLogFileSizeMB = 500;
 
         /// <summary>
+        /// 时间戳格式字符串，用于日志记录中的时间显示。默认格式为"yyyy-MM-dd HH:mm:ss"。
+        /// </summary>
+        public static string TimeFormat= "yyyy-MM-dd HH:mm:ss";
+
+        /// <summary>
         /// 表示内部使用的线程安全日志条目队列。
         /// </summary>
         public static readonly ConcurrentQueue<LogInfo> Logs = new();
@@ -74,7 +79,7 @@ namespace CodeWF.Log.Core
                         foreach (var log in logsInBatch)
                         {
                             logContentBuilder.AppendLine(
-                                $"{log.RecordTime}: {log.Level.Description()} {log.Description}");
+                                $"{log.RecordTime.ToString(TimeFormat)}: {log.Level.Description()} {log.Description}");
                         }
 
                         // 批量写入文件（只打开和关闭文件一次）
@@ -378,7 +383,7 @@ namespace CodeWF.Log.Core
         public static async Task AddLogToFileAsync(LogInfo logInfo)
         {
             await AddLogToFileAsync(
-                $"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}{Environment.NewLine}");
+                $"{logInfo.RecordTime.ToString(TimeFormat)}: {logInfo.Level.Description()} {logInfo.Description}{Environment.NewLine}");
         }
 
         /// <summary>
@@ -398,7 +403,7 @@ namespace CodeWF.Log.Core
                 foreach (var logInfo in logsBatch)
                 {
                     logContentBuilder.AppendLine(
-                        $"{logInfo.RecordTime}: {logInfo.Level.Description()} {logInfo.Description}");
+                        $"{logInfo.RecordTime.ToString(TimeFormat)}: {logInfo.Level.Description()} {logInfo.Description}");
                 }
 
                 // 只调用一次文件写入，大幅减少I/O操作
