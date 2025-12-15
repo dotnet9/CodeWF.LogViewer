@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeWF.LogViewer.Avalonia",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeWF.Log.Core", "CodeWF.Log.Core\CodeWF.Log.Core.csproj", "{6F7470BE-0E3F-3765-2DFB-85A795C564E1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleLogDemo", "ConsoleLogDemo\ConsoleLogDemo.csproj", "{0D9928E8-910A-7E0C-30FA-42689F8A7258}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -37,6 +39,10 @@ Global
 		{6F7470BE-0E3F-3765-2DFB-85A795C564E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6F7470BE-0E3F-3765-2DFB-85A795C564E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6F7470BE-0E3F-3765-2DFB-85A795C564E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0D9928E8-910A-7E0C-30FA-42689F8A7258}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D9928E8-910A-7E0C-30FA-42689F8A7258}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D9928E8-910A-7E0C-30FA-42689F8A7258}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0D9928E8-910A-7E0C-30FA-42689F8A7258}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -45,6 +51,7 @@ Global
 		{F1F422F9-48AB-41B8-999A-6A2595BEC5C4} = {53654337-FF17-4F13-A081-69801A2AE290}
 		{436879CE-EFDA-4F58-A1D3-44E5AF515F2E} = {A7FA457D-7E77-4B21-958F-F45A51EF8163}
 		{6F7470BE-0E3F-3765-2DFB-85A795C564E1} = {A7FA457D-7E77-4B21-958F-F45A51EF8163}
+		{0D9928E8-910A-7E0C-30FA-42689F8A7258} = {53654337-FF17-4F13-A081-69801A2AE290}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7685ED0A-581B-42BC-9613-64AD00D124D6}

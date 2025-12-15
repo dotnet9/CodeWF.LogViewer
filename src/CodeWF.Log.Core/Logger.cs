@@ -55,6 +55,11 @@ namespace CodeWF.Log.Core
         public static string TimeFormat = "yyyy-MM-dd HH:mm:ss";
 
         /// <summary>
+        /// 是否允许将日志输出到控制台，默认允许
+        /// </summary>
+        public static bool EnableConsoleOutput { get; set; } = true;
+
+        /// <summary>
         /// 表示内部使用的线程安全日志条目队列。
         /// </summary>
         public static readonly ConcurrentQueue<LogInfo> Logs = new();
@@ -147,11 +152,19 @@ namespace CodeWF.Log.Core
         /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
         /// <param name="log2UI">是否输出到UI界面，默认为true</param>
         /// <param name="log2File">是否输出到日志文件，默认为true</param>
+        /// <param name="log2Console">是否输出到控制台，默认为true</param>
         public static void Log(int type, string content, string? uiContent = default, bool log2UI = true,
-            bool log2File = true)
+            bool log2File = true, bool log2Console = true)
         {
             var logType = (LogType)type;
             if (Level > logType) return;
+            
+            // 输出到控制台（如果允许）
+            if (EnableConsoleOutput && log2Console)
+            {
+                WriteToConsole(logType, content);
+            }
+            
             Logs.Enqueue(new LogInfo(logType, content, uiContent, log2UI, log2File));
         }
 
@@ -183,10 +196,18 @@ namespace CodeWF.Log.Core
         /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
         /// <param name="log2UI">是否输出到UI界面，默认为true</param>
         /// <param name="log2File">是否输出到日志文件，默认为true</param>
+        /// <param name="log2Console">是否输出到控制台，默认为true</param>
         public static void Log(LogType type, string content, string? uiContent = default, bool log2UI = true,
-            bool log2File = true)
+            bool log2File = true, bool log2Console = true)
         {
             if (Level > type) return;
+            
+            // 输出到控制台（如果允许）
+            if (EnableConsoleOutput && log2Console)
+            {
+                WriteToConsole(type, content);
+            }
+            
             Logs.Enqueue(new LogInfo(type, content, uiContent, log2UI, log2File));
         }
 
@@ -197,7 +218,53 @@ namespace CodeWF.Log.Core
         /// <param name="content">日志内容</param>
         public static void LogToFile(LogType type, string content)
         {
-            Log(type, content, null, log2UI: false, log2File: true);
+            Log(type, content, null, log2UI: false, log2File: true, log2Console: false);
+        }
+
+        /// <summary>
+        /// 根据日志类型将日志输出到控制台，使用不同的前景色
+        /// </summary>
+        /// <param name="logType">日志类型</param>
+        /// <param name="content">日志内容</param>
+        private static void WriteToConsole(LogType logType, string content)
+        {
+            try
+            {
+                string timestamp = DateTime.Now.ToString(TimeFormat);
+                string logContent = $"{timestamp}: {logType.Description()} {content}";
+                
+                // 根据日志类型设置不同的前景色，参考LogView.axaml.cs中的颜色定义
+                switch (logType)
+                {
+                    case LogType.Debug:
+                        Console.ForegroundColor = ConsoleColor.Cyan; // 对应LogView.axaml.cs中的#1890FF（蓝色系）
+                        break;
+                    case LogType.Info:
+                        Console.ForegroundColor = ConsoleColor.Green; // 对应LogView.axaml.cs中的#52C41A（绿色系）
+                        break;
+                    case LogType.Warn:
+                        Console.ForegroundColor = ConsoleColor.Yellow; // 对应LogView.axaml.cs中的#FAAD14（黄色系）
+                        break;
+                    case LogType.Error:
+                        Console.ForegroundColor = ConsoleColor.Red; // 对应LogView.axaml.cs中的#FF4D4F（红色系）
+                        break;
+                    case LogType.Fatal:
+                        Console.ForegroundColor = ConsoleColor.Red; // 对应LogView.axaml.cs中的#FF4D4F（红色系）
+                        break;
+                    default:
+                        Console.ForegroundColor = ConsoleColor.White;
+                        break;
+                }
+                
+                Console.WriteLine(logContent);
+                
+                // 恢复默认颜色
+                Console.ResetColor();
+            }
+            catch
+            {
+                // 忽略控制台输出异常
+            }
         }
 
         /// <summary>
@@ -217,10 +284,17 @@ namespace CodeWF.Log.Core
         /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
         /// <param name="log2UI">是否输出到UI界面，默认为true</param>
         /// <param name="log2File">是否输出到日志文件，默认为true</param>
-        public static void Debug(string content, string? uiContent = default, bool log2UI = true, bool log2File = true)
+        /// <param name="log2Console">是否输出到控制台，默认为true</param>
+        public static void Debug(string content, string? uiContent = default, bool log2UI = true, bool log2File = true, bool log2Console = true)
         {
             if (Level <= LogType.Debug)
             {
+                // 输出到控制台（如果允许）
+                if (EnableConsoleOutput && log2Console)
+                {
+                    WriteToConsole(LogType.Debug, content);
+                }
+                
                 Logs.Enqueue(new LogInfo(LogType.Debug, content, uiContent, log2UI, log2File));
             }
         }
@@ -231,7 +305,7 @@ namespace CodeWF.Log.Core
         /// <param name="content">日志内容</param>
         public static void DebugToFile(string content)
         {
-            Debug(content, null, log2UI: false, log2File: true);
+            Debug(content, null, log2UI: false, log2File: true, log2Console: false);
         }
 
         /// <summary>
@@ -240,7 +314,7 @@ namespace CodeWF.Log.Core
         /// <param name="content">日志内容（同时作为UI显示内容）</param>
         public static void DebugToUI(string content)
         {
-            Debug(content, content, log2UI: true, log2File: false);
+            Debug(content, content, log2UI: true, log2File: false, log2Console: true);
         }
 
         /// <summary>
@@ -250,10 +324,17 @@ namespace CodeWF.Log.Core
         /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
         /// <param name="log2UI">是否输出到UI界面，默认为true</param>
         /// <param name="log2File">是否输出到日志文件，默认为true</param>
-        public static void Info(string content, string? uiContent = default, bool log2UI = true, bool log2File = true)
+        /// <param name="log2Console">是否输出到控制台，默认为true</param>
+        public static void Info(string content, string? uiContent = default, bool log2UI = true, bool log2File = true, bool log2Console = true)
         {
             if (Level <= LogType.Info)
             {
+                // 输出到控制台（如果允许）
+                if (EnableConsoleOutput && log2Console)
+                {
+                    WriteToConsole(LogType.Info, content);
+                }
+                
                 Logs.Enqueue(new LogInfo(LogType.Info, content, uiContent, log2UI, log2File));
             }
         }
@@ -264,7 +345,7 @@ namespace CodeWF.Log.Core
         /// <param name="content">日志内容</param>
         public static void InfoToFile(string content)
         {
-            Info(content, null, log2UI: false, log2File: true);
+            Info(content, null, log2UI: false, log2File: true, log2Console: false);
         }
 
         /// <summary>
@@ -273,7 +354,7 @@ namespace CodeWF.Log.Core
         /// <param name="content">日志内容（同时作为UI显示内容）</param>
         public static void InfoToUI(string content)
         {
-            Info(content, content, log2UI: true, log2File: false);
+            Info(content, content, log2UI: true, log2File: false, log2Console: true);
         }
 
         /// <summary>
@@ -283,10 +364,17 @@ namespace CodeWF.Log.Core
         /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
         /// <param name="log2UI">是否输出到UI界面，默认为true</param>
         /// <param name="log2File">是否输出到日志文件，默认为true</param>
-        public static void Warn(string content, string? uiContent = default, bool log2UI = true, bool log2File = true)
+        /// <param name="log2Console">是否输出到控制台，默认为true</param>
+        public static void Warn(string content, string? uiContent = default, bool log2UI = true, bool log2File = true, bool log2Console = true)
         {
             if (Level <= LogType.Warn)
             {
+                // 输出到控制台（如果允许）
+                if (EnableConsoleOutput && log2Console)
+                {
+                    WriteToConsole(LogType.Warn, content);
+                }
+                
                 Logs.Enqueue(new LogInfo(LogType.Warn, content, uiContent, log2UI, log2File));
             }
         }
@@ -297,7 +385,7 @@ namespace CodeWF.Log.Core
         /// <param name="content">日志内容</param>
         public static void WarnToFile(string content)
         {
-            Warn(content, null, log2UI: false, log2File: true);
+            Warn(content, null, log2UI: false, log2File: true, log2Console: false);
         }
 
         /// <summary>
@@ -306,7 +394,7 @@ namespace CodeWF.Log.Core
         /// <param name="content">日志内容（同时作为UI显示内容）</param>
         public static void WarnToUI(string content)
         {
-            Warn(content, content, log2UI: true, log2File: false);
+            Warn(content, content, log2UI: true, log2File: false, log2Console: true);
         }
 
         /// <summary>
@@ -317,12 +405,23 @@ namespace CodeWF.Log.Core
         /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
         /// <param name="log2UI">是否输出到UI界面，默认为true</param>
         /// <param name="log2File">是否输出到日志文件，默认为true</param>
+        /// <param name="log2Console">是否输出到控制台，默认为true</param>
         public static void Error(string content, Exception? ex = null, string? uiContent = default, bool log2UI = true,
-            bool log2File = true)
+            bool log2File = true, bool log2Console = true)
         {
             if (Level > LogType.Error) return;
 
             var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
+            
+            // 输出到控制台（如果允许）
+            if (EnableConsoleOutput && log2Console)
+            {
+                WriteToConsole(LogType.Error, content);
+                if (ex != null)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+            }
 
             Logs.Enqueue(new LogInfo(LogType.Error, msg, uiContent, log2UI, log2File));
         }
@@ -334,7 +433,7 @@ namespace CodeWF.Log.Core
         /// <param name="ex">异常信息</param>
         public static void ErrorToFile(string content, Exception? ex = null)
         {
-            Error(content, ex, null, log2UI: false, log2File: true);
+            Error(content, ex, null, log2UI: false, log2File: true, log2Console: false);
         }
 
         /// <summary>
@@ -344,7 +443,7 @@ namespace CodeWF.Log.Core
         /// <param name="ex">异常信息</param>
         public static void ErrorToUI(string content, Exception? ex = null)
         {
-            Error(content, ex, content, log2UI: true, log2File: false);
+            Error(content, ex, content, log2UI: true, log2File: false, log2Console: true);
         }
 
         /// <summary>
@@ -355,12 +454,23 @@ namespace CodeWF.Log.Core
         /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
         /// <param name="log2UI">是否输出到UI界面，默认为true</param>
         /// <param name="log2File">是否输出到日志文件，默认为true</param>
+        /// <param name="log2Console">是否输出到控制台，默认为true</param>
         public static void Fatal(string content, Exception? ex = null, string? uiContent = default, bool log2UI = true,
-            bool log2File = true)
+            bool log2File = true, bool log2Console = true)
         {
             if (Level > LogType.Fatal) return;
 
             var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
+            
+            // 输出到控制台（如果允许）
+            if (EnableConsoleOutput && log2Console)
+            {
+                WriteToConsole(LogType.Fatal, content);
+                if (ex != null)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+            }
 
             Logs.Enqueue(new LogInfo(LogType.Fatal, msg, uiContent, log2UI, log2File));
         }
@@ -372,7 +482,7 @@ namespace CodeWF.Log.Core
         /// <param name="ex">异常信息</param>
         public static void FatalToFile(string content, Exception? ex = null)
         {
-            Fatal(content, ex, null, log2UI: false, log2File: true);
+            Fatal(content, ex, null, log2UI: false, log2File: true, log2Console: false);
         }
 
         /// <summary>
@@ -382,7 +492,7 @@ namespace CodeWF.Log.Core
         /// <param name="ex">异常信息</param>
         public static void FatalToUI(string content, Exception? ex = null)
         {
-            Fatal(content, ex, content, log2UI: true, log2File: false);
+            Fatal(content, ex, content, log2UI: true, log2File: false, log2Console: true);
         }
 
         /// <summary>
