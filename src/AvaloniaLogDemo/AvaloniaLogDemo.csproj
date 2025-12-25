@@ -20,8 +20,8 @@
     <PackageReference Include="Avalonia.Fonts.Inter" Version="$(AvaloniaVersion)" />
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="$(AvaloniaVersion)" />
-		<PackageReference Include="VC-LTL" Version="5.3.1-Beta2" />
-		<PackageReference Include="YY-Thunks" Version="1.1.9" />
+		<PackageReference Include="VC-LTL" Version="5.3.1" />
+		<PackageReference Include="YY-Thunks" Version="1.1.10-Beta1" />
   </ItemGroup>
 	<ItemGroup>
 		<TrimmerRootDescriptor Include="Roots.xml" />
