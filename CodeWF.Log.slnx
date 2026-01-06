@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/Demo/">
+    <Project Path="src/AvaloniaLogDemo/AvaloniaLogDemo.csproj" />
+    <Project Path="src/ConsoleLogDemo/ConsoleLogDemo.csproj" />
+  </Folder>
+  <Folder Name="/Solution Files/">
+    <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="src/CodeWF.Log.Core/CodeWF.Log.Core.csproj" />
+  <Project Path="src/CodeWF.LogViewer.Avalonia/CodeWF.LogViewer.Avalonia.csproj" />
+  
+</Solution>
