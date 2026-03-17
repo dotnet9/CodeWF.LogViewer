@@ -25,6 +25,7 @@ A log component tailored for Avalonia. It supports synchronously writing logs to
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
+		<PackageReference Include="CodeWF.Tools.Core" Version="1.3.12" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Include="..\..\README.md" Pack="true" PackagePath="" />

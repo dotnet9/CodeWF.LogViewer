@@ -15,8 +15,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using CodeWF.Tools.FileExtensions;
 
 namespace CodeWF.LogViewer.Avalonia;
 
@@ -247,11 +249,7 @@ public partial class LogView : UserControl
             {
                 Directory.CreateDirectory(logFolder);
             }
-
-            Process.Start(new ProcessStartInfo("explorer.exe", logFolder)
-            {
-                UseShellExecute = true
-            });
+            FileHelper.OpenFolder(logFolder);
         }
         catch (Exception ex)
         {
