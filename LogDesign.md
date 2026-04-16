@@ -205,9 +205,15 @@ await Logger.FlushAsync();
 
 ## 性能优化
 
-### 1. 批量写入
+### 1. 批量写入 + 防抖机制
 
 不是每条日志都写文件，而是积累到 `BatchProcessSize` 条或 `LogFileDuration` 时间后才写入，减少 I/O 操作。
+
+**防抖逻辑：**
+- 当日志数量达到 `BatchProcessSize` 时立即处理
+- 未达到时启动防抖定时器
+- 如果在防抖期间有新日志到达，取消之前的定时器并重新计时
+- 确保即使日志量很少，也能在合理时间内（最多 `LogFileDuration`/`LogUIDuration`）被处理
 
 ### 2. 异步处理
 
@@ -219,7 +225,29 @@ await Logger.FlushAsync();
 - 文件通道：保证日志不丢失
 - UI通道：保证 UI 响应性
 
-### 4. 有界队列
+### 4. `await foreach` 异步枚举
+
+使用 C# 异步流特性消费日志，有日志时自动唤醒，无日志时自然等待，无需手动轮询。
+
+```csharp
+// Logger 内部实现
+public static async IAsyncEnumerable<LogInfo> ReadAllUiLogsAsync(
+    [EnumeratorCancellation] CancellationToken cancellationToken = default)
+{
+    await foreach (var log in UiChannel.Reader.ReadAllAsync(cancellationToken))
+    {
+        yield return log;
+    }
+}
+
+// LogView 消费端
+await foreach (var log in Logger.ReadAllUiLogsAsync(token))
+{
+    // 处理日志
+}
+```
+
+### 5. 有界队列
 
 防止内存无限增长，满时自动处理（等待或丢弃）。
 

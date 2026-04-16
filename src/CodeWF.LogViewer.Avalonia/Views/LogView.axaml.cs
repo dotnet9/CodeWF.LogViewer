@@ -86,40 +86,58 @@ public partial class LogView : UserControl
         Task.Run(async () =>
         {
             var logsBatch = new List<LogInfo>();
-            var token = _cancellationTokenSource.Token;
+            var debounceTask = Task.CompletedTask;
 
             try
             {
-                while (!token.IsCancellationRequested)
+                await foreach (var log in Logger.ReadAllUiLogsAsync(_cancellationTokenSource.Token))
                 {
-                    logsBatch.Clear();
+                    logsBatch.Add(log);
 
-                    for (int i = 0; i < Logger.BatchProcessSize; i++)
-                    {
-                        LogInfo? log = Logger.TryDequeue();
-                        if (log == null) break;
-                        AddToBatch(logsBatch, log);
-                    }
-
-                    if (logsBatch.Count > 0)
+                    if (logsBatch.Count >= Logger.BatchProcessSize)
                     {
                         await Dispatcher.UIThread.InvokeAsync(() => UpdateLogUi(logsBatch));
+                        logsBatch.Clear();
+                        debounceTask = Task.CompletedTask;
                     }
+                    else if (debounceTask.IsCompleted)
+                    {
+                        debounceTask = DebounceUpdateUiAsync(logsBatch);
+                    }
+                }
 
-                    await Task.Delay(TimeSpan.FromMilliseconds(Logger.LogUIDuration), token);
+                if (logsBatch.Count > 0)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => UpdateLogUi(logsBatch));
                 }
             }
             catch (OperationCanceledException)
             {
-                /* 任务被取消，正常退出 */
+                if (logsBatch.Count > 0)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => UpdateLogUi(logsBatch));
+                }
             }
         });
     }
 
-    private static void AddToBatch(List<LogInfo> batch, LogInfo? item)
+    private async Task DebounceUpdateUiAsync(List<LogInfo> logsBatch)
     {
-        if (item == null) return;
-        batch.Add((LogInfo)item);
+        try
+        {
+            await Task.Delay((int)Logger.LogUIDuration, _cancellationTokenSource.Token);
+            if (logsBatch.Count > 0)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => UpdateLogUi(logsBatch));
+                logsBatch.Clear();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+        }
     }
 
     /// <summary>

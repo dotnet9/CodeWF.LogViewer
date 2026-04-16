@@ -1,4 +1,4 @@
-﻿﻿﻿using CodeWF.Log.Core.Extensions;
+﻿﻿﻿﻿using CodeWF.Log.Core.Extensions;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -208,6 +208,15 @@ namespace CodeWF.Log.Core
                 return item;
             }
             return null;
+        }
+
+        public static async IAsyncEnumerable<LogInfo> ReadAllUiLogsAsync(
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await foreach (var log in UiChannel.Reader.ReadAllAsync(cancellationToken))
+            {
+                yield return log;
+            }
         }
 
         public static bool TryPeek(out LogInfo? info)

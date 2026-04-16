@@ -1,4 +1,4 @@
-﻿# CodeWF.Log
+# CodeWF.Log
 
 [![NuGet](https://img.shields.io/nuget/v/CodeWF.Log.Core.svg)](https://www.nuget.org/packages/CodeWF.Log.Core/)
 [![NuGet](https://img.shields.io/nuget/dt/CodeWF.Log.Core.svg)](https://www.nuget.org/dt/CodeWF.Log.Core.svg)
@@ -109,7 +109,9 @@ await Logger.FlushAsync();
 
 ### 日志消费
 
-`LogView` 内部会定期调用 `Logger.TryDequeue()` 获取日志并显示到 UI。
+`LogView` 内部使用 `await foreach` 异步枚举模式消费 UI 通道日志，支持批量处理和防抖机制：
+- 日志数量达到 `BatchProcessSize` 时立即刷新 UI
+- 未达阈值时，最长延迟 `LogUIDuration`（默认100ms）后刷新
 
 ---
 
@@ -118,7 +120,9 @@ await Logger.FlushAsync();
 ### V1.0.12（2026-04）
 
 1. ✨[优化]-重构为 Channel 架构，提升性能
-2. 🐛[修复]-修复 FlushAsync 方法
+2. ✨[优化]-添加防抖机制，避免日志频繁刷新
+3. ✨[优化]-UI消费使用 `await foreach` 异步枚举模式
+4. 🐛[修复]-修复 FlushAsync 方法
 
 ### V1.0.11.3（2025-09-15）
 
