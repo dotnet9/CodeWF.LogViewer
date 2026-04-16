@@ -5,6 +5,7 @@ using Avalonia.Threading;
 using CodeWF.Log.Core;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Timers;
 using Timer = System.Timers.Timer;
 
@@ -26,8 +27,16 @@ namespace AvaloniaLogDemo.Views
             Logger.Level = LogType.Debug;
             Logger.MaxLogFileSizeMB = 5;
             Logger.TimeFormat = "yyyy-MM-dd HH:mm:ss.fff";
+            Logger.RecordToFile();
             _performanceTimer = new Timer(1000);
             _performanceTimer.Elapsed += PerformanceTimer_Elapsed;
+            Closing += MainWindow_Closing;
+        }
+
+        private void MainWindow_Closing(object? sender, WindowClosingEventArgs e)
+        {
+            _performanceTimer.Stop();
+            _performanceTimer.Dispose();
         }
 
         private void InitializeComponent()
@@ -105,11 +114,18 @@ namespace AvaloniaLogDemo.Views
 
             var log2UI = false;
             var log2File = false;
-            Dispatcher.UIThread.Invoke(() =>
+            try
             {
-                log2UI = _log2UI.IsChecked == true;
-                log2File = _log2File.IsChecked == true;
-            });
+                Dispatcher.UIThread.Invoke(() =>
+                {
+                    log2UI = _log2UI.IsChecked == true;
+                    log2File = _log2File.IsChecked == true;
+                });
+            }
+            catch (TaskCanceledException)
+            {
+                return;
+            }
 
             for (var i = 0; i < logsToWrite; i++)
             {

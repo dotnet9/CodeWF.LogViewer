@@ -10,15 +10,12 @@ using Avalonia.Threading;
 using CodeWF.Log.Core;
 using CodeWF.Log.Core.Extensions;
 using CodeWF.LogViewer.Avalonia.Extensions;
+using CodeWF.Tools.FileExtensions;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using CodeWF.Tools.FileExtensions;
 
 namespace CodeWF.LogViewer.Avalonia;
 
@@ -97,24 +94,16 @@ public partial class LogView : UserControl
                 {
                     logsBatch.Clear();
 
-                    while (logsBatch.Count < Logger.BatchProcessSize && Logger.TryDequeue(out var log))
+                    for (int i = 0; i < Logger.BatchProcessSize; i++)
                     {
-                        logsBatch.Add(log);
+                        LogInfo? log = Logger.TryDequeue();
+                        if (log == null) break;
+                        AddToBatch(logsBatch, log);
                     }
 
                     if (logsBatch.Count > 0)
                     {
-                        var toFileLogs = logsBatch.Where(log => log.Log2File).ToList();
-                        if (toFileLogs.Count != 0)
-                        {
-                            await Logger.AddLogBatchToFileAsync(toFileLogs);
-                        }
-
-                        var toUiLogs = logsBatch.Where(log => log.Log2UI).ToList();
-                        if (toUiLogs.Count != 0)
-                        {
-                            await Dispatcher.UIThread.InvokeAsync(() => UpdateLogUi(toUiLogs));
-                        }
+                        await Dispatcher.UIThread.InvokeAsync(() => UpdateLogUi(logsBatch));
                     }
 
                     await Task.Delay(TimeSpan.FromMilliseconds(Logger.LogUIDuration), token);
@@ -125,6 +114,12 @@ public partial class LogView : UserControl
                 /* 任务被取消，正常退出 */
             }
         });
+    }
+
+    private static void AddToBatch(List<LogInfo> batch, LogInfo? item)
+    {
+        if (item == null) return;
+        batch.Add((LogInfo)item);
     }
 
     /// <summary>

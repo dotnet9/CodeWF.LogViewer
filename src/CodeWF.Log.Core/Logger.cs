@@ -1,10 +1,10 @@
-﻿using CodeWF.Log.Core.Extensions;
+﻿﻿﻿using CodeWF.Log.Core.Extensions;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CodeWF.Log.Core
@@ -25,29 +25,29 @@ namespace CodeWF.Log.Core
         /// <summary>
         /// 指定单次批处理操作中要处理的默认日志条目数。
         /// </summary>
-        public static int BatchProcessSize = 200; // 增加批处理大小，减少文件写入频率
+        public static uint BatchProcessSize = 200; // 增加批处理大小，减少文件写入频率
 
         /// <summary>
         /// 获取或设置日志文件在轮换前的最大大小（以MB为单位）。
         /// </summary>
         /// <remarks>当日志文件超过此大小时，将进行轮换以保持文件大小可管理。
         /// 默认值为500 MB。此值必须大于0。</remarks>
-        public static int MaxLogFileSizeMB = 500;
+        public static uint MaxLogFileSizeMB = 500;
 
         /// <summary>
         /// 批量记录文本日志的时间间隔（以毫秒为单位）。
         /// </summary>
-        public static int LogFileDuration = 500;
+        public static uint LogFileDuration = 500;
 
         /// <summary>
         /// 界面最多显示日志条件
         /// </summary>
-        public static int MaxUIDisplayCount = 1000;
+        public static uint MaxUIDisplayCount = 1000;
 
         /// <summary>
         /// 批量记录文本日志的时间间隔（以毫秒为单位）。
         /// </summary>
-        public static int LogUIDuration = 1000;
+        public static uint LogUIDuration = 100;
 
         /// <summary>
         /// 时间戳格式字符串，用于日志记录中的时间显示。默认格式为"yyyy-MM-dd HH:mm:ss"。
@@ -62,18 +62,40 @@ namespace CodeWF.Log.Core
         /// <summary>
         /// 表示内部使用的线程安全日志条目队列。
         /// </summary>
-        public static readonly ConcurrentQueue<LogInfo> Logs = new();
+        private static readonly Channel<LogInfo> LogChannel;
+
+        private static readonly Channel<LogInfo> UiChannel;
 
         private static bool _isRecording = false;
+        private static bool _isFlushing = false;
+        private static CancellationTokenSource? _cts;
+
+        static Logger()
+        {
+            LogChannel = Channel.CreateBounded<LogInfo>(
+                new BoundedChannelOptions(10000)
+                {
+                    SingleReader = true,
+                    SingleWriter = false,
+                    FullMode = BoundedChannelFullMode.Wait
+                });
+
+            UiChannel = Channel.CreateBounded<LogInfo>(
+                new BoundedChannelOptions(5000)
+                {
+                    SingleReader = true,
+                    SingleWriter = false,
+                    FullMode = BoundedChannelFullMode.DropOldest
+                });
+        }
 
         /// <summary>
-        /// 注：非UI项目使用，如果使用了UI项目，则不用调用此方法。
         /// 启动后台任务，持续批量处理日志条目并将其写入文件。
         /// </summary>
-        /// <remarks>此方法旨在应用程序启动期间调用一次，以启用异步批量日志文件写入。
-        /// 它从内部队列处理日志条目，将它们分组写入文件以提高性能。
+        /// <remarks>此方法应在应用程序启动时调用一次，以启用异步批量日志文件写入。
+        /// 无论是否使用 UI 控件，都需要调用此方法启动文件日志消费。
         /// 该方法不会阻塞调用线程，而是立即返回。
-        /// 多次调用可能导致多个后台任务同时写入日志，这可能不是预期的。</remarks>
+        /// 多次调用无效（内部有防重入检查）。</remarks>
         public static void RecordToFile()
         {
             if (_isRecording)
@@ -82,31 +104,96 @@ namespace CodeWF.Log.Core
             }
 
             _isRecording = true;
+            _cts = new CancellationTokenSource();
 
             Task.Run(async () =>
             {
                 var logContentBuilder = new StringBuilder();
+                var batch = new List<LogInfo>();
+                var debounceTask = Task.CompletedTask;
 
-                while (true)
+                try
                 {
-                    logContentBuilder.Clear();
-
-                    var count = 0;
-                    while (count < BatchProcessSize && TryDequeue(out var log))
+                    await foreach (var log in LogChannel.Reader.ReadAllAsync(_cts.Token))
                     {
-                        logContentBuilder.AppendLine(
-                            $"{log.RecordTime.ToString(TimeFormat)}: {log.Level.Description()} {log.Description}");
-                        count++;
+                        batch.Add(log);
+
+                        if (batch.Count >= BatchProcessSize)
+                        {
+                            FlushBatchToFile(batch, logContentBuilder);
+                            batch.Clear();
+                            debounceTask = Task.CompletedTask;
+                        }
+                        else if (debounceTask.IsCompleted)
+                        {
+                            debounceTask = DebounceFlushAsync(batch, logContentBuilder, (int)LogFileDuration);
+                        }
                     }
 
-                    if (logContentBuilder.Length > 0)
+                    if (batch.Count > 0)
                     {
-                        await AddLogToFileOptimizedAsync(logContentBuilder.ToString());
+                        FlushBatchToFile(batch, logContentBuilder);
+                        batch.Clear();
                     }
-
-                    await Task.Delay(TimeSpan.FromMilliseconds(LogFileDuration));
                 }
-            });
+                catch (OperationCanceledException)
+                {
+                    if (batch.Count > 0)
+                    {
+                        FlushBatchToFile(batch, logContentBuilder);
+                    }
+                }
+            }, _cts.Token);
+        }
+
+        private static async Task DebounceFlushAsync(List<LogInfo> batch, StringBuilder builder, int delayMs)
+        {
+            try
+            {
+                await Task.Delay(delayMs, _cts!.Token);
+                if (batch.Count > 0)
+                {
+                    FlushBatchToFile(batch, builder);
+                    batch.Clear();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch
+            {
+            }
+        }
+
+        private static void FlushBatchToFile(List<LogInfo> batch, StringBuilder builder)
+        {
+            if (batch.Count == 0) return;
+
+            builder.Clear();
+            foreach (var log in batch)
+            {
+                builder.AppendLine($"{log.RecordTime.ToString(TimeFormat)}: {log.Level.Description()} {log.Description}");
+            }
+
+            AddLogToFileSync(builder.ToString());
+        }
+
+        private static void AddLogToFileSync(string msg)
+        {
+            try
+            {
+                var logFolder = Path.Combine(LogDir, "Log");
+                if (!Directory.Exists(logFolder))
+                {
+                    Directory.CreateDirectory(logFolder);
+                }
+
+                var logFilePath = GetAvailableLogFilePath(logFolder, DateTime.Now);
+                File.AppendAllText(logFilePath, msg);
+            }
+            catch
+            {
+            }
         }
 
         /// <summary>
@@ -114,33 +201,65 @@ namespace CodeWF.Log.Core
         /// </summary>
         /// <param name="info">返回的日志信息</param>
         /// <returns>如果成功移除并返回日志信息则返回true，否则返回false</returns>
-        public static bool TryDequeue(out LogInfo info)
+        public static LogInfo? TryDequeue()
         {
-            return Logs.TryDequeue(out info);
+            if (UiChannel.Reader.TryRead(out var item))
+            {
+                return item;
+            }
+            return null;
         }
 
-        /// <summary>
-        /// 查看队列头部的日志但不移除
-        /// </summary>
-        /// <param name="info">返回队列头部的日志信息</param>
-        /// <returns>如果队列不为空则返回true，否则返回false</returns>
-        public static bool TryPeek(out LogInfo info)
+        public static bool TryPeek(out LogInfo? info)
         {
-            return Logs.TryPeek(out info);
+            if (UiChannel.Reader.TryPeek(out var item))
+            {
+                info = item;
+                return true;
+            }
+            info = null;
+            return false;
         }
 
+        private static readonly object _flushLock = new();
+
         /// <summary>
-        /// 强制将所有日志写入文件
+        /// 强制将所有待写入文件的日志刷新到磁盘
         /// </summary>
-        /// <returns></returns>
+        /// <remarks>此方法仅在程序退出时调用，确保所有日志都被写入文件。
+        /// 调用此方法前应先停止产生新日志。它不会阻止日志方法的调用。</remarks>
         public static async Task FlushAsync()
         {
-            var logsBatch = Logs.ToList();
-            Logs.Clear();
-
-            if (logsBatch.Count > 0)
+            lock (_flushLock)
             {
-                await AddLogBatchToFileAsync(logsBatch);
+                if (_isFlushing) return;
+                _isFlushing = true;
+            }
+
+            try
+            {
+                var logsToFlush = new List<LogInfo>();
+
+                while (LogChannel.Reader.TryRead(out var log))
+                {
+                    logsToFlush.Add(log);
+                }
+
+                if (logsToFlush.Count > 0)
+                {
+                    await AddLogBatchToFileAsync(logsToFlush);
+                }
+
+                while (UiChannel.Reader.TryRead(out _))
+                {
+                }
+            }
+            catch
+            {
+            }
+            finally
+            {
+                _isFlushing = false;
             }
         }
 
@@ -158,14 +277,23 @@ namespace CodeWF.Log.Core
         {
             var logType = (LogType)type;
             if (Level > logType) return;
-            
-            // 输出到控制台（如果允许）
+
             if (EnableConsoleOutput && log2Console)
             {
                 WriteToConsole(logType, content);
             }
-            
-            Logs.Enqueue(new LogInfo(logType, content, uiContent, log2UI, log2File));
+
+            var logInfo = new LogInfo(logType, content, uiContent, log2UI, log2File);
+
+            if (log2File)
+            {
+                LogChannel.Writer.TryWrite(logInfo);
+            }
+
+            if (log2UI)
+            {
+                UiChannel.Writer.TryWrite(logInfo);
+            }
         }
 
         /// <summary>
@@ -201,14 +329,23 @@ namespace CodeWF.Log.Core
             bool log2File = true, bool log2Console = true)
         {
             if (Level > type) return;
-            
-            // 输出到控制台（如果允许）
+
             if (EnableConsoleOutput && log2Console)
             {
                 WriteToConsole(type, content);
             }
-            
-            Logs.Enqueue(new LogInfo(type, content, uiContent, log2UI, log2File));
+
+            var logInfo = new LogInfo(type, content, uiContent, log2UI, log2File);
+
+            if (log2File)
+            {
+                LogChannel.Writer.TryWrite(logInfo);
+            }
+
+            if (log2UI)
+            {
+                UiChannel.Writer.TryWrite(logInfo);
+            }
         }
 
         /// <summary>
@@ -289,13 +426,22 @@ namespace CodeWF.Log.Core
         {
             if (Level <= LogType.Debug)
             {
-                // 输出到控制台（如果允许）
                 if (EnableConsoleOutput && log2Console)
                 {
                     WriteToConsole(LogType.Debug, content);
                 }
-                
-                Logs.Enqueue(new LogInfo(LogType.Debug, content, uiContent, log2UI, log2File));
+
+                var logInfo = new LogInfo(LogType.Debug, content, uiContent, log2UI, log2File);
+
+                if (log2File)
+                {
+                    LogChannel.Writer.TryWrite(logInfo);
+                }
+
+                if (log2UI)
+                {
+                    UiChannel.Writer.TryWrite(logInfo);
+                }
             }
         }
 
@@ -329,13 +475,22 @@ namespace CodeWF.Log.Core
         {
             if (Level <= LogType.Info)
             {
-                // 输出到控制台（如果允许）
                 if (EnableConsoleOutput && log2Console)
                 {
                     WriteToConsole(LogType.Info, content);
                 }
-                
-                Logs.Enqueue(new LogInfo(LogType.Info, content, uiContent, log2UI, log2File));
+
+                var logInfo = new LogInfo(LogType.Info, content, uiContent, log2UI, log2File);
+
+                if (log2File)
+                {
+                    LogChannel.Writer.TryWrite(logInfo);
+                }
+
+                if (log2UI)
+                {
+                    UiChannel.Writer.TryWrite(logInfo);
+                }
             }
         }
 
@@ -369,13 +524,22 @@ namespace CodeWF.Log.Core
         {
             if (Level <= LogType.Warn)
             {
-                // 输出到控制台（如果允许）
                 if (EnableConsoleOutput && log2Console)
                 {
                     WriteToConsole(LogType.Warn, content);
                 }
-                
-                Logs.Enqueue(new LogInfo(LogType.Warn, content, uiContent, log2UI, log2File));
+
+                var logInfo = new LogInfo(LogType.Warn, content, uiContent, log2UI, log2File);
+
+                if (log2File)
+                {
+                    LogChannel.Writer.TryWrite(logInfo);
+                }
+
+                if (log2UI)
+                {
+                    UiChannel.Writer.TryWrite(logInfo);
+                }
             }
         }
 
@@ -412,8 +576,7 @@ namespace CodeWF.Log.Core
             if (Level > LogType.Error) return;
 
             var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
-            
-            // 输出到控制台（如果允许）
+
             if (EnableConsoleOutput && log2Console)
             {
                 WriteToConsole(LogType.Error, content);
@@ -423,7 +586,17 @@ namespace CodeWF.Log.Core
                 }
             }
 
-            Logs.Enqueue(new LogInfo(LogType.Error, msg, uiContent, log2UI, log2File));
+            var logInfo = new LogInfo(LogType.Error, msg, uiContent, log2UI, log2File);
+
+            if (log2File)
+            {
+                LogChannel.Writer.TryWrite(logInfo);
+            }
+
+            if (log2UI)
+            {
+                UiChannel.Writer.TryWrite(logInfo);
+            }
         }
 
         /// <summary>
@@ -461,8 +634,7 @@ namespace CodeWF.Log.Core
             if (Level > LogType.Fatal) return;
 
             var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
-            
-            // 输出到控制台（如果允许）
+
             if (EnableConsoleOutput && log2Console)
             {
                 WriteToConsole(LogType.Fatal, content);
@@ -472,7 +644,17 @@ namespace CodeWF.Log.Core
                 }
             }
 
-            Logs.Enqueue(new LogInfo(LogType.Fatal, msg, uiContent, log2UI, log2File));
+            var logInfo = new LogInfo(LogType.Fatal, msg, uiContent, log2UI, log2File);
+
+            if (log2File)
+            {
+                LogChannel.Writer.TryWrite(logInfo);
+            }
+
+            if (log2UI)
+            {
+                UiChannel.Writer.TryWrite(logInfo);
+            }
         }
 
         /// <summary>

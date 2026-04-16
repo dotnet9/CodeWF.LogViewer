@@ -1,13 +1,12 @@
 using CodeWF.Log.Core;
 
-// 控制台日志输出测试程序
 Logger.Info("这样写可不输出控制台：Logger.EnableConsoleOutput = false;");
 Logger.EnableConsoleOutput = false;
 Logger.Info("=== 控制台日志输出测试 ===");
 Logger.Info("");
 
-// 设置日志级别为Debug，确保所有日志都能输出
 Logger.Level = LogType.Debug;
+Logger.RecordToFile();
 
 // 1. 测试不同日志级别的彩色输出
 Logger.Info("1. 测试不同日志级别的彩色输出：");
