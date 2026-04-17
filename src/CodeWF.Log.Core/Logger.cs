@@ -196,20 +196,6 @@ namespace CodeWF.Log.Core
             }
         }
 
-        /// <summary>
-        /// 从队列中移除并返回日志信息
-        /// </summary>
-        /// <param name="info">返回的日志信息</param>
-        /// <returns>如果成功移除并返回日志信息则返回true，否则返回false</returns>
-        public static LogInfo? TryDequeue()
-        {
-            if (UiChannel.Reader.TryRead(out var item))
-            {
-                return item;
-            }
-            return null;
-        }
-
         public static async IAsyncEnumerable<LogInfo> ReadAllUiLogsAsync(
             [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
@@ -217,17 +203,6 @@ namespace CodeWF.Log.Core
             {
                 yield return log;
             }
-        }
-
-        public static bool TryPeek(out LogInfo? info)
-        {
-            if (UiChannel.Reader.TryPeek(out var item))
-            {
-                info = item;
-                return true;
-            }
-            info = null;
-            return false;
         }
 
         private static readonly object _flushLock = new();

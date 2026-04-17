@@ -77,3 +77,5 @@ Logger.Info("");
 Logger.Info("=== 测试完成 ===");
 Logger.Info("按任意键退出...");
 Console.ReadKey();
+
+await Logger.FlushAsync();

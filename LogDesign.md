@@ -94,9 +94,9 @@ public enum LogType
                     │                           │
                     ▼                           ▼
         ┌───────────────────┐       ┌───────────────────┐
-        │  RecordToFile()   │       │   TryDequeue()    │
-        │   (后台任务)       │       │    (UI线程调用)    │
-        │   批量写入文件      │       │   实时获取日志      │
+        │  RecordToFile()   │       │ ReadAllUiLogsAsync()│
+        │   (后台任务)       │       │   (后台任务)        │
+        │   批量写入文件      │       │   批量更新UI        │
         └───────────────────┘       └───────────────────┘
                     │                           │
                     ▼                           ▼
@@ -125,12 +125,15 @@ public enum LogType
 
 ## 工作流程
 
-### 1. 初始化（控制台程序）
+### 1. 初始化
 
+**控制台程序**：
 ```csharp
 // 程序启动时调用一次
 Logger.RecordToFile();
 ```
+
+**Avalonia 程序（使用 LogView）**：无需调用，`LogView` 内部自动处理
 
 内部启动后台任务：
 ```csharp
@@ -164,15 +167,11 @@ Logger.Info("消息内容");
 ### 3. 消费日志（UI）
 
 ```csharp
-// 在 UI 线程定时调用（如 100ms 间隔）
-var logs = new List<LogInfo>();
-for (int i = 0; i < Logger.BatchProcessSize; i++)
+// 在后台任务中异步消费
+await foreach (var log in Logger.ReadAllUiLogsAsync(cancellationToken))
 {
-    var log = Logger.TryDequeue();
-    if (log == null) break;
-    logs.Add(log);
+    // 处理日志
 }
-UpdateLogUi(logs);
 ```
 
 ### 4. 刷新退出
@@ -318,19 +317,8 @@ Logger.Info(
 );
 ```
 
-## 与旧版本对比
-
-| 特性 | 旧版本 (ConcurrentQueue) | 新版本 (Channel) |
-|------|-------------------------|------------------|
-| 消费模式 | 轮询等待 (空转CPU) | 异步等待 (无CPU消耗) |
-| 背压控制 | 无界队列可能OOM | 有界队列自动控制 |
-| API | Enqueue/TryDequeue | TryWrite/await foreach |
-| 取消机制 | 需要手动实现 | 内置 CancellationToken |
-| 批量处理 | 单独维护 | 消费时自然批量 |
-
 ## 注意事项
 
-1. **RecordToFile() 只需调用一次**，多次调用无效
+1. **RecordToFile() 仅控制台程序需要调用**，Avalonia 程序使用 `LogView` 时会自动调用
 2. **FlushAsync() 在退出时调用**，确保所有日志写入文件
-3. **TryDequeue() 在UI线程调用**，不要在后台线程调用
-4. **Channel 是不可变的**，创建后不能修改，FlushAsync 不会销毁 Channel
+3. **Channel 是不可变的**，创建后不能修改

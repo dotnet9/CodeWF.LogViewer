@@ -98,14 +98,11 @@ xmlns:log="https://codewf.com"
 ### Avalonia 程序初始化
 
 ```csharp
-// App.OnLaunched 中调用一次（启动文件日志记录）
-Logger.RecordToFile();
-
 // 程序退出时调用
 await Logger.FlushAsync();
 ```
 
-> 注意：`LogView` 控件仅负责从 UI 通道消费日志并显示到界面，不处理文件写入。文件日志由 `RecordToFile()` 启动的后台任务处理。
+> 注意：`LogView` 控件内部会自动调用 `RecordToFile()` 启动文件日志记录，并从 UI 通道消费日志显示到界面。
 
 ### 日志消费
 

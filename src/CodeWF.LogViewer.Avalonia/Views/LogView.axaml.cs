@@ -82,6 +82,7 @@ public partial class LogView : UserControl
         if (_isRecording) return;
 
         _isRecording = true;
+        Logger.RecordToFile();
 
         Task.Run(async () =>
         {
