@@ -66,9 +66,11 @@ namespace CodeWF.Log.Core
 
         private static readonly Channel<LogInfo> UiChannel;
 
+        private static readonly object _recordingLock = new();
         private static bool _isRecording = false;
         private static bool _isFlushing = false;
         private static CancellationTokenSource? _cts;
+        private static Task? _recordingTask;
 
         static Logger()
         {
@@ -98,64 +100,79 @@ namespace CodeWF.Log.Core
         /// 多次调用无效（内部有防重入检查）。</remarks>
         public static void RecordToFile()
         {
-            if (_isRecording)
+            lock (_recordingLock)
             {
-                return;
+                if (_isRecording)
+                {
+                    return;
+                }
+
+                _isRecording = true;
+                _cts = new CancellationTokenSource();
+                var cts = _cts;
+
+                _recordingTask = Task.Run(async () =>
+                {
+                    var batch = new List<LogInfo>();
+                    var batchLock = new object();
+                    var debounceTask = Task.CompletedTask;
+
+                    try
+                    {
+                        await foreach (var log in LogChannel.Reader.ReadAllAsync(cts.Token))
+                        {
+                            List<LogInfo>? batchToFlush = null;
+
+                            lock (batchLock)
+                            {
+                                batch.Add(log);
+
+                                if (batch.Count >= BatchProcessSize)
+                                {
+                                    batchToFlush = [.. batch];
+                                    batch.Clear();
+                                }
+                            }
+
+                            if (batchToFlush != null)
+                            {
+                                FlushBatchToFile(batchToFlush);
+                            }
+                            else if (debounceTask.IsCompleted)
+                            {
+                                debounceTask = DebounceFlushAsync(batch, batchLock, cts.Token, (int)LogFileDuration);
+                            }
+                        }
+
+                        FlushPendingBatch(batch, batchLock);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        FlushPendingBatch(batch, batchLock);
+                    }
+                    finally
+                    {
+                        lock (_recordingLock)
+                        {
+                            if (ReferenceEquals(_cts, cts))
+                            {
+                                _isRecording = false;
+                                _recordingTask = null;
+                                _cts = null;
+                                cts.Dispose();
+                            }
+                        }
+                    }
+                });
             }
-
-            _isRecording = true;
-            _cts = new CancellationTokenSource();
-
-            Task.Run(async () =>
-            {
-                var logContentBuilder = new StringBuilder();
-                var batch = new List<LogInfo>();
-                var debounceTask = Task.CompletedTask;
-
-                try
-                {
-                    await foreach (var log in LogChannel.Reader.ReadAllAsync(_cts.Token))
-                    {
-                        batch.Add(log);
-
-                        if (batch.Count >= BatchProcessSize)
-                        {
-                            FlushBatchToFile(batch, logContentBuilder);
-                            batch.Clear();
-                            debounceTask = Task.CompletedTask;
-                        }
-                        else if (debounceTask.IsCompleted)
-                        {
-                            debounceTask = DebounceFlushAsync(batch, logContentBuilder, (int)LogFileDuration);
-                        }
-                    }
-
-                    if (batch.Count > 0)
-                    {
-                        FlushBatchToFile(batch, logContentBuilder);
-                        batch.Clear();
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    if (batch.Count > 0)
-                    {
-                        FlushBatchToFile(batch, logContentBuilder);
-                    }
-                }
-            }, _cts.Token);
         }
 
-        private static async Task DebounceFlushAsync(List<LogInfo> batch, StringBuilder builder, int delayMs)
+        private static async Task DebounceFlushAsync(List<LogInfo> batch, object batchLock, CancellationToken cancellationToken, int delayMs)
         {
             try
             {
-                await Task.Delay(delayMs, _cts!.Token);
-                if (batch.Count > 0)
-                {
-                    FlushBatchToFile(batch, builder);
-                    batch.Clear();
-                }
+                await Task.Delay(delayMs, cancellationToken);
+                FlushPendingBatch(batch, batchLock);
             }
             catch (OperationCanceledException)
             {
@@ -165,11 +182,30 @@ namespace CodeWF.Log.Core
             }
         }
 
-        private static void FlushBatchToFile(List<LogInfo> batch, StringBuilder builder)
+        private static void FlushPendingBatch(List<LogInfo> batch, object batchLock)
+        {
+            List<LogInfo>? batchToFlush = null;
+
+            lock (batchLock)
+            {
+                if (batch.Count > 0)
+                {
+                    batchToFlush = new List<LogInfo>(batch);
+                    batch.Clear();
+                }
+            }
+
+            if (batchToFlush != null)
+            {
+                FlushBatchToFile(batchToFlush);
+            }
+        }
+
+        private static void FlushBatchToFile(IReadOnlyList<LogInfo> batch)
         {
             if (batch.Count == 0) return;
 
-            builder.Clear();
+            var builder = new StringBuilder();
             foreach (var log in batch)
             {
                 builder.AppendLine($"{log.RecordTime.ToString(TimeFormat)}: {log.Level.Description()} {log.Description}");
@@ -222,6 +258,34 @@ namespace CodeWF.Log.Core
 
             try
             {
+                Task? recordingTask;
+                CancellationTokenSource? cts;
+
+                lock (_recordingLock)
+                {
+                    recordingTask = _recordingTask;
+                    cts = _cts;
+                }
+
+                try
+                {
+                    cts?.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+
+                if (recordingTask != null)
+                {
+                    try
+                    {
+                        await recordingTask;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                    }
+                }
+
                 var logsToFlush = new List<LogInfo>();
 
                 while (LogChannel.Reader.TryRead(out var log))
@@ -243,7 +307,10 @@ namespace CodeWF.Log.Core
             }
             finally
             {
-                _isFlushing = false;
+                lock (_flushLock)
+                {
+                    _isFlushing = false;
+                }
             }
         }
 

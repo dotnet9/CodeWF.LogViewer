@@ -9,14 +9,7 @@ public readonly struct LogInfo
         RecordTime = DateTime.Now;
         Level = logType;
         Description = description;
-        if (string.IsNullOrWhiteSpace(friendlyDescription))
-        {
-            friendlyDescription = description;
-        }
-        else
-        {
-            FriendlyDescription = friendlyDescription;
-        }
+        FriendlyDescription = string.IsNullOrWhiteSpace(friendlyDescription) ? description : friendlyDescription;
         Log2UI = log2UI;
         Log2File = log2File;
     }

@@ -8,7 +8,7 @@ namespace CodeWF.LogViewer.Avalonia.Extensions;
 
 public static class VisualTreeExtensions
 {
-    public static T FindVisualDescendant<T>(this Visual visual) where T : Visual
+    public static T? FindVisualDescendant<T>(this Visual visual) where T : Visual
     {
         if (visual == null) return null;
         foreach (var child in visual.GetVisualChildren())

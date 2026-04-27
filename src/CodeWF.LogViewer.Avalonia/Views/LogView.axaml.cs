@@ -21,12 +21,12 @@ namespace CodeWF.LogViewer.Avalonia;
 
 public partial class LogView : UserControl
 {
-    private IClipboard _clipboard;
-    private ContextMenu _contextMenu;
+    private IClipboard? _clipboard;
+    private ContextMenu _contextMenu = null!;
 
     private bool _isRecording;
-    private ScrollViewer _scrollViewer;
-    private SelectableTextBlock _textView;
+    private ScrollViewer _scrollViewer = null!;
+    private SelectableTextBlock _textView = null!;
     private readonly CancellationTokenSource _cancellationTokenSource;
 
     // 修复：使用Brush对象池，避免重复创建
@@ -70,9 +70,12 @@ public partial class LogView : UserControl
 
     private void Init()
     {
-        _textView = this.Find<SelectableTextBlock>("LogTextView");
-        _scrollViewer = this.Find<ScrollViewer>("LogScrollViewer");
-        _contextMenu = this.Find<ContextMenu>("LogContextMenu");
+        _textView = this.FindControl<SelectableTextBlock>("LogTextView")
+            ?? throw new InvalidOperationException("LogTextView is missing.");
+        _scrollViewer = this.FindControl<ScrollViewer>("LogScrollViewer")
+            ?? throw new InvalidOperationException("LogScrollViewer is missing.");
+        _contextMenu = this.FindControl<ContextMenu>("LogContextMenu")
+            ?? throw new InvalidOperationException("LogContextMenu is missing.");
         _textView.Text = string.Empty;
         RecordLog();
     }
@@ -87,51 +90,51 @@ public partial class LogView : UserControl
         Task.Run(async () =>
         {
             var logsBatch = new List<LogInfo>();
+            var batchLock = new object();
             var debounceTask = Task.CompletedTask;
 
             try
             {
                 await foreach (var log in Logger.ReadAllUiLogsAsync(_cancellationTokenSource.Token))
                 {
-                    logsBatch.Add(log);
+                    List<LogInfo>? batchToRender = null;
 
-                    if (logsBatch.Count >= Logger.BatchProcessSize)
+                    lock (batchLock)
                     {
-                        await Dispatcher.UIThread.InvokeAsync(() => UpdateLogUi(logsBatch));
-                        logsBatch.Clear();
-                        debounceTask = Task.CompletedTask;
+                        logsBatch.Add(log);
+
+                        if (logsBatch.Count >= Logger.BatchProcessSize)
+                        {
+                            batchToRender = new List<LogInfo>(logsBatch);
+                            logsBatch.Clear();
+                        }
+                    }
+
+                    if (batchToRender != null)
+                    {
+                        await RenderLogBatchAsync(batchToRender);
                     }
                     else if (debounceTask.IsCompleted)
                     {
-                        debounceTask = DebounceUpdateUiAsync(logsBatch);
+                        debounceTask = DebounceUpdateUiAsync(logsBatch, batchLock);
                     }
                 }
 
-                if (logsBatch.Count > 0)
-                {
-                    await Dispatcher.UIThread.InvokeAsync(() => UpdateLogUi(logsBatch));
-                }
+                await RenderPendingBatchAsync(logsBatch, batchLock);
             }
             catch (OperationCanceledException)
             {
-                if (logsBatch.Count > 0)
-                {
-                    await Dispatcher.UIThread.InvokeAsync(() => UpdateLogUi(logsBatch));
-                }
+                await RenderPendingBatchAsync(logsBatch, batchLock);
             }
         });
     }
 
-    private async Task DebounceUpdateUiAsync(List<LogInfo> logsBatch)
+    private async Task DebounceUpdateUiAsync(List<LogInfo> logsBatch, object batchLock)
     {
         try
         {
             await Task.Delay((int)Logger.LogUIDuration, _cancellationTokenSource.Token);
-            if (logsBatch.Count > 0)
-            {
-                await Dispatcher.UIThread.InvokeAsync(() => UpdateLogUi(logsBatch));
-                logsBatch.Clear();
-            }
+            await RenderPendingBatchAsync(logsBatch, batchLock);
         }
         catch (OperationCanceledException)
         {
@@ -141,11 +144,40 @@ public partial class LogView : UserControl
         }
     }
 
+    private async Task RenderPendingBatchAsync(List<LogInfo> logsBatch, object batchLock)
+    {
+        var batchToRender = TakePendingBatch(logsBatch, batchLock);
+        if (batchToRender != null)
+        {
+            await RenderLogBatchAsync(batchToRender);
+        }
+    }
+
+    private static List<LogInfo>? TakePendingBatch(List<LogInfo> logsBatch, object batchLock)
+    {
+        lock (batchLock)
+        {
+            if (logsBatch.Count == 0)
+            {
+                return null;
+            }
+
+            var batchToRender = new List<LogInfo>(logsBatch);
+            logsBatch.Clear();
+            return batchToRender;
+        }
+    }
+
+    private async Task RenderLogBatchAsync(IReadOnlyList<LogInfo> logsBatch)
+    {
+        await Dispatcher.UIThread.InvokeAsync(() => UpdateLogUi(logsBatch));
+    }
+
     /// <summary>
     /// 批量更新日志UI
     /// </summary>
     /// <param name="logsBatch">日志批次</param>
-    private void UpdateLogUi(List<LogInfo>? logsBatch)
+    private void UpdateLogUi(IReadOnlyList<LogInfo>? logsBatch)
     {
         if (logsBatch == null || logsBatch.Count == 0)
             return;

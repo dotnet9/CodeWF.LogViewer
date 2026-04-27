@@ -3,56 +3,368 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:log="https://codewf.com"
-        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="450"
-        Width="900" Height="400"
         x:Class="AvaloniaLogDemo.Views.MainWindow"
-        Icon="/Assets/avalonia-logo.ico" Background="Blue"
-        Title="AvaloniaUI日志组件" Padding="20">
+        mc:Ignorable="d"
+        d:DesignWidth="1220"
+        d:DesignHeight="760"
+        Width="1220"
+        Height="760"
+        MinWidth="1040"
+        MinHeight="680"
+        Icon="/Assets/avalonia-logo.ico"
+        Background="#F3F6FA"
+        Title="CodeWF Log Viewer - Avalonia Demo">
 
-    <Grid RowDefinitions="Auto, *">
-        <Border CornerRadius="5" Background="White" Margin="0 0 0 5">
-            <UniformGrid Columns="8" HorizontalAlignment="Stretch">
-                <Button Content="Debug" Click="AddDebugLog_OnClick" />
-                <Button Content="Info" Click="AddInfoLog_OnClick" />
-                <Button Content="Warn" Click="AddWarnLog_OnClick" />
-                <Button Content="Error" Click="AddErrorLog_OnClick" />
-                <Button Content="Fatal" Click="AddFatalLog_OnClick" />
-                <Button Content="性能测试" Click="StartPerformanceTest_OnClick" />
-                <CheckBox Content="往UI记录" x:Name="Log2UI" IsChecked="True" />
-                <CheckBox Content="往文件记录" x:Name="Log2File" IsChecked="True" />
-            </UniformGrid>
-        </Border>
-        <Border Grid.Row="1" CornerRadius="5" Background="White">
-            <Grid RowDefinitions="Auto, *">
-                <TextBlock Text="日志" FontWeight="Bold" Margin="24 20 0 17" VerticalAlignment="Center" FontSize="14"
-                           Foreground="#262626" />
-                <Border CornerRadius="5" Grid.Row="1" Margin="24 0 20 20">
-                    <Grid ColumnDefinitions="*, *">
-                        <Rectangle Height="200" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Top">
-                            <Rectangle.Fill>
-                                <LinearGradientBrush StartPoint="50%,0%" EndPoint="50%,100%">
-                                    <LinearGradientBrush.GradientStops>
-                                        <GradientStop Color="#FFF2E8" Offset="0" />
-                                        <GradientStop Color="#FFFFFF" Offset="1" />
-                                    </LinearGradientBrush.GradientStops>
-                                </LinearGradientBrush>
-                            </Rectangle.Fill>
-                        </Rectangle>
-                        <Rectangle Height="200" Grid.Column="1" VerticalAlignment="Top">
-                            <Rectangle.Fill>
-                                <LinearGradientBrush StartPoint="100%,50%" EndPoint="0%,50%">
-                                    <LinearGradientBrush.GradientStops>
-                                        <GradientStop Color="#FFFFFF" Offset="0" />
-                                        <GradientStop Color="#00FFFFFF" Offset="1" />
-                                    </LinearGradientBrush.GradientStops>
-                                </LinearGradientBrush>
-                            </Rectangle.Fill>
-                        </Rectangle>
-                        <log:LogView Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Stretch" FontSize="14" Padding="20" />
-                    </Grid>
-                </Border>
+    <Window.Styles>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#DDE4EE" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="18" />
+        </Style>
+
+        <Style Selector="Border.badge">
+            <Setter Property="Background" Value="#1F2937" />
+            <Setter Property="BorderBrush" Value="#374151" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10 6" />
+        </Style>
+
+        <Style Selector="Button.command">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="Padding" Value="14 8" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Background" Value="#F6F8FB" />
+            <Setter Property="BorderBrush" Value="#D7DEE8" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="#172033" />
+        </Style>
+
+        <Style Selector="Button.command:pointerover">
+            <Setter Property="Background" Value="#EAF1FB" />
+            <Setter Property="BorderBrush" Value="#B8C7DA" />
+        </Style>
+
+        <Style Selector="TextBlock.sectionLabel">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#5B6678" />
+        </Style>
+
+        <Style Selector="TextBlock.metricValue">
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#121826" />
+        </Style>
+
+        <Style Selector="TextBlock.metricCaption">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#667085" />
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*">
+        <Border Grid.Row="0" Background="#111827" Padding="24 18">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="CodeWF Log Viewer"
+                               FontSize="23"
+                               FontWeight="SemiBold"
+                               Foreground="#FFFFFF" />
+                    <TextBlock Text="Avalonia 日志观察台"
+                               FontSize="13"
+                               Foreground="#B7C0CE" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="10"
+                            VerticalAlignment="Center">
+                    <Border Classes="badge">
+                        <TextBlock x:Name="LevelStateText"
+                                   Text="Level: Debug"
+                                   Foreground="#DCE7F5" />
+                    </Border>
+                    <Border Classes="badge">
+                        <TextBlock x:Name="FileStateText"
+                                   Text="File: on"
+                                   Foreground="#DCE7F5" />
+                    </Border>
+                    <Border Classes="badge">
+                        <TextBlock x:Name="UiStateText"
+                                   Text="UI: on"
+                                   Foreground="#DCE7F5" />
+                    </Border>
+                </StackPanel>
             </Grid>
         </Border>
-    </Grid>
 
+        <Grid Grid.Row="1"
+              Margin="20"
+              ColumnDefinitions="300,*,280">
+            <Border Grid.Column="0"
+                    Classes="panel"
+                    Margin="0 0 14 0">
+                <Grid RowDefinitions="Auto,Auto,Auto,*">
+                    <StackPanel Spacing="3">
+                        <TextBlock Text="控制台"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Foreground="#141A28" />
+                        <TextBlock Text="业务场景、输出通道与采样级别"
+                                   FontSize="12"
+                                   Foreground="#667085" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1"
+                                Margin="0 18 0 0"
+                                Spacing="8">
+                        <TextBlock Classes="sectionLabel" Text="场景样本" />
+                        <Button Classes="command" Content="API 链路请求" Click="ApiScenario_OnClick" />
+                        <Button Classes="command" Content="任务队列积压" Click="QueueScenario_OnClick" />
+                        <Button Classes="command" Content="数据库慢查询" Click="DatabaseScenario_OnClick" />
+                        <Button Classes="command" Content="异常链路追踪" Click="ExceptionScenario_OnClick" />
+                        <Button Classes="command" Content="安全审计事件" Click="SecurityScenario_OnClick" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2"
+                                Margin="0 20 0 0"
+                                Spacing="10">
+                        <TextBlock Classes="sectionLabel" Text="运行配置" />
+                        <ComboBox x:Name="LevelSelector"
+                                  SelectedIndex="0"
+                                  SelectionChanged="LevelSelector_OnSelectionChanged">
+                            <ComboBoxItem Content="Debug 及以上" />
+                            <ComboBoxItem Content="Info 及以上" />
+                            <ComboBoxItem Content="Warn 及以上" />
+                            <ComboBoxItem Content="Error 及以上" />
+                            <ComboBoxItem Content="Fatal only" />
+                        </ComboBox>
+                        <CheckBox x:Name="OutputToUiCheckBox"
+                                  Content="写入 UI 通道"
+                                  IsChecked="True"
+                                  Checked="Channels_OnChanged"
+                                  Unchecked="Channels_OnChanged" />
+                        <CheckBox x:Name="OutputToFileCheckBox"
+                                  Content="写入文件"
+                                  IsChecked="True"
+                                  Checked="Channels_OnChanged"
+                                  Unchecked="Channels_OnChanged" />
+                        <CheckBox x:Name="OutputToConsoleCheckBox"
+                                  Content="输出到控制台"
+                                  IsChecked="False"
+                                  Checked="Channels_OnChanged"
+                                  Unchecked="Channels_OnChanged" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="3"
+                                Margin="0 22 0 0"
+                                Spacing="10">
+                        <Button x:Name="LiveTrafficButton"
+                                Classes="command"
+                                Content="启动实时流"
+                                Click="StartLiveTraffic_OnClick" />
+                        <Button x:Name="BurstTestButton"
+                                Classes="command"
+                                Content="批量写入 500 条"
+                                Click="BurstTest_OnClick" />
+
+                        <Border Background="#F7F9FC"
+                                BorderBrush="#E1E7F0"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12"
+                                Margin="0 8 0 0">
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="日志目录"
+                                           FontWeight="SemiBold"
+                                           Foreground="#202939" />
+                                <TextBlock x:Name="LogPathText"
+                                           TextWrapping="Wrap"
+                                           FontSize="12"
+                                           Foreground="#667085" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1"
+                    Classes="panel"
+                    Padding="0"
+                    Margin="0 0 14 0">
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <Grid Grid.Row="0"
+                          ColumnDefinitions="*,Auto"
+                          Margin="18 16 18 12">
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="实时日志流"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="#141A28" />
+                            <TextBlock Text="结构化业务日志、异常栈与 UI 友好文案"
+                                       FontSize="12"
+                                       Foreground="#667085" />
+                        </StackPanel>
+
+                        <Border Grid.Column="1"
+                                Background="#EEF6FF"
+                                BorderBrush="#C8DFFC"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10 6"
+                                VerticalAlignment="Center">
+                            <TextBlock x:Name="ThroughputText"
+                                       Text="0.0/s"
+                                       Foreground="#235A97"
+                                       FontWeight="SemiBold" />
+                        </Border>
+                    </Grid>
+
+                    <Border Grid.Row="1"
+                            Margin="18 0"
+                            Background="#FBFCFE"
+                            BorderBrush="#D8E0EA"
+                            BorderThickness="1"
+                            CornerRadius="6">
+                        <log:LogView x:Name="MainLogView"
+                                     Padding="14"
+                                     FontFamily="Consolas"
+                                     FontSize="13" />
+                    </Border>
+
+                    <Grid Grid.Row="2"
+                          ColumnDefinitions="*,Auto"
+                          Margin="18 12 18 16">
+                        <TextBlock x:Name="LastEventText"
+                                   Text="Last: waiting for traffic"
+                                   Foreground="#667085"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1"
+                                   Text="Batch 80 / UI 80ms / File 5MB"
+                                   Foreground="#667085" />
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <StackPanel Grid.Column="2" Spacing="14">
+                <Border Classes="panel">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="运行状态"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="#141A28" />
+                            <TextBlock x:Name="HealthText"
+                                       Text="Healthy"
+                                       FontSize="12"
+                                       Foreground="#667085" />
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+                            <Border Background="#F7FAFF"
+                                    BorderBrush="#DFE8F7"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="12"
+                                    Margin="0 0 8 8">
+                                <StackPanel>
+                                    <TextBlock x:Name="TotalLogsText"
+                                               Classes="metricValue"
+                                               Text="0" />
+                                    <TextBlock Classes="metricCaption" Text="Total logs" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="1"
+                                    Background="#FFF9F0"
+                                    BorderBrush="#F1DEC1"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="12"
+                                    Margin="0 0 0 8">
+                                <StackPanel>
+                                    <TextBlock x:Name="ProblemLogsText"
+                                               Classes="metricValue"
+                                               Text="0" />
+                                    <TextBlock Classes="metricCaption" Text="Warn/Error/Fatal" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Row="1"
+                                    Background="#F4FBF6"
+                                    BorderBrush="#D6ECDD"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="12"
+                                    Margin="0 0 8 0">
+                                <StackPanel>
+                                    <TextBlock x:Name="InfoLogsText"
+                                               Classes="metricValue"
+                                               Text="0" />
+                                    <TextBlock Classes="metricCaption" Text="Info" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Row="1"
+                                    Grid.Column="1"
+                                    Background="#FFF5F5"
+                                    BorderBrush="#F0D1D1"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="12">
+                                <StackPanel>
+                                    <TextBlock x:Name="FatalLogsText"
+                                               Classes="metricValue"
+                                               Text="0" />
+                                    <TextBlock Classes="metricCaption" Text="Fatal" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="panel">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="链路快照"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Foreground="#141A28" />
+                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*">
+                            <TextBlock Text="Debug" Foreground="#667085" />
+                            <TextBlock x:Name="DebugLogsText"
+                                       Grid.Column="1"
+                                       HorizontalAlignment="Right"
+                                       FontWeight="SemiBold" />
+
+                            <TextBlock Grid.Row="1" Text="Warn" Foreground="#667085" />
+                            <TextBlock x:Name="WarnLogsText"
+                                       Grid.Row="1"
+                                       Grid.Column="1"
+                                       HorizontalAlignment="Right"
+                                       FontWeight="SemiBold" />
+
+                            <TextBlock Grid.Row="2" Text="Error" Foreground="#667085" />
+                            <TextBlock x:Name="ErrorLogsText"
+                                       Grid.Row="2"
+                                       Grid.Column="1"
+                                       HorizontalAlignment="Right"
+                                       FontWeight="SemiBold" />
+
+                            <TextBlock Grid.Row="3" Text="Live batch" Foreground="#667085" />
+                            <TextBlock x:Name="LiveBatchText"
+                                       Grid.Row="3"
+                                       Grid.Column="1"
+                                       HorizontalAlignment="Right"
+                                       FontWeight="SemiBold" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </Grid>
 </Window>

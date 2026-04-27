@@ -29,6 +29,8 @@ namespace CodeWF.Log.Core.Extensions
         private static string GetDescription(Enum value)
         {
             var fieldInfo = value.GetType().GetField(value.ToString());
+            if (fieldInfo == null) return value.ToString();
+
             var attribute =
                 Attribute.GetCustomAttribute(fieldInfo, typeof(DescriptionAttribute)) as DescriptionAttribute;
             return attribute?.Description ?? value.ToString();
