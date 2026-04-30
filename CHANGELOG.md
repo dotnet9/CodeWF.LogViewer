@@ -1,5 +1,16 @@
 # 更新日志（Known）
 
+## V12.0.2（2026-04-30）
+
+- 😄[新增]-新增 `Directory.Packages.props`，切换到 NuGet 中央包版本管理，统一 Avalonia、CodeWF.Tools.Core、VC-LTL 与 YY-Thunks 等依赖版本
+- 😄[新增]-新增 `pack_libraries.bat`，支持一键打包 `CodeWF.Log.Core` 与 `CodeWF.LogViewer.Avalonia`
+- 🔨[优化]-统一 `CodeWF.Log.Core` 与 `CodeWF.LogViewer.Avalonia` 的 NuGet 包输出目录到 `publish/nuget/<Configuration>`
+- 🔨[优化]-完善多平台发布脚本与发布配置文件，补齐 `win-x86`、`linux-x64`、`linux-arm64` 的 `pubxml`，并统一发布输出目录命名
+- 🔨[优化]-发布脚本增加缺失 `pubxml` 时的命令行回退、`CODEX_NO_PAUSE` 开关，以及发布后自动恢复 `Directory.Build.props` 的平台宏
+- 🔨[优化]-示例项目与日志库补充 `net11.0` 目标框架，便于统一 .NET 11 发布与打包流程
+- 🐛[修复]-修复 Avalonia 12 下 `CheckBox` 的事件绑定方式，改为使用 `IsCheckedChanged`，恢复 `AvaloniaLogDemo` 构建
+- 🐛[修复]-修复 `UpdateAssemblyVersion.ps1` 的编码与注释文本问题，避免不同终端环境下出现乱码
+
 ## V11.3.15（2026-04-27）
 
 - 😄[新增]-添加 CHANGELOG.md 更新日志文件，从 2026-04-27 开始记录版本变更

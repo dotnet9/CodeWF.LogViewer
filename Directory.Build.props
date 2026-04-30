@@ -1,6 +1,23 @@
-<Project>
+﻿<Project>
     <PropertyGroup>
-	    <Version>11.3.15.0</Version>
-		<AvaloniaVersion>11.3.14</AvaloniaVersion>
+	    <Version>12.0.2.0</Version>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <PackageOutputPath>$(MSBuildThisFileDirectory)publish\nuget\$(Configuration)\</PackageOutputPath>
     </PropertyGroup>
 </Project>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

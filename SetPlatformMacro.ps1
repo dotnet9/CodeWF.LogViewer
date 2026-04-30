@@ -3,6 +3,8 @@ param(
 	[string]$Platform
 )
 
+$ErrorActionPreference = "Stop"
+
 $propsFile = Join-Path $PSScriptRoot "Directory.Build.props"
 
 if (-not (Test-Path $propsFile)) {
@@ -24,8 +26,19 @@ switch ($Platform) {
 
 $content = Get-Content -Path $propsFile -Encoding UTF8 -Raw
 $pattern = '<DefineConstants>.*?</DefineConstants>'
-$replacement = "<DefineConstants>`$(DefineConstants);$macro</DefineConstants>"
 
-$content = $content -replace $pattern, $replacement
+if ($content -match $pattern) {
+    $replacement = "<DefineConstants>`$(DefineConstants);$macro</DefineConstants>"
+    $content = $content -replace $pattern, $replacement
+} elseif ($content -match '</PropertyGroup>') {
+    $closingTag = '</PropertyGroup>'
+    $insertAt = $content.IndexOf($closingTag)
+    $insertion = "    <DefineConstants>`$(DefineConstants);$macro</DefineConstants>`r`n"
+    $content = $content.Insert($insertAt, $insertion)
+} else {
+    Write-Error "PropertyGroup not found in: $propsFile"
+    exit 1
+}
+
 Set-Content -Path $propsFile -Value $content -Encoding UTF8
 Write-Output "Set DefineConstants to: $macro"

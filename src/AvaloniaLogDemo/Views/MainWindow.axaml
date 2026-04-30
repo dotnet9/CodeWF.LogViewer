@@ -6,11 +6,11 @@
         x:Class="AvaloniaLogDemo.Views.MainWindow"
         mc:Ignorable="d"
         d:DesignWidth="1220"
-        d:DesignHeight="760"
+        d:DesignHeight="920"
         Width="1220"
-        Height="760"
+        Height="920"
         MinWidth="1040"
-        MinHeight="680"
+        MinHeight="920"
         Icon="/Assets/avalonia-logo.ico"
         Background="#F3F6FA"
         Title="CodeWF Log Viewer - Avalonia Demo">
@@ -147,18 +147,15 @@
                         <CheckBox x:Name="OutputToUiCheckBox"
                                   Content="写入 UI 通道"
                                   IsChecked="True"
-                                  Checked="Channels_OnChanged"
-                                  Unchecked="Channels_OnChanged" />
+                                  IsCheckedChanged="Channels_OnChanged" />
                         <CheckBox x:Name="OutputToFileCheckBox"
                                   Content="写入文件"
                                   IsChecked="True"
-                                  Checked="Channels_OnChanged"
-                                  Unchecked="Channels_OnChanged" />
+                                  IsCheckedChanged="Channels_OnChanged" />
                         <CheckBox x:Name="OutputToConsoleCheckBox"
                                   Content="输出到控制台"
                                   IsChecked="False"
-                                  Checked="Channels_OnChanged"
-                                  Unchecked="Channels_OnChanged" />
+                                  IsCheckedChanged="Channels_OnChanged" />
                     </StackPanel>
 
                     <StackPanel Grid.Row="3"
