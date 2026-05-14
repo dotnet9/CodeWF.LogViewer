@@ -1,15 +1,16 @@
 <Project>
-	<PropertyGroup>
-		<AvaloniaVersion>12.0.2</AvaloniaVersion>
-	</PropertyGroup>
-	<ItemGroup>
-		<PackageVersion Include="Avalonia" Version="$(AvaloniaVersion)" />
-		<PackageVersion Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
-		<PackageVersion Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
-		<PackageVersion Include="Avalonia.Fonts.Inter" Version="$(AvaloniaVersion)" />
-		<PackageVersion Include="Avalonia.Diagnostics" Version="11.3.14" />
-		<PackageVersion Include="CodeWF.Tools.Core" Version="1.3.12.3" />
-		<PackageVersion Include="VC-LTL" Version="5.3.1" />
-		<PackageVersion Include="YY-Thunks" Version="1.2.1-beta.7" />
-	</ItemGroup>
+  <PropertyGroup>
+    <AvaloniaVersion>12.0.3</AvaloniaVersion>
+    <VC_LTL>5.3.1</VC_LTL>
+    <YY_Thunks>1.2.2-beta.1</YY_Thunks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Avalonia" Version="$(AvaloniaVersion)" />
+    <PackageVersion Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="$(AvaloniaVersion)" />
+    <PackageVersion Include="CodeWF.Tools.Core" Version="1.3.13" />
+    <PackageVersion Include="VC-LTL" Version="$(VC_LTL)" />
+    <PackageVersion Include="YY-Thunks" Version="$(YY_Thunks)" />
+  </ItemGroup>
 </Project>
