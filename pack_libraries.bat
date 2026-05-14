@@ -8,12 +8,19 @@ set "projects=src\CodeWF.Log.Core\CodeWF.Log.Core.csproj src\CodeWF.LogViewer.Av
 set "output_dir=%~dp0publish\nuget\%configuration%"
 
 echo ========================================
-echo Packing NuGet libraries with %configuration% configuration...
+echo Building and packing NuGet libraries with %configuration% configuration...
 echo ========================================
 
 for %%p in (%projects%) do (
+    echo Building %%p...
+    dotnet build "%%p" -c %configuration% -nologo /p:GeneratePackageOnBuild=false
+    if errorlevel 1 (
+        echo Error: Failed to build %%p
+        goto :error
+    )
+
     echo Packing %%p...
-    dotnet pack "%%p" -c %configuration% -nologo
+    dotnet pack "%%p" -c %configuration% --no-build --no-restore -nologo
     if errorlevel 1 (
         echo Error: Failed to pack %%p
         goto :error
