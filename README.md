@@ -126,3 +126,16 @@ await Logger.FlushAsync();
 1. 🐛[修复]-修复自定义日志目录打开异常问题
 
 TODO
+
+## 第三方开源组件审计（2026-05-20）
+
+检查方式：NuGet 元数据、恢复后的 `project.assets.json`、NuGet.org 与源码仓库信息。优先接受 MIT / Apache-2.0 / BSD。
+
+| 包 | 使用范围 | 协议 | 源码/项目地址 | 结论 |
+| --- | --- | --- | --- | --- |
+| `Avalonia` / `Avalonia.Desktop` / `Avalonia.Fonts.Inter` / `Avalonia.Themes.Fluent` | Avalonia 日志查看器和示例 | MIT | https://github.com/AvaloniaUI/Avalonia | 通过 |
+| `CodeWF.Tools.Core` | 日志核心辅助能力 | MIT | https://github.com/dotnet9/CodeWF.Tools | 自研开源包，已更新到 `1.3.13.2` |
+| `VC-LTL` | Windows 示例运行时兼容 | EPL-2.0 | https://github.com/Chuyu-Team/VC-LTL5 | 源码开放，按“非优先但可追溯”通过 |
+| `YY-Thunks` | Windows 示例运行时兼容 | MIT | https://github.com/Chuyu-Team/YY-Thunks | 通过 |
+
+传递依赖检查结论：Avalonia/SkiaSharp/ANGLE 链均有公开源码，许可证为 MIT 或 BSD-style。未发现 `Semi.Avalonia.Dock`、`Semi.Avalonia.ProDataGrid`、`Semi.Avalonia.AvaloniaEdit` 或其它黑盒主题包。

@@ -9,7 +9,7 @@
     <PackageVersion Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="$(AvaloniaVersion)" />
-    <PackageVersion Include="CodeWF.Tools.Core" Version="1.3.13" />
+    <PackageVersion Include="CodeWF.Tools.Core" Version="1.3.13.2" />
     <PackageVersion Include="VC-LTL" Version="$(VC_LTL)" />
     <PackageVersion Include="YY-Thunks" Version="$(YY_Thunks)" />
   </ItemGroup>
