@@ -5,11 +5,11 @@
   </Folder>
   <Folder Name="/Solution Files/">
     <File Path=".gitignore" />
-    <File Path="CHANGELOG.md" />
+    <File Path="UpdateLog.md" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
     <File Path="LICENSE" />
-    <File Path="pack_libraries.bat" />
+    <File Path="pack.bat" />
     <File Path="publish.bat" />
     <File Path="publish_all.bat" />
     <File Path="publish_win-x64.bat" />

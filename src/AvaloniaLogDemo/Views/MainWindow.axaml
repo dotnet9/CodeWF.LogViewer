@@ -11,7 +11,7 @@
         Height="920"
         MinWidth="1040"
         MinHeight="920"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/logo.ico"
         Background="#F3F6FA"
         Title="CodeWF Log Viewer - Avalonia Demo">
 
