@@ -1,5 +1,9 @@
 # 更新日志（Known）
 
+## 12.0.5.3 (2026-06-24)
+
+- 😄[新增]-`CodeWF.Log.Core` 新增 `Logger.Warn(string content, Exception? ex, ...)` 重载，警告日志可记录异常堆栈信息。
+
 ## 12.0.4.2 (2026-06-08)
 
 - 🎨[优化]-再次收敛根目录 `logo.svg`、`logo.png`、`logo.ico`，移除外层深色底板，将日志面板本身作为主体图标，提升小尺寸显示清晰度。

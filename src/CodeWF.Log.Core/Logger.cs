@@ -595,12 +595,50 @@ namespace CodeWF.Log.Core
         }
 
         /// <summary>
+        /// 记录警告日志，并附带异常堆栈信息
+        /// </summary>
+        /// <param name="content">日志内容（将写入日志文件）</param>
+        /// <param name="ex">异常信息（可选，若提供，将在日志中包含异常堆栈信息）</param>
+        /// <param name="uiContent">用于UI显示的友好日志内容（可选，默认为null，此时UI将显示content）</param>
+        /// <param name="log2UI">是否输出到UI界面，默认为true</param>
+        /// <param name="log2File">是否输出到日志文件，默认为true</param>
+        /// <param name="log2Console">是否输出到控制台，默认为true</param>
+        public static void Warn(string content, Exception? ex, string? uiContent = default, bool log2UI = true,
+            bool log2File = true, bool log2Console = true)
+        {
+            if (Level > LogType.Warn) return;
+
+            var msg = ex == null ? content : $"{content}\r\n{ex.ToString()}";
+
+            if (EnableConsoleOutput && log2Console)
+            {
+                WriteToConsole(LogType.Warn, content);
+                if (ex != null)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+            }
+
+            var logInfo = new LogInfo(LogType.Warn, msg, uiContent, log2UI, log2File);
+
+            if (log2File)
+            {
+                LogChannel.Writer.TryWrite(logInfo);
+            }
+
+            if (log2UI)
+            {
+                UiChannel.Writer.TryWrite(logInfo);
+            }
+        }
+
+        /// <summary>
         /// 只往文件输出警告日志，不输出到UI
         /// </summary>
         /// <param name="content">日志内容</param>
         public static void WarnToFile(string content)
         {
-            Warn(content, null, log2UI: false, log2File: true, log2Console: false);
+            Warn(content, uiContent: null, log2UI: false, log2File: true, log2Console: false);
         }
 
         /// <summary>
