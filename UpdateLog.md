@@ -1,5 +1,9 @@
 # 更新日志（Known）
 
+## 12.0.5.5 (2026-06-25)
+
+- 🐛[修复]-`CodeWF.LogViewer.Avalonia` 日志文本默认按字号生成更舒适的行高，并开放 `LogLineHeightMultiplier` 便于调用方按场景微调。
+
 ## 12.0.5.4 (2026-06-25)
 
 - 🐛[修复]-`CodeWF.LogViewer.Avalonia` 禁用日志视图横向滚动条，日志文本按控件可视宽度自动换行，窗口或布局分隔条调整后可随宽度重新排版。

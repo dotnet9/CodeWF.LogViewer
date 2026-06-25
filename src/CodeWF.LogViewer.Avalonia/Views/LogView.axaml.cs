@@ -21,6 +21,9 @@ namespace CodeWF.LogViewer.Avalonia;
 
 public partial class LogView : UserControl
 {
+    public static readonly StyledProperty<double> LogLineHeightMultiplierProperty =
+        AvaloniaProperty.Register<LogView, double>(nameof(LogLineHeightMultiplier), 1.5);
+
     private IClipboard? _clipboard;
     private ContextMenu _contextMenu = null!;
 
@@ -39,6 +42,12 @@ public partial class LogView : UserControl
     private static readonly SolidColorBrush ErrorBrush = new(Color.Parse("#FF4D4F"));
     private static readonly SolidColorBrush FatalBrush = new(Color.Parse("#FF4D4F"));
     private static readonly SolidColorBrush DefaultBrush = new(Color.Parse("#000000"));
+
+    public double LogLineHeightMultiplier
+    {
+        get => GetValue(LogLineHeightMultiplierProperty);
+        set => SetValue(LogLineHeightMultiplierProperty, value);
+    }
 
     public LogView()
     {
@@ -77,7 +86,34 @@ public partial class LogView : UserControl
         _contextMenu = this.FindControl<ContextMenu>("LogContextMenu")
             ?? throw new InvalidOperationException("LogContextMenu is missing.");
         _textView.Text = string.Empty;
+        UpdateLogLineHeight();
         RecordLog();
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == FontSizeProperty || change.Property == LogLineHeightMultiplierProperty)
+        {
+            UpdateLogLineHeight();
+        }
+    }
+
+    private void UpdateLogLineHeight()
+    {
+        if (_textView is null)
+        {
+            return;
+        }
+
+        if (LogLineHeightMultiplier <= 0 || double.IsNaN(LogLineHeightMultiplier))
+        {
+            _textView.ClearValue(TextBlock.LineHeightProperty);
+            return;
+        }
+
+        _textView.LineHeight = Math.Ceiling(FontSize * LogLineHeightMultiplier);
     }
 
     private void RecordLog()
