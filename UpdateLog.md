@@ -1,5 +1,9 @@
 # 更新日志（Known）
 
+## 12.0.5.4 (2026-06-25)
+
+- 🐛[修复]-`CodeWF.LogViewer.Avalonia` 禁用日志视图横向滚动条，日志文本按控件可视宽度自动换行，窗口或布局分隔条调整后可随宽度重新排版。
+
 ## 12.0.5.3 (2026-06-24)
 
 - 😄[新增]-`CodeWF.Log.Core` 新增 `Logger.Warn(string content, Exception? ex, ...)` 重载，警告日志可记录异常堆栈信息。
