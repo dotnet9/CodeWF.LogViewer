@@ -1,5 +1,11 @@
 # 更新日志（Known）
 
+## 12.1.0.2 (2026-07-16)
+
+- 😄[新增]-`CodeWF.LogViewer.Avalonia` 支持按最低日志级别弹出重要日志 Notification，可配置总开关、显示时间和 TopLevel Host，并支持 AXAML 与后台代码配置。
+- 😄[新增]-重要日志通知独立于 UI 日志通道，`log2UI=false` 的日志仍可触发弹出提醒。
+- 🔨[优化]-使用 Avalonia `WindowNotificationManager` 接入 Semi.Avalonia Notification 样式，限制同一 Host 最多显示 3 条通知，并同步更新 Demo 与使用文档。
+
 ## 12.0.5.5 (2026-06-25)
 
 - 🐛[修复]-`CodeWF.LogViewer.Avalonia` 日志文本默认按字号生成更舒适的行高，并开放 `LogLineHeightMultiplier` 便于调用方按场景微调。

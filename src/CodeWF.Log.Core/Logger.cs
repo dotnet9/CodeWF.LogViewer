@@ -60,6 +60,14 @@ namespace CodeWF.Log.Core
         public static bool EnableConsoleOutput { get; set; } = true;
 
         /// <summary>
+        /// 日志通过 <see cref="Level"/> 过滤后触发，不受文件、UI、控制台输出开关影响。
+        /// </summary>
+        /// <remarks>
+        /// 订阅方应保持处理逻辑轻量，并自行切换到所需线程。单个订阅方异常不会影响日志写入和其他订阅方。
+        /// </remarks>
+        public static event Action<LogInfo>? LogPublished;
+
+        /// <summary>
         /// 表示内部使用的线程安全日志条目队列。
         /// </summary>
         private static readonly Channel<LogInfo> LogChannel;
@@ -335,16 +343,7 @@ namespace CodeWF.Log.Core
             }
 
             var logInfo = new LogInfo(logType, content, uiContent, log2UI, log2File);
-
-            if (log2File)
-            {
-                LogChannel.Writer.TryWrite(logInfo);
-            }
-
-            if (log2UI)
-            {
-                UiChannel.Writer.TryWrite(logInfo);
-            }
+            PublishLog(logInfo);
         }
 
         /// <summary>
@@ -387,16 +386,7 @@ namespace CodeWF.Log.Core
             }
 
             var logInfo = new LogInfo(type, content, uiContent, log2UI, log2File);
-
-            if (log2File)
-            {
-                LogChannel.Writer.TryWrite(logInfo);
-            }
-
-            if (log2UI)
-            {
-                UiChannel.Writer.TryWrite(logInfo);
-            }
+            PublishLog(logInfo);
         }
 
         /// <summary>
@@ -483,16 +473,7 @@ namespace CodeWF.Log.Core
                 }
 
                 var logInfo = new LogInfo(LogType.Debug, content, uiContent, log2UI, log2File);
-
-                if (log2File)
-                {
-                    LogChannel.Writer.TryWrite(logInfo);
-                }
-
-                if (log2UI)
-                {
-                    UiChannel.Writer.TryWrite(logInfo);
-                }
+                PublishLog(logInfo);
             }
         }
 
@@ -532,16 +513,7 @@ namespace CodeWF.Log.Core
                 }
 
                 var logInfo = new LogInfo(LogType.Info, content, uiContent, log2UI, log2File);
-
-                if (log2File)
-                {
-                    LogChannel.Writer.TryWrite(logInfo);
-                }
-
-                if (log2UI)
-                {
-                    UiChannel.Writer.TryWrite(logInfo);
-                }
+                PublishLog(logInfo);
             }
         }
 
@@ -581,16 +553,7 @@ namespace CodeWF.Log.Core
                 }
 
                 var logInfo = new LogInfo(LogType.Warn, content, uiContent, log2UI, log2File);
-
-                if (log2File)
-                {
-                    LogChannel.Writer.TryWrite(logInfo);
-                }
-
-                if (log2UI)
-                {
-                    UiChannel.Writer.TryWrite(logInfo);
-                }
+                PublishLog(logInfo);
             }
         }
 
@@ -620,16 +583,7 @@ namespace CodeWF.Log.Core
             }
 
             var logInfo = new LogInfo(LogType.Warn, msg, uiContent, log2UI, log2File);
-
-            if (log2File)
-            {
-                LogChannel.Writer.TryWrite(logInfo);
-            }
-
-            if (log2UI)
-            {
-                UiChannel.Writer.TryWrite(logInfo);
-            }
+            PublishLog(logInfo);
         }
 
         /// <summary>
@@ -676,16 +630,7 @@ namespace CodeWF.Log.Core
             }
 
             var logInfo = new LogInfo(LogType.Error, msg, uiContent, log2UI, log2File);
-
-            if (log2File)
-            {
-                LogChannel.Writer.TryWrite(logInfo);
-            }
-
-            if (log2UI)
-            {
-                UiChannel.Writer.TryWrite(logInfo);
-            }
+            PublishLog(logInfo);
         }
 
         /// <summary>
@@ -734,16 +679,7 @@ namespace CodeWF.Log.Core
             }
 
             var logInfo = new LogInfo(LogType.Fatal, msg, uiContent, log2UI, log2File);
-
-            if (log2File)
-            {
-                LogChannel.Writer.TryWrite(logInfo);
-            }
-
-            if (log2UI)
-            {
-                UiChannel.Writer.TryWrite(logInfo);
-            }
+            PublishLog(logInfo);
         }
 
         /// <summary>
@@ -764,6 +700,37 @@ namespace CodeWF.Log.Core
         public static void FatalToUI(string content, Exception? ex = null)
         {
             Fatal(content, ex, content, log2UI: true, log2File: false, log2Console: true);
+        }
+
+        private static void PublishLog(LogInfo logInfo)
+        {
+            if (logInfo.Log2File)
+            {
+                LogChannel.Writer.TryWrite(logInfo);
+            }
+
+            if (logInfo.Log2UI)
+            {
+                UiChannel.Writer.TryWrite(logInfo);
+            }
+
+            var handlers = LogPublished;
+            if (handlers == null)
+            {
+                return;
+            }
+
+            foreach (var subscriber in handlers.GetInvocationList())
+            {
+                try
+                {
+                    ((Action<LogInfo>)subscriber)(logInfo);
+                }
+                catch
+                {
+                    // 单个订阅方异常不能影响日志主流程。
+                }
+            }
         }
 
         /// <summary>

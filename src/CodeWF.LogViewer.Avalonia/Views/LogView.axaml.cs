@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
+using Avalonia.Controls.Notifications;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
@@ -21,8 +22,22 @@ namespace CodeWF.LogViewer.Avalonia;
 
 public partial class LogView : UserControl
 {
+    private static readonly TimeSpan DefaultNotificationDuration = TimeSpan.FromSeconds(5);
+
     public static readonly StyledProperty<double> LogLineHeightMultiplierProperty =
         AvaloniaProperty.Register<LogView, double>(nameof(LogLineHeightMultiplier), 1.5);
+
+    public static readonly StyledProperty<bool> IsNotificationEnabledProperty =
+        AvaloniaProperty.Register<LogView, bool>(nameof(IsNotificationEnabled), false);
+
+    public static readonly StyledProperty<LogType> NotificationLevelProperty =
+        AvaloniaProperty.Register<LogView, LogType>(nameof(NotificationLevel), LogType.Error);
+
+    public static readonly StyledProperty<TimeSpan> NotificationDurationProperty =
+        AvaloniaProperty.Register<LogView, TimeSpan>(nameof(NotificationDuration), DefaultNotificationDuration);
+
+    public static readonly StyledProperty<TopLevel?> NotificationHostProperty =
+        AvaloniaProperty.Register<LogView, TopLevel?>(nameof(NotificationHost));
 
     private IClipboard? _clipboard;
     private ContextMenu _contextMenu = null!;
@@ -31,6 +46,12 @@ public partial class LogView : UserControl
     private ScrollViewer _scrollViewer = null!;
     private SelectableTextBlock _textView = null!;
     private readonly CancellationTokenSource _cancellationTokenSource;
+    private WindowNotificationManager? _notificationManager;
+    private TopLevel? _notificationManagerHost;
+    private bool _isAttachedToVisualTree;
+    private bool _isNotificationSubscribed;
+    private int _notificationEnabled;
+    private int _notificationLevel = (int)LogType.Error;
 
     // 修复：使用Brush对象池，避免重复创建
     private static readonly SolidColorBrush GrayBrush = new(Color.Parse("#8C8C8C"));
@@ -49,6 +70,42 @@ public partial class LogView : UserControl
         set => SetValue(LogLineHeightMultiplierProperty, value);
     }
 
+    /// <summary>
+    /// 是否弹出重要日志通知。默认关闭，避免升级组件后改变现有应用行为。
+    /// </summary>
+    public bool IsNotificationEnabled
+    {
+        get => GetValue(IsNotificationEnabledProperty);
+        set => SetValue(IsNotificationEnabledProperty, value);
+    }
+
+    /// <summary>
+    /// 弹出通知的最低日志级别。默认 <see cref="LogType.Error"/>。
+    /// </summary>
+    public LogType NotificationLevel
+    {
+        get => GetValue(NotificationLevelProperty);
+        set => SetValue(NotificationLevelProperty, value);
+    }
+
+    /// <summary>
+    /// 通知自动关闭时间。默认 5 秒，设置为 <see cref="TimeSpan.Zero"/> 时不自动关闭。
+    /// </summary>
+    public TimeSpan NotificationDuration
+    {
+        get => GetValue(NotificationDurationProperty);
+        set => SetValue(NotificationDurationProperty, value);
+    }
+
+    /// <summary>
+    /// 通知显示宿主。未设置时自动使用当前控件所属的 <see cref="TopLevel"/>。
+    /// </summary>
+    public TopLevel? NotificationHost
+    {
+        get => GetValue(NotificationHostProperty);
+        set => SetValue(NotificationHostProperty, value);
+    }
+
     public LogView()
     {
         InitializeComponent();
@@ -59,6 +116,11 @@ public partial class LogView : UserControl
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+        _isAttachedToVisualTree = false;
+        UnsubscribeFromLogNotifications();
+        _notificationManager?.CloseAll();
+        _notificationManager = null;
+        _notificationManagerHost = null;
         // 清理资源，停止后台任务
         _cancellationTokenSource?.Cancel();
     }
@@ -71,10 +133,14 @@ public partial class LogView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        _isAttachedToVisualTree = true;
         var level = TopLevel.GetTopLevel(this);
-        if (level == null) return;
-
-        _clipboard = level.Clipboard;
+        if (level != null)
+        {
+            _clipboard = level.Clipboard;
+        }
+        EnsureNotificationManager();
+        SubscribeToLogNotifications();
     }
 
     private void Init()
@@ -98,6 +164,117 @@ public partial class LogView : UserControl
         {
             UpdateLogLineHeight();
         }
+
+        else if (change.Property == IsNotificationEnabledProperty)
+        {
+            Volatile.Write(ref _notificationEnabled, change.GetNewValue<bool>() ? 1 : 0);
+            if (!change.GetNewValue<bool>())
+            {
+                _notificationManager?.CloseAll();
+            }
+        }
+        else if (change.Property == NotificationLevelProperty)
+        {
+            Volatile.Write(ref _notificationLevel, (int)change.GetNewValue<LogType>());
+        }
+        else if (change.Property == NotificationHostProperty && _isAttachedToVisualTree)
+        {
+            EnsureNotificationManager();
+        }
+    }
+
+    private void SubscribeToLogNotifications()
+    {
+        if (_isNotificationSubscribed)
+        {
+            return;
+        }
+
+        Logger.LogPublished += Logger_LogPublished;
+        _isNotificationSubscribed = true;
+    }
+
+    private void UnsubscribeFromLogNotifications()
+    {
+        if (!_isNotificationSubscribed)
+        {
+            return;
+        }
+
+        Logger.LogPublished -= Logger_LogPublished;
+        _isNotificationSubscribed = false;
+    }
+
+    private void Logger_LogPublished(LogInfo logInfo)
+    {
+        if (Volatile.Read(ref _notificationEnabled) == 0 ||
+            (int)logInfo.Level < Volatile.Read(ref _notificationLevel))
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => ShowLogNotification(logInfo));
+    }
+
+    private void ShowLogNotification(LogInfo logInfo)
+    {
+        if (!IsNotificationEnabled || logInfo.Level < NotificationLevel || !_isAttachedToVisualTree)
+        {
+            return;
+        }
+
+        EnsureNotificationManager();
+        if (_notificationManager == null)
+        {
+            return;
+        }
+
+        var duration = NotificationDuration < TimeSpan.Zero
+            ? DefaultNotificationDuration
+            : NotificationDuration;
+        var title = $"{logInfo.Level.Description()} · {logInfo.RecordTime:HH:mm:ss}";
+        var content = string.IsNullOrWhiteSpace(logInfo.FriendlyDescription)
+            ? logInfo.Description
+            : logInfo.FriendlyDescription;
+
+        _notificationManager.Show(new Notification(
+            title,
+            TrimNotificationContent(content),
+            GetNotificationType(logInfo.Level),
+            duration));
+    }
+
+    private void EnsureNotificationManager()
+    {
+        var host = NotificationHost ?? TopLevel.GetTopLevel(this);
+        if (host == null || ReferenceEquals(host, _notificationManagerHost))
+        {
+            return;
+        }
+
+        _notificationManager?.CloseAll();
+        _notificationManager = new WindowNotificationManager(host)
+        {
+            MaxItems = 3,
+            Position = NotificationPosition.TopRight
+        };
+        _notificationManagerHost = host;
+    }
+
+    private static NotificationType GetNotificationType(LogType level)
+    {
+        return level switch
+        {
+            LogType.Warn => NotificationType.Warning,
+            LogType.Error or LogType.Fatal => NotificationType.Error,
+            _ => NotificationType.Information
+        };
+    }
+
+    private static string TrimNotificationContent(string content)
+    {
+        const int maxLength = 500;
+        return content.Length <= maxLength ? content : content[..maxLength] + "...";
     }
 
     private void UpdateLogLineHeight()

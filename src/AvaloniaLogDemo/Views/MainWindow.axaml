@@ -145,7 +145,7 @@
                             <ComboBoxItem Content="Fatal only" />
                         </ComboBox>
                         <CheckBox x:Name="OutputToUiCheckBox"
-                                  Content="写入 UI 通道"
+                                  Content="写入 UI 通道（不影响重要日志 Tip）"
                                   IsChecked="True"
                                   IsCheckedChanged="Channels_OnChanged" />
                         <CheckBox x:Name="OutputToFileCheckBox"
@@ -231,7 +231,10 @@
                         <log:LogView x:Name="MainLogView"
                                      Padding="14"
                                      FontFamily="Consolas"
-                                     FontSize="13" />
+                                     FontSize="13"
+                                     IsNotificationEnabled="True"
+                                     NotificationLevel="Error"
+                                     NotificationDuration="0:0:5" />
                     </Border>
 
                     <Grid Grid.Row="2"

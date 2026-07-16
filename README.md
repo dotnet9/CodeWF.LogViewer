@@ -10,7 +10,7 @@
 
 ## 仓库规范
 
-- 当前版本：`12.0.4.2`，版本号统一维护在根目录 `Directory.Build.props` 的 `<Version>` 节点。
+- 当前版本：`12.1.0.2`，版本号统一维护在根目录 `Directory.Build.props` 的 `<Version>` 节点。
 - NuGet 包项目统一支持 `net8.0;net10.0`；Demo、App、测试与内部应用项目统一使用 `net11.0` / `net11.0-windows`。
 - 根目录 `logo.svg`、`logo.png`、`logo.ico` 是唯一图标源，子工程只通过 MSBuild `Link` 引用，不维护图标副本。
 - 运行时帮助、Markdown 示例、内置备忘录、设计说明等业务文档按功能保留；仓库级入口文档使用根目录 `README.md` 和 `UpdateLog.md`。
@@ -120,6 +120,49 @@ await Logger.FlushAsync();
 `LogView` 内部使用 `await foreach` 异步枚举模式消费 UI 通道日志，支持批量处理和防抖机制：
 - 日志数量达到 `BatchProcessSize` 时立即刷新 UI
 - 未达阈值时，最长延迟 `LogUIDuration`（默认100ms）后刷新
+
+### 重要日志弹出通知
+
+`LogView` 可以把达到指定级别的日志显示为窗口内 Notification。通知订阅独立于 UI 日志通道，
+因此 `log2UI=false` 或 `ErrorToFile`、`FatalToFile` 产生的重要日志仍然可以弹出。
+
+默认值：
+
+| 属性 | 默认值 | 说明 |
+| --- | --- | --- |
+| `IsNotificationEnabled` | `false` | 总开关，默认关闭以保持升级兼容 |
+| `NotificationLevel` | `Error` | 最低弹出级别，默认弹出 Error 和 Fatal |
+| `NotificationDuration` | `00:00:05` | 自动关闭时间；`TimeSpan.Zero` 表示不自动关闭 |
+| `NotificationHost` | `null` | 未设置时自动使用 `LogView` 所属的 TopLevel |
+
+AXAML 配置：
+
+```html
+<log:LogView IsNotificationEnabled="True"
+             NotificationLevel="Error"
+             NotificationDuration="0:0:5" />
+```
+
+这些属性都是 Avalonia `StyledProperty`，也可以绑定，包括显式绑定 Host：
+
+```html
+<log:LogView IsNotificationEnabled="{Binding EnableLogNotification}"
+             NotificationLevel="{Binding LogNotificationLevel}"
+             NotificationDuration="{Binding LogNotificationDuration}"
+             NotificationHost="{Binding LogNotificationHost}" />
+```
+
+后台配置：
+
+```csharp
+MainLogView.IsNotificationEnabled = true;
+MainLogView.NotificationLevel = LogType.Error;
+MainLogView.NotificationDuration = TimeSpan.FromSeconds(5);
+MainLogView.NotificationHost = this; // Window / TopLevel，可省略并自动获取
+```
+
+通知使用 Avalonia 的 `WindowNotificationManager`，宿主应用采用 Semi.Avalonia 主题时会使用其 Notification 样式。
+同一 Host 最多同时显示 3 条通知，防止高频错误遮挡界面。
 
 ---
 

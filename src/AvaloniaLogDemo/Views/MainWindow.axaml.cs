@@ -3,6 +3,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using CodeWF.Log.Core;
+using CodeWF.LogViewer.Avalonia;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -39,6 +40,7 @@ namespace AvaloniaLogDemo.Views
         private TextBlock _warnLogsText = null!;
         private TextBlock _errorLogsText = null!;
         private TextBlock _liveBatchText = null!;
+        private LogView _mainLogView = null!;
 
         private int _totalCount;
         private int _debugCount;
@@ -128,6 +130,8 @@ namespace AvaloniaLogDemo.Views
             _warnLogsText = FindRequired<TextBlock>("WarnLogsText");
             _errorLogsText = FindRequired<TextBlock>("ErrorLogsText");
             _liveBatchText = FindRequired<TextBlock>("LiveBatchText");
+            _mainLogView = FindRequired<LogView>("MainLogView");
+            _mainLogView.NotificationHost = this;
         }
 
         private T FindRequired<T>(string name) where T : Control
