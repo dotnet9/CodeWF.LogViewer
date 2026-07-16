@@ -17,7 +17,7 @@ internal partial class DesktopLogNotificationWindow : Window
     private const int MaxLogCount = 100;
     private const int ScreenMargin = 16;
     private const double DefaultWindowWidth = 390;
-    private const double DefaultWindowHeight = 330;
+    private const double DefaultWindowHeight = 430;
     private static readonly string[] LevelClassNames = ["debug", "info", "warn", "error", "fatal"];
 
     private readonly List<LogNotificationContent> _logs = [];

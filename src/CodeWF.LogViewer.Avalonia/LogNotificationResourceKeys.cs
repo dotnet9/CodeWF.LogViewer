@@ -9,6 +9,8 @@ public static class LogNotificationResourceKeys
 
     public const string WindowWidth = Prefix + "WindowWidth";
     public const string WindowHeight = Prefix + "WindowHeight";
+    public const string WindowMinHeight = Prefix + "WindowMinHeight";
+    public const string WindowMaxHeight = Prefix + "WindowMaxHeight";
     public const string WindowBackground = Prefix + "WindowBackground";
     public const string WindowMargin = Prefix + "WindowMargin";
     public const string WindowBorderBrush = Prefix + "WindowBorderBrush";
@@ -21,6 +23,7 @@ public static class LogNotificationResourceKeys
     public const string TitleBarCornerRadius = Prefix + "TitleBarCornerRadius";
     public const string TitleForeground = Prefix + "TitleForeground";
     public const string ContentForeground = Prefix + "ContentForeground";
+    public const string ContentMaxHeight = Prefix + "ContentMaxHeight";
     public const string MutedForeground = Prefix + "MutedForeground";
     public const string NavigationBackground = Prefix + "NavigationBackground";
     public const string NavigationPointerOverBackground = Prefix + "NavigationPointerOverBackground";
