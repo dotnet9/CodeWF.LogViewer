@@ -1,5 +1,12 @@
 # 更新日志（Known）
 
+## 12.1.0.3 (2026-07-16)
+
+- 😄[新增]-重要日志通知模式调整为 `None`、`InApp`、`DesktopWindow`，桌面模式提供右下角无边框窗口、倒计时、渐隐、Hover 暂停和键盘操作。
+- 😄[新增]-桌面窗口支持最多最近 100 条日志、初始批次顺序轮播、实时日志跳转最新、上一条/下一条导航和正文自定义模板。
+- 🔨[优化]-默认重要日志级别为 Error、默认显示时间为 10 秒，未配置应用名称时使用当前进程名，最简用法仅需设置 `NotificationMode="DesktopWindow"`。
+- 🔨[优化]-桌面窗口视觉资源统一使用公开 DynamicResource Key，调用方可在 `Application.Resources` 中覆盖，无需 Semi、Ursa 或独立 Theme 包。
+
 ## 12.1.0.2 (2026-07-16)
 
 - 😄[新增]-`CodeWF.LogViewer.Avalonia` 支持按最低日志级别弹出重要日志 Notification，可配置总开关、显示时间和 TopLevel Host，并支持 AXAML 与后台代码配置。

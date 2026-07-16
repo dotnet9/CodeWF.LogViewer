@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Controls.Notifications;
+using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
@@ -11,8 +12,10 @@ using Avalonia.Threading;
 using CodeWF.Log.Core;
 using CodeWF.Log.Core.Extensions;
 using CodeWF.LogViewer.Avalonia.Extensions;
+using CodeWF.LogViewer.Avalonia.Views;
 using CodeWF.Tools.FileExtensions;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -22,13 +25,14 @@ namespace CodeWF.LogViewer.Avalonia;
 
 public partial class LogView : UserControl
 {
-    private static readonly TimeSpan DefaultNotificationDuration = TimeSpan.FromSeconds(5);
+    private const int MaxPendingNotificationCount = 100;
+    private static readonly TimeSpan DefaultNotificationDuration = TimeSpan.FromSeconds(10);
 
     public static readonly StyledProperty<double> LogLineHeightMultiplierProperty =
         AvaloniaProperty.Register<LogView, double>(nameof(LogLineHeightMultiplier), 1.5);
 
-    public static readonly StyledProperty<bool> IsNotificationEnabledProperty =
-        AvaloniaProperty.Register<LogView, bool>(nameof(IsNotificationEnabled), false);
+    public static readonly StyledProperty<LogNotificationMode> NotificationModeProperty =
+        AvaloniaProperty.Register<LogView, LogNotificationMode>(nameof(NotificationMode), LogNotificationMode.None);
 
     public static readonly StyledProperty<LogType> NotificationLevelProperty =
         AvaloniaProperty.Register<LogView, LogType>(nameof(NotificationLevel), LogType.Error);
@@ -39,6 +43,12 @@ public partial class LogView : UserControl
     public static readonly StyledProperty<TopLevel?> NotificationHostProperty =
         AvaloniaProperty.Register<LogView, TopLevel?>(nameof(NotificationHost));
 
+    public static readonly StyledProperty<string?> NotificationApplicationNameProperty =
+        AvaloniaProperty.Register<LogView, string?>(nameof(NotificationApplicationName));
+
+    public static readonly StyledProperty<IDataTemplate?> DesktopNotificationContentTemplateProperty =
+        AvaloniaProperty.Register<LogView, IDataTemplate?>(nameof(DesktopNotificationContentTemplate));
+
     private IClipboard? _clipboard;
     private ContextMenu _contextMenu = null!;
 
@@ -48,10 +58,15 @@ public partial class LogView : UserControl
     private readonly CancellationTokenSource _cancellationTokenSource;
     private WindowNotificationManager? _notificationManager;
     private TopLevel? _notificationManagerHost;
+    private DesktopLogNotificationWindow? _desktopNotificationWindow;
+    private readonly ConcurrentQueue<PendingNotificationLog> _pendingNotificationLogs = new();
     private bool _isAttachedToVisualTree;
     private bool _isNotificationSubscribed;
-    private int _notificationEnabled;
+    private int _notificationMode;
     private int _notificationLevel = (int)LogType.Error;
+    private int _notificationGeneration;
+    private int _pendingNotificationCount;
+    private int _notificationDispatchScheduled;
 
     // 修复：使用Brush对象池，避免重复创建
     private static readonly SolidColorBrush GrayBrush = new(Color.Parse("#8C8C8C"));
@@ -71,12 +86,12 @@ public partial class LogView : UserControl
     }
 
     /// <summary>
-    /// 是否弹出重要日志通知。默认关闭，避免升级组件后改变现有应用行为。
+    /// 重要日志的弹出方式。默认 <see cref="LogNotificationMode.None"/>。
     /// </summary>
-    public bool IsNotificationEnabled
+    public LogNotificationMode NotificationMode
     {
-        get => GetValue(IsNotificationEnabledProperty);
-        set => SetValue(IsNotificationEnabledProperty, value);
+        get => GetValue(NotificationModeProperty);
+        set => SetValue(NotificationModeProperty, value);
     }
 
     /// <summary>
@@ -89,7 +104,7 @@ public partial class LogView : UserControl
     }
 
     /// <summary>
-    /// 通知自动关闭时间。默认 5 秒，设置为 <see cref="TimeSpan.Zero"/> 时不自动关闭。
+    /// 通知自动关闭时间。默认 10 秒，设置为 <see cref="TimeSpan.Zero"/> 时不自动关闭。
     /// </summary>
     public TimeSpan NotificationDuration
     {
@@ -106,8 +121,27 @@ public partial class LogView : UserControl
         set => SetValue(NotificationHostProperty, value);
     }
 
+    /// <summary>
+    /// 通知标题中显示的应用名称或标识。未设置时使用当前进程名。
+    /// </summary>
+    public string? NotificationApplicationName
+    {
+        get => GetValue(NotificationApplicationNameProperty);
+        set => SetValue(NotificationApplicationNameProperty, value);
+    }
+
+    /// <summary>
+    /// 桌面窗口中间内容区域的自定义模板。
+    /// </summary>
+    public IDataTemplate? DesktopNotificationContentTemplate
+    {
+        get => GetValue(DesktopNotificationContentTemplateProperty);
+        set => SetValue(DesktopNotificationContentTemplateProperty, value);
+    }
+
     public LogView()
     {
+        LogNotificationResources.EnsureRegistered();
         InitializeComponent();
         _cancellationTokenSource = new CancellationTokenSource();
         Init();
@@ -118,7 +152,8 @@ public partial class LogView : UserControl
         base.OnDetachedFromVisualTree(e);
         _isAttachedToVisualTree = false;
         UnsubscribeFromLogNotifications();
-        _notificationManager?.CloseAll();
+        InvalidatePendingNotifications();
+        CloseAllNotifications();
         _notificationManager = null;
         _notificationManagerHost = null;
         // 清理资源，停止后台任务
@@ -133,14 +168,18 @@ public partial class LogView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        LogNotificationResources.EnsureRegistered();
         _isAttachedToVisualTree = true;
         var level = TopLevel.GetTopLevel(this);
         if (level != null)
         {
             _clipboard = level.Clipboard;
         }
-        EnsureNotificationManager();
-        SubscribeToLogNotifications();
+        UpdateNotificationSubscription();
+        if (NotificationMode == LogNotificationMode.InApp)
+        {
+            EnsureNotificationManager();
+        }
     }
 
     private void Init()
@@ -165,12 +204,16 @@ public partial class LogView : UserControl
             UpdateLogLineHeight();
         }
 
-        else if (change.Property == IsNotificationEnabledProperty)
+        else if (change.Property == NotificationModeProperty)
         {
-            Volatile.Write(ref _notificationEnabled, change.GetNewValue<bool>() ? 1 : 0);
-            if (!change.GetNewValue<bool>())
+            var mode = change.GetNewValue<LogNotificationMode>();
+            Volatile.Write(ref _notificationMode, (int)mode);
+            InvalidatePendingNotifications();
+            CloseAllNotifications();
+            UpdateNotificationSubscription();
+            if (_isAttachedToVisualTree && mode == LogNotificationMode.InApp)
             {
-                _notificationManager?.CloseAll();
+                EnsureNotificationManager();
             }
         }
         else if (change.Property == NotificationLevelProperty)
@@ -179,7 +222,32 @@ public partial class LogView : UserControl
         }
         else if (change.Property == NotificationHostProperty && _isAttachedToVisualTree)
         {
-            EnsureNotificationManager();
+            InvalidatePendingNotifications();
+            CloseAllNotifications();
+            _notificationManager = null;
+            _notificationManagerHost = null;
+            if (NotificationMode == LogNotificationMode.InApp)
+            {
+                EnsureNotificationManager();
+            }
+        }
+        else if (change.Property == NotificationApplicationNameProperty ||
+                 change.Property == NotificationDurationProperty ||
+                 change.Property == DesktopNotificationContentTemplateProperty)
+        {
+            ConfigureDesktopNotificationWindow();
+        }
+    }
+
+    private void UpdateNotificationSubscription()
+    {
+        if (_isAttachedToVisualTree && NotificationMode != LogNotificationMode.None)
+        {
+            SubscribeToLogNotifications();
+        }
+        else
+        {
+            UnsubscribeFromLogNotifications();
         }
     }
 
@@ -207,18 +275,100 @@ public partial class LogView : UserControl
 
     private void Logger_LogPublished(LogInfo logInfo)
     {
-        if (Volatile.Read(ref _notificationEnabled) == 0 ||
+        var generation = Volatile.Read(ref _notificationGeneration);
+        if (Volatile.Read(ref _notificationMode) == (int)LogNotificationMode.None ||
             (int)logInfo.Level < Volatile.Read(ref _notificationLevel))
         {
             return;
         }
 
-        Dispatcher.UIThread.Post(() => ShowLogNotification(logInfo));
+        if (generation != Volatile.Read(ref _notificationGeneration))
+        {
+            return;
+        }
+
+        _pendingNotificationLogs.Enqueue(new PendingNotificationLog(logInfo, generation));
+        Interlocked.Increment(ref _pendingNotificationCount);
+        TrimPendingNotificationLogs();
+        ScheduleNotificationDispatch();
     }
 
-    private void ShowLogNotification(LogInfo logInfo)
+    private void TrimPendingNotificationLogs()
     {
-        if (!IsNotificationEnabled || logInfo.Level < NotificationLevel || !_isAttachedToVisualTree)
+        while (Volatile.Read(ref _pendingNotificationCount) > MaxPendingNotificationCount &&
+               _pendingNotificationLogs.TryDequeue(out _))
+        {
+            Interlocked.Decrement(ref _pendingNotificationCount);
+        }
+    }
+
+    private void InvalidatePendingNotifications()
+    {
+        Interlocked.Increment(ref _notificationGeneration);
+        while (_pendingNotificationLogs.TryDequeue(out _))
+        {
+            Interlocked.Decrement(ref _pendingNotificationCount);
+        }
+    }
+
+    private void ScheduleNotificationDispatch()
+    {
+        if (Interlocked.Exchange(ref _notificationDispatchScheduled, 1) != 0)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(DrainPendingNotificationLogs);
+    }
+
+    private void DrainPendingNotificationLogs()
+    {
+        try
+        {
+            var logs = new List<LogInfo>();
+            var generation = Volatile.Read(ref _notificationGeneration);
+            while (_pendingNotificationLogs.TryDequeue(out var pendingLog))
+            {
+                Interlocked.Decrement(ref _pendingNotificationCount);
+                if (pendingLog.Generation == generation &&
+                    NotificationMode != LogNotificationMode.None &&
+                    pendingLog.LogInfo.Level >= NotificationLevel)
+                {
+                    logs.Add(pendingLog.LogInfo);
+                }
+            }
+
+            if (logs.Count == 0 || !_isAttachedToVisualTree)
+            {
+                return;
+            }
+
+            if (NotificationMode == LogNotificationMode.DesktopWindow)
+            {
+                ShowDesktopLogNotifications(logs);
+                return;
+            }
+
+            foreach (var logInfo in logs)
+            {
+                ShowInAppLogNotification(logInfo);
+            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _notificationDispatchScheduled, 0);
+            if (!_pendingNotificationLogs.IsEmpty)
+            {
+                ScheduleNotificationDispatch();
+            }
+        }
+    }
+
+    private void ShowInAppLogNotification(LogInfo logInfo)
+    {
+        if (NotificationMode != LogNotificationMode.InApp ||
+            logInfo.Level < NotificationLevel ||
+            !_isAttachedToVisualTree)
         {
             return;
         }
@@ -232,7 +382,7 @@ public partial class LogView : UserControl
         var duration = NotificationDuration < TimeSpan.Zero
             ? DefaultNotificationDuration
             : NotificationDuration;
-        var title = $"{logInfo.Level.Description()} · {logInfo.RecordTime:HH:mm:ss}";
+        var title = $"{GetNotificationApplicationName()} · {logInfo.Level.Description()} · {logInfo.RecordTime:HH:mm:ss}";
         var content = string.IsNullOrWhiteSpace(logInfo.FriendlyDescription)
             ? logInfo.Description
             : logInfo.FriendlyDescription;
@@ -244,8 +394,70 @@ public partial class LogView : UserControl
             duration));
     }
 
+    private void ShowDesktopLogNotifications(IReadOnlyList<LogInfo> logInfos)
+    {
+        if (_desktopNotificationWindow == null || _desktopNotificationWindow.IsClosing)
+        {
+            var window = new DesktopLogNotificationWindow();
+            window.Closed += (_, _) =>
+            {
+                if (ReferenceEquals(_desktopNotificationWindow, window))
+                {
+                    _desktopNotificationWindow = null;
+                }
+            };
+            _desktopNotificationWindow = window;
+            ConfigureDesktopNotificationWindow();
+            window.AddLogs(logInfos);
+            window.Show();
+            return;
+        }
+
+        ConfigureDesktopNotificationWindow();
+        _desktopNotificationWindow.AddLogs(logInfos);
+    }
+
+    private void ConfigureDesktopNotificationWindow()
+    {
+        _desktopNotificationWindow?.Configure(
+            GetNotificationApplicationName(),
+            GetNotificationDuration(),
+            NotificationHost ?? TopLevel.GetTopLevel(this),
+            DesktopNotificationContentTemplate);
+    }
+
+    private string GetNotificationApplicationName()
+    {
+        if (!string.IsNullOrWhiteSpace(NotificationApplicationName))
+        {
+            return NotificationApplicationName.Trim();
+        }
+
+        using var process = System.Diagnostics.Process.GetCurrentProcess();
+        return process.ProcessName;
+    }
+
+    private TimeSpan GetNotificationDuration()
+    {
+        return NotificationDuration < TimeSpan.Zero
+            ? DefaultNotificationDuration
+            : NotificationDuration;
+    }
+
+    private void CloseAllNotifications()
+    {
+        _notificationManager?.CloseAll();
+        _desktopNotificationWindow?.CloseNotification();
+        _desktopNotificationWindow = null;
+    }
+
     private void EnsureNotificationManager()
     {
+        if (NotificationMode != LogNotificationMode.InApp)
+        {
+            return;
+        }
+
         var host = NotificationHost ?? TopLevel.GetTopLevel(this);
         if (host == null || ReferenceEquals(host, _notificationManagerHost))
         {
@@ -276,6 +488,8 @@ public partial class LogView : UserControl
         const int maxLength = 500;
         return content.Length <= maxLength ? content : content[..maxLength] + "...";
     }
+
+    private readonly record struct PendingNotificationLog(LogInfo LogInfo, int Generation);
 
     private void UpdateLogLineHeight()
     {

@@ -28,6 +28,7 @@ namespace AvaloniaLogDemo.Views
         private TextBlock _levelStateText = null!;
         private TextBlock _fileStateText = null!;
         private TextBlock _uiStateText = null!;
+        private TextBlock _notificationStateText = null!;
         private TextBlock _logPathText = null!;
         private TextBlock _throughputText = null!;
         private TextBlock _lastEventText = null!;
@@ -41,6 +42,10 @@ namespace AvaloniaLogDemo.Views
         private TextBlock _errorLogsText = null!;
         private TextBlock _liveBatchText = null!;
         private LogView _mainLogView = null!;
+        private ComboBox _notificationModeSelector = null!;
+        private TextBox _notificationApplicationNameTextBox = null!;
+        private ComboBox _notificationLevelSelector = null!;
+        private ComboBox _notificationDurationSelector = null!;
 
         private int _totalCount;
         private int _debugCount;
@@ -118,6 +123,7 @@ namespace AvaloniaLogDemo.Views
             _levelStateText = FindRequired<TextBlock>("LevelStateText");
             _fileStateText = FindRequired<TextBlock>("FileStateText");
             _uiStateText = FindRequired<TextBlock>("UiStateText");
+            _notificationStateText = FindRequired<TextBlock>("NotificationStateText");
             _logPathText = FindRequired<TextBlock>("LogPathText");
             _throughputText = FindRequired<TextBlock>("ThroughputText");
             _lastEventText = FindRequired<TextBlock>("LastEventText");
@@ -131,6 +137,10 @@ namespace AvaloniaLogDemo.Views
             _errorLogsText = FindRequired<TextBlock>("ErrorLogsText");
             _liveBatchText = FindRequired<TextBlock>("LiveBatchText");
             _mainLogView = FindRequired<LogView>("MainLogView");
+            _notificationModeSelector = FindRequired<ComboBox>("NotificationModeSelector");
+            _notificationApplicationNameTextBox = FindRequired<TextBox>("NotificationApplicationNameTextBox");
+            _notificationLevelSelector = FindRequired<ComboBox>("NotificationLevelSelector");
+            _notificationDurationSelector = FindRequired<ComboBox>("NotificationDurationSelector");
             _mainLogView.NotificationHost = this;
         }
 
@@ -202,6 +212,73 @@ namespace AvaloniaLogDemo.Views
                 $"logger.channels ui={LogToUi} file={LogToFile} console={LogToConsole}",
                 $"输出通道已更新：UI={ToOnOff(LogToUi)}，File={ToOnOff(LogToFile)}，Console={ToOnOff(LogToConsole)}。");
             UpdateDashboard();
+        }
+
+        private void NotificationSettings_OnChanged(object? sender, RoutedEventArgs e)
+        {
+            if (!_controlsReady)
+            {
+                return;
+            }
+
+            _mainLogView.NotificationMode = _notificationModeSelector.SelectedIndex switch
+            {
+                1 => LogNotificationMode.InApp,
+                2 => LogNotificationMode.DesktopWindow,
+                _ => LogNotificationMode.None
+            };
+            _mainLogView.NotificationApplicationName = _notificationApplicationNameTextBox.Text;
+            _mainLogView.NotificationLevel = _notificationLevelSelector.SelectedIndex switch
+            {
+                0 => LogType.Debug,
+                1 => LogType.Info,
+                2 => LogType.Warn,
+                4 => LogType.Fatal,
+                _ => LogType.Error
+            };
+            _mainLogView.NotificationDuration = _notificationDurationSelector.SelectedIndex switch
+            {
+                0 => TimeSpan.FromSeconds(5),
+                2 => TimeSpan.FromSeconds(15),
+                3 => TimeSpan.Zero,
+                _ => TimeSpan.FromSeconds(10)
+            };
+
+            UpdateDashboard();
+        }
+
+        private void NotificationTest_OnClick(object? sender, RoutedEventArgs e)
+        {
+            var testLogs = new (LogType Level, string Content, string FriendlyContent)[]
+            {
+                (LogType.Error,
+                    "test=notification sequence=1 dependency=SqlServer status=timeout",
+                    "测试日志 1：SQL Server 请求超时。"),
+                (LogType.Fatal,
+                    "test=notification sequence=2 service=Order.Api status=unavailable",
+                    "测试日志 2：Order.Api 服务不可用。"),
+                (LogType.Error,
+                    "test=notification sequence=3 queue=payment-capture pending=8362",
+                    "测试日志 3：支付队列出现严重积压。"),
+                (LogType.Fatal,
+                    "test=notification sequence=4 region=north-cn failover=failed",
+                    "测试日志 4：north-cn 区域故障转移失败。"),
+                (LogType.Error,
+                    "test=notification sequence=5 disk=D free=4.7%",
+                    "测试日志 5：磁盘 D 剩余空间低于 5%。")
+            };
+
+            foreach (var testLog in testLogs)
+            {
+                WriteLog(
+                    testLog.Level,
+                    testLog.Content,
+                    testLog.FriendlyContent,
+                    null,
+                    logToUi: false,
+                    logToFile: false,
+                    logToConsole: false);
+            }
         }
 
         private void ApiScenario_OnClick(object? sender, RoutedEventArgs e)
@@ -509,6 +586,7 @@ namespace AvaloniaLogDemo.Views
             _levelStateText.Text = $"Level: {GetLevelName(Logger.Level)}";
             _fileStateText.Text = $"File: {ToOnOff(LogToFile)}";
             _uiStateText.Text = $"UI: {ToOnOff(LogToUi)}";
+            _notificationStateText.Text = $"Tip: {_mainLogView.NotificationMode}";
             _healthText.Text = fatal > 0
                 ? "Critical incidents detected"
                 : error > 0

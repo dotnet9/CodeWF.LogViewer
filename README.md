@@ -10,7 +10,7 @@
 
 ## 仓库规范
 
-- 当前版本：`12.1.0.2`，版本号统一维护在根目录 `Directory.Build.props` 的 `<Version>` 节点。
+- 当前版本：`12.1.0.3`，版本号统一维护在根目录 `Directory.Build.props` 的 `<Version>` 节点。
 - NuGet 包项目统一支持 `net8.0;net10.0`；Demo、App、测试与内部应用项目统一使用 `net11.0` / `net11.0-windows`。
 - 根目录 `logo.svg`、`logo.png`、`logo.ico` 是唯一图标源，子工程只通过 MSBuild `Link` 引用，不维护图标副本。
 - 运行时帮助、Markdown 示例、内置备忘录、设计说明等业务文档按功能保留；仓库级入口文档使用根目录 `README.md` 和 `UpdateLog.md`。
@@ -123,46 +123,63 @@ await Logger.FlushAsync();
 
 ### 重要日志弹出通知
 
-`LogView` 可以把达到指定级别的日志显示为窗口内 Notification。通知订阅独立于 UI 日志通道，
-因此 `log2UI=false` 或 `ErrorToFile`、`FatalToFile` 产生的重要日志仍然可以弹出。
+`LogView` 可以把达到指定级别的日志显示为应用内 Notification 或桌面右下角独立窗口。
+通知订阅独立于 UI 日志通道，因此 `log2UI=false` 或 `ErrorToFile`、`FatalToFile` 产生的重要日志仍然可以弹出。
 
 默认值：
 
 | 属性 | 默认值 | 说明 |
 | --- | --- | --- |
-| `IsNotificationEnabled` | `false` | 总开关，默认关闭以保持升级兼容 |
+| `NotificationMode` | `None` | `None`、`InApp` 或 `DesktopWindow` |
+| `NotificationApplicationName` | 当前进程名 | 通知标题中的应用名称或标识 |
 | `NotificationLevel` | `Error` | 最低弹出级别，默认弹出 Error 和 Fatal |
-| `NotificationDuration` | `00:00:05` | 自动关闭时间；`TimeSpan.Zero` 表示不自动关闭 |
+| `NotificationDuration` | `00:00:10` | 每条日志的自动显示时间；`TimeSpan.Zero` 表示不自动关闭 |
 | `NotificationHost` | `null` | 未设置时自动使用 `LogView` 所属的 TopLevel |
+| `DesktopNotificationContentTemplate` | `null` | 桌面窗口正文的自定义模板 |
 
-AXAML 配置：
+最简桌面窗口配置：
 
 ```html
-<log:LogView IsNotificationEnabled="True"
-             NotificationLevel="Error"
-             NotificationDuration="0:0:5" />
+<log:LogView NotificationMode="DesktopWindow" />
 ```
 
-这些属性都是 Avalonia `StyledProperty`，也可以绑定，包括显式绑定 Host：
+应用内 Notification：
 
 ```html
-<log:LogView IsNotificationEnabled="{Binding EnableLogNotification}"
-             NotificationLevel="{Binding LogNotificationLevel}"
-             NotificationDuration="{Binding LogNotificationDuration}"
-             NotificationHost="{Binding LogNotificationHost}" />
+<log:LogView NotificationMode="InApp" />
 ```
 
 后台配置：
 
 ```csharp
-MainLogView.IsNotificationEnabled = true;
+MainLogView.NotificationMode = LogNotificationMode.DesktopWindow;
+MainLogView.NotificationApplicationName = "NURES历史数据服务";
 MainLogView.NotificationLevel = LogType.Error;
-MainLogView.NotificationDuration = TimeSpan.FromSeconds(5);
+MainLogView.NotificationDuration = TimeSpan.FromSeconds(10);
 MainLogView.NotificationHost = this; // Window / TopLevel，可省略并自动获取
 ```
 
-通知使用 Avalonia 的 `WindowNotificationManager`，宿主应用采用 Semi.Avalonia 主题时会使用其 Notification 样式。
-同一 Host 最多同时显示 3 条通知，防止高频错误遮挡界面。
+桌面窗口支持：
+
+- 标题栏显示进程/应用名和倒计时；Hover 时隐藏倒计时。
+- 正文依次显示级别图标、日志级别、可选择复制的日志内容和日志时间。
+- 序号仅显示在上一条/下一条导航区，单条日志时隐藏导航区。
+- 初始批次从第一条开始，每条自动显示指定时间；实时新增日志会立即切换到最新一条。
+- 上一条、下一条导航，鼠标 Hover 暂停，移出后重新开始倒计时，最后 3 秒渐隐。
+- 最多保留最近 100 条，无人操作的单次自动轮播最长 2 分钟。
+- `Enter`/`Esc` 关闭，`←`/`→` 切换日志。
+
+桌面窗口样式全部使用 `DynamicResource`。调用方可在 `Application.Resources` 中覆盖公开资源 Key：
+
+```html
+<Application.Resources>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmBackground">#7C3AED</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationTitleBarBackground">#EEF4FF</SolidColorBrush>
+</Application.Resources>
+```
+
+可用 Key 定义在 `LogNotificationResourceKeys`。默认资源包含在现有 `CodeWF.LogViewer.Avalonia` 包内，
+不需要额外引入 Semi、Ursa 或 Theme 包。
 
 ---
 

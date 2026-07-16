@@ -99,6 +99,11 @@
                                    Text="UI: on"
                                    Foreground="#DCE7F5" />
                     </Border>
+                    <Border Classes="badge">
+                        <TextBlock x:Name="NotificationStateText"
+                                   Text="Tip: DesktopWindow"
+                                   Foreground="#DCE7F5" />
+                    </Border>
                 </StackPanel>
             </Grid>
         </Border>
@@ -109,7 +114,9 @@
             <Border Grid.Column="0"
                     Classes="panel"
                     Margin="0 0 14 0">
-                <Grid RowDefinitions="Auto,Auto,Auto,*">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto">
                     <StackPanel Spacing="3">
                         <TextBlock Text="控制台"
                                    FontSize="18"
@@ -144,6 +151,37 @@
                             <ComboBoxItem Content="Error 及以上" />
                             <ComboBoxItem Content="Fatal only" />
                         </ComboBox>
+
+                        <TextBlock Classes="sectionLabel"
+                                   Margin="0 8 0 0"
+                                   Text="重要日志通知" />
+                        <ComboBox x:Name="NotificationModeSelector"
+                                  SelectedIndex="2"
+                                  SelectionChanged="NotificationSettings_OnChanged">
+                            <ComboBoxItem Content="关闭" />
+                            <ComboBoxItem Content="应用内 Notification" />
+                            <ComboBoxItem Content="桌面右下角窗口" />
+                        </ComboBox>
+                        <TextBox x:Name="NotificationApplicationNameTextBox"
+                                 PlaceholderText="应用名称或标识"
+                                 TextChanged="NotificationSettings_OnChanged" />
+                        <ComboBox x:Name="NotificationLevelSelector"
+                                  SelectedIndex="3"
+                                  SelectionChanged="NotificationSettings_OnChanged">
+                            <ComboBoxItem Content="Debug 及以上" />
+                            <ComboBoxItem Content="Info 及以上" />
+                            <ComboBoxItem Content="Warn 及以上" />
+                            <ComboBoxItem Content="Error 及以上" />
+                            <ComboBoxItem Content="Fatal only" />
+                        </ComboBox>
+                        <ComboBox x:Name="NotificationDurationSelector"
+                                  SelectedIndex="1"
+                                  SelectionChanged="NotificationSettings_OnChanged">
+                            <ComboBoxItem Content="显示 5 秒" />
+                            <ComboBoxItem Content="显示 10 秒" />
+                            <ComboBoxItem Content="显示 15 秒" />
+                            <ComboBoxItem Content="始终显示" />
+                        </ComboBox>
                         <CheckBox x:Name="OutputToUiCheckBox"
                                   Content="写入 UI 通道（不影响重要日志 Tip）"
                                   IsChecked="True"
@@ -161,6 +199,9 @@
                     <StackPanel Grid.Row="3"
                                 Margin="0 22 0 0"
                                 Spacing="10">
+                        <Button Classes="command"
+                                Content="测试重要日志（5 条，UI off）"
+                                Click="NotificationTest_OnClick" />
                         <Button x:Name="LiveTrafficButton"
                                 Classes="command"
                                 Content="启动实时流"
@@ -188,6 +229,7 @@
                         </Border>
                     </StackPanel>
                 </Grid>
+                </ScrollViewer>
             </Border>
 
             <Border Grid.Column="1"
@@ -232,9 +274,9 @@
                                      Padding="14"
                                      FontFamily="Consolas"
                                      FontSize="13"
-                                     IsNotificationEnabled="True"
+                                     NotificationMode="DesktopWindow"
                                      NotificationLevel="Error"
-                                     NotificationDuration="0:0:5" />
+                                     NotificationDuration="0:0:10" />
                     </Border>
 
                     <Grid Grid.Row="2"

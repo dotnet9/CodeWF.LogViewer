@@ -1,0 +1,245 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="CodeWF.LogViewer.Avalonia.Views.DesktopLogNotificationWindow"
+        Width="{DynamicResource CodeWFLogDesktopNotificationWindowWidth}"
+        Height="{DynamicResource CodeWFLogDesktopNotificationWindowHeight}"
+        MinWidth="340"
+        MinHeight="280"
+        MaxHeight="480"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        WindowDecorations="None"
+        CanResize="False"
+        ShowActivated="False"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowStartupLocation="Manual">
+
+    <Window.Styles>
+        <Style Selector="Button.titleClose">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="#475467" />
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button.titleClose:pointerover">
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationClosePointerOverBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationClosePointerOverForeground}" />
+        </Style>
+
+        <Style Selector="Button.navigation">
+            <Setter Property="MinWidth" Value="86" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="CornerRadius" Value="17" />
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationNavigationBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CodeWFLogDesktopNotificationNavigationBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationNavigationForeground}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button.navigation:pointerover">
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationNavigationPointerOverBackground}" />
+            <Setter Property="BorderBrush" Value="#B7C4D6" />
+        </Style>
+
+        <Style Selector="Button.confirm">
+            <Setter Property="Height" Value="38" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="CornerRadius" Value="19" />
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationConfirmBackground}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationConfirmForeground}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button.confirm:pointerover">
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationConfirmPointerOverBackground}" />
+        </Style>
+
+        <Style Selector="Border.levelBadge.debug">
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationDebugBackground}" />
+        </Style>
+        <Style Selector="TextBlock.levelText.debug">
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationDebugForeground}" />
+        </Style>
+        <Style Selector="PathIcon.levelIcon.debug">
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationDebugForeground}" />
+            <Setter Property="Data" Value="{DynamicResource CodeWFLogDesktopNotificationDebugIconData}" />
+        </Style>
+        <Style Selector="Border.levelBadge.info">
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationInfoBackground}" />
+        </Style>
+        <Style Selector="TextBlock.levelText.info">
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationInfoForeground}" />
+        </Style>
+        <Style Selector="PathIcon.levelIcon.info">
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationInfoForeground}" />
+            <Setter Property="Data" Value="{DynamicResource CodeWFLogDesktopNotificationInfoIconData}" />
+        </Style>
+        <Style Selector="Border.levelBadge.warn">
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationWarnBackground}" />
+        </Style>
+        <Style Selector="TextBlock.levelText.warn">
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationWarnForeground}" />
+        </Style>
+        <Style Selector="PathIcon.levelIcon.warn">
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationWarnForeground}" />
+            <Setter Property="Data" Value="{DynamicResource CodeWFLogDesktopNotificationWarnIconData}" />
+        </Style>
+        <Style Selector="Border.levelBadge.error">
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationErrorBackground}" />
+        </Style>
+        <Style Selector="TextBlock.levelText.error">
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationErrorForeground}" />
+        </Style>
+        <Style Selector="PathIcon.levelIcon.error">
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationErrorForeground}" />
+            <Setter Property="Data" Value="{DynamicResource CodeWFLogDesktopNotificationErrorIconData}" />
+        </Style>
+        <Style Selector="Border.levelBadge.fatal">
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationFatalBackground}" />
+        </Style>
+        <Style Selector="TextBlock.levelText.fatal">
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationFatalForeground}" />
+        </Style>
+        <Style Selector="PathIcon.levelIcon.fatal">
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationFatalForeground}" />
+            <Setter Property="Data" Value="{DynamicResource CodeWFLogDesktopNotificationFatalIconData}" />
+        </Style>
+    </Window.Styles>
+
+    <Border x:Name="WindowRoot"
+            Margin="{DynamicResource CodeWFLogDesktopNotificationWindowMargin}"
+            Background="{DynamicResource CodeWFLogDesktopNotificationWindowBackground}"
+            BorderBrush="{DynamicResource CodeWFLogDesktopNotificationWindowBorderBrush}"
+            BorderThickness="{DynamicResource CodeWFLogDesktopNotificationWindowBorderThickness}"
+            CornerRadius="{DynamicResource CodeWFLogDesktopNotificationWindowCornerRadius}"
+            BoxShadow="{DynamicResource CodeWFLogDesktopNotificationWindowBoxShadow}"
+            PointerEntered="WindowRoot_OnPointerEntered"
+            PointerExited="WindowRoot_OnPointerExited">
+        <Grid RowDefinitions="46,*,Auto">
+            <Border Grid.Row="0"
+                    Background="{DynamicResource CodeWFLogDesktopNotificationTitleBarBackground}"
+                    BorderBrush="{DynamicResource CodeWFLogDesktopNotificationTitleBarBorderBrush}"
+                    BorderThickness="{DynamicResource CodeWFLogDesktopNotificationTitleBarBorderThickness}"
+                    CornerRadius="{DynamicResource CodeWFLogDesktopNotificationTitleBarCornerRadius}"
+                    Padding="16 6 8 6">
+                <Grid ColumnDefinitions="*,Auto,Auto">
+                    <TextBlock x:Name="TitleText"
+                               VerticalAlignment="Center"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource CodeWFLogDesktopNotificationTitleForeground}"
+                               TextTrimming="CharacterEllipsis" />
+
+                    <TextBlock x:Name="CountdownText"
+                               Grid.Column="1"
+                               Margin="12 0 8 0"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{DynamicResource CodeWFLogDesktopNotificationMutedForeground}" />
+
+                    <Button Grid.Column="2"
+                            Classes="titleClose"
+                            Content="×"
+                            ToolTip.Tip="关闭"
+                            Click="CloseButton_OnClick" />
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="1"
+                  Margin="20 16 20 10"
+                  RowDefinitions="*,Auto">
+                <Grid Margin="0 0 0 10">
+                    <Grid x:Name="DefaultContent">
+                        <Grid RowDefinitions="Auto,Auto,*,Auto">
+                            <Border x:Name="LevelBadge"
+                                    Classes="levelBadge error"
+                                    Width="56"
+                                    Height="56"
+                                    HorizontalAlignment="Center"
+                                    CornerRadius="28">
+                                <PathIcon x:Name="LevelIcon"
+                                          Classes="levelIcon error"
+                                          Width="30"
+                                          Height="30"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
+                            </Border>
+
+                            <TextBlock x:Name="LevelText"
+                                       Grid.Row="1"
+                                       Classes="levelText error"
+                                       Margin="0 7 0 0"
+                                       HorizontalAlignment="Center"
+                                       FontSize="17"
+                                       FontWeight="SemiBold" />
+
+                            <ScrollViewer Grid.Row="2"
+                                          Margin="0 10 0 0"
+                                          MaxHeight="100"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          VerticalScrollBarVisibility="Auto">
+                                <SelectableTextBlock x:Name="LogContentText"
+                                                     TextWrapping="Wrap"
+                                                     FontSize="14"
+                                                     LineHeight="22"
+                                                     Foreground="{DynamicResource CodeWFLogDesktopNotificationContentForeground}" />
+                            </ScrollViewer>
+
+                            <TextBlock x:Name="RecordTimeText"
+                                       Grid.Row="3"
+                                       Margin="0 8 0 0"
+                                       HorizontalAlignment="Right"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource CodeWFLogDesktopNotificationMutedForeground}" />
+                        </Grid>
+                    </Grid>
+
+                    <ContentControl x:Name="CustomContent"
+                                    IsVisible="False" />
+                </Grid>
+
+                <Grid x:Name="NavigationPanel"
+                      Grid.Row="1"
+                      ColumnDefinitions="Auto,*,Auto">
+                    <Button x:Name="PreviousButton"
+                            Classes="navigation"
+                            Content="← 上一条"
+                            ToolTip.Tip="上一条日志（←）"
+                            Click="PreviousButton_OnClick" />
+                    <TextBlock x:Name="CountText"
+                               Grid.Column="1"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{DynamicResource CodeWFLogDesktopNotificationMutedForeground}" />
+                    <Button x:Name="NextButton"
+                            Grid.Column="2"
+                            Classes="navigation"
+                            Content="下一条 →"
+                            ToolTip.Tip="下一条日志（→）"
+                            Click="NextButton_OnClick" />
+                </Grid>
+            </Grid>
+
+            <Button Grid.Row="2"
+                    Classes="confirm"
+                    Margin="20 0 20 16"
+                    Content="确定"
+                    ToolTip.Tip="关闭通知（Enter）"
+                    Click="ConfirmButton_OnClick" />
+        </Grid>
+    </Border>
+</Window>
