@@ -4,15 +4,13 @@ using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
-using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.Xaml.Interactivity;
 using CodeWF.Log.Core;
 using CodeWF.Log.Core.Extensions;
+using CodeWF.LogViewer.Avalonia.Behaviors;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CodeWF.LogViewer.Avalonia.Views;
 
@@ -22,7 +20,6 @@ internal partial class DesktopLogNotificationWindow : Window
     private const int ScreenMargin = 16;
     private const double DefaultWindowWidth = 390;
     private const double FallbackWindowHeight = 430;
-    private static readonly TimeSpan AttentionCooldown = TimeSpan.FromSeconds(2);
     private static readonly string[] LevelClassNames = ["debug", "info", "warn", "error", "fatal"];
 
     private readonly List<LogNotificationContent> _logs = [];
@@ -43,8 +40,7 @@ internal partial class DesktopLogNotificationWindow : Window
     private Button _openLogFolderButton = null!;
     private TextBlock _countText = null!;
     private Grid _navigationPanel = null!;
-    private readonly TranslateTransform _windowTranslateTransform = new();
-    private readonly ScaleTransform _badgeScaleTransform = new(1, 1);
+    private DesktopLogNotificationAttentionBehavior _attentionBehavior = null!;
 
     private string _applicationName = string.Empty;
     private TimeSpan _duration = TimeSpan.FromSeconds(10);
@@ -58,10 +54,7 @@ internal partial class DesktopLogNotificationWindow : Window
     private bool _isClosing;
     private bool _hasPendingAttention;
     private LogType _pendingAttentionLevel;
-    private LogType _lastAttentionLevel;
-    private DateTimeOffset _lastAttentionAt = DateTimeOffset.MinValue;
     private DesktopNotificationAttentionMode _attentionMode = DesktopNotificationAttentionMode.ShakeAndPulse;
-    private CancellationTokenSource? _attentionCancellationTokenSource;
 
     public DesktopLogNotificationWindow()
     {
@@ -91,10 +84,7 @@ internal partial class DesktopLogNotificationWindow : Window
         if (_attentionMode != attentionMode)
         {
             _attentionMode = attentionMode;
-            if (attentionMode == DesktopNotificationAttentionMode.None)
-            {
-                StopAttentionEffect();
-            }
+            _attentionBehavior.Mode = attentionMode;
         }
         _customContent.ContentTemplate = contentTemplate;
         _customContent.IsVisible = contentTemplate != null;
@@ -190,14 +180,23 @@ internal partial class DesktopLogNotificationWindow : Window
         _openLogFolderButton = FindRequired<Button>("OpenLogFolderButton");
         _countText = FindRequired<TextBlock>("CountText");
         _navigationPanel = FindRequired<Grid>("NavigationPanel");
-        _windowRoot.RenderTransform = _windowTranslateTransform;
-        _levelBadge.RenderTransformOrigin = RelativePoint.Center;
-        _levelBadge.RenderTransform = _badgeScaleTransform;
+        _attentionBehavior = FindRequiredBehavior<DesktopLogNotificationAttentionBehavior>(_windowRoot);
+        _attentionBehavior.PulseTarget = _levelBadge;
     }
 
     private T FindRequired<T>(string name) where T : Control
     {
         return this.FindControl<T>(name) ?? throw new InvalidOperationException($"{name} is missing.");
+    }
+
+    private static T FindRequiredBehavior<T>(AvaloniaObject associatedObject) where T : Behavior
+    {
+        foreach (var behavior in Interaction.GetBehaviors(associatedObject))
+        {
+            if (behavior is T expectedBehavior) return expectedBehavior;
+        }
+
+        throw new InvalidOperationException($"{typeof(T).Name} is missing.");
     }
 
     private void DesktopLogNotificationWindow_OnOpened(object? sender, EventArgs e)
@@ -209,7 +208,9 @@ internal partial class DesktopLogNotificationWindow : Window
         {
             var level = _pendingAttentionLevel;
             _hasPendingAttention = false;
-            Dispatcher.UIThread.Post(() => PlayAttention(level), DispatcherPriority.Loaded);
+            Dispatcher.UIThread.Post(
+                () => _attentionBehavior.Play(level, _isPointerInside || _hasUserNavigated),
+                DispatcherPriority.Loaded);
         }
         StartInitialCountdown();
     }
@@ -218,7 +219,7 @@ internal partial class DesktopLogNotificationWindow : Window
     {
         _countdownTimer.Stop();
         Screens.Changed -= Screens_OnChanged;
-        StopAttentionEffect();
+        _attentionBehavior.Stop();
         _isWindowOpened = false;
         _logs.Clear();
     }
@@ -254,136 +255,7 @@ internal partial class DesktopLogNotificationWindow : Window
             return;
         }
 
-        PlayAttention(level);
-    }
-
-    private async void PlayAttention(LogType level)
-    {
-        if (_attentionMode == DesktopNotificationAttentionMode.None || level < LogType.Warn || _isClosing)
-        {
-            return;
-        }
-
-        var now = DateTimeOffset.UtcNow;
-        if (now - _lastAttentionAt < AttentionCooldown && level <= _lastAttentionLevel)
-        {
-            return;
-        }
-
-        _lastAttentionAt = now;
-        _lastAttentionLevel = level;
-
-        var cancellationTokenSource = new CancellationTokenSource();
-        var previousCancellationTokenSource = _attentionCancellationTokenSource;
-        _attentionCancellationTokenSource = cancellationTokenSource;
-        previousCancellationTokenSource?.Cancel();
-
-        try
-        {
-            var shouldShake = _attentionMode == DesktopNotificationAttentionMode.ShakeAndPulse &&
-                              level >= LogType.Error &&
-                              !_isPointerInside &&
-                              !_hasUserNavigated;
-            var isFatal = level == LogType.Fatal;
-            var duration = isFatal
-                ? TimeSpan.FromMilliseconds(380)
-                : level == LogType.Error
-                    ? TimeSpan.FromMilliseconds(280)
-                    : TimeSpan.FromMilliseconds(220);
-
-            await AnimateAttentionAsync(
-                shouldShake,
-                isFatal,
-                duration,
-                cancellationTokenSource.Token);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        finally
-        {
-            if (ReferenceEquals(_attentionCancellationTokenSource, cancellationTokenSource))
-            {
-                _attentionCancellationTokenSource = null;
-                ResetAttentionTransforms();
-            }
-
-            cancellationTokenSource.Dispose();
-        }
-    }
-
-    private async Task AnimateAttentionAsync(
-        bool shouldShake,
-        bool isFatal,
-        TimeSpan duration,
-        CancellationToken cancellationToken)
-    {
-        var shakeFrames = isFatal
-            ? new (double Cue, double Value)[]
-            {
-                (0, 0), (0.11, -7), (0.22, 7), (0.33, -6), (0.44, 6),
-                (0.56, -4), (0.68, 4), (0.8, -2), (0.9, 2), (1, 0)
-            }
-            :
-            [
-                (0, 0), (0.14, -5), (0.28, 5), (0.42, -4),
-                (0.56, 4), (0.7, -2), (0.84, 2), (1, 0)
-            ];
-        var pulseFrames = isFatal
-            ? new (double Cue, double Value)[]
-            {
-                (0, 1), (0.18, 1.12), (0.38, 1), (0.62, 1.1), (0.8, 1), (1, 1)
-            }
-            : [(0, 1), (0.45, 1.1), (1, 1)];
-
-        var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.Elapsed < duration)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var progress = Math.Clamp(stopwatch.Elapsed.TotalMilliseconds / duration.TotalMilliseconds, 0, 1);
-            _windowTranslateTransform.X = shouldShake ? InterpolateFrames(shakeFrames, progress) : 0;
-            var scale = InterpolateFrames(pulseFrames, progress);
-            _badgeScaleTransform.ScaleX = scale;
-            _badgeScaleTransform.ScaleY = scale;
-            await Task.Delay(16, cancellationToken);
-        }
-
-        ResetAttentionTransforms();
-    }
-
-    private static double InterpolateFrames(
-        IReadOnlyList<(double Cue, double Value)> frames,
-        double progress)
-    {
-        for (var index = 1; index < frames.Count; index++)
-        {
-            var next = frames[index];
-            if (progress > next.Cue)
-            {
-                continue;
-            }
-
-            var previous = frames[index - 1];
-            var frameProgress = (progress - previous.Cue) / (next.Cue - previous.Cue);
-            return previous.Value + (next.Value - previous.Value) * frameProgress;
-        }
-
-        return frames[^1].Value;
-    }
-
-    private void StopAttentionEffect()
-    {
-        var cancellationTokenSource = _attentionCancellationTokenSource;
-        _attentionCancellationTokenSource = null;
-        cancellationTokenSource?.Cancel();
-        ResetAttentionTransforms();
-    }
-
-    private void ResetAttentionTransforms()
-    {
-        _windowTranslateTransform.X = 0;
-        _badgeScaleTransform.ScaleX = 1;
-        _badgeScaleTransform.ScaleY = 1;
+        _attentionBehavior.Play(level, _isPointerInside || _hasUserNavigated);
     }
 
     private void PositionAtBottomRight()

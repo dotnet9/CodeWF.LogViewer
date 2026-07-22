@@ -24,6 +24,7 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
     <PackageReference Include="Avalonia" />
     <PackageReference Include="CodeWF.Tools.Core" />
+    <PackageReference Include="Xaml.Behaviors" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="" />

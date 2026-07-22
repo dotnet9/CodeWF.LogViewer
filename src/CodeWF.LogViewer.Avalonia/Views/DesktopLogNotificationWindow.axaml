@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:behaviors="using:CodeWF.LogViewer.Avalonia.Behaviors"
         x:Class="CodeWF.LogViewer.Avalonia.Views.DesktopLogNotificationWindow"
         Width="{DynamicResource CodeWFLogDesktopNotificationWindowWidth}"
         MinWidth="340"
@@ -146,6 +147,9 @@
             BoxShadow="{DynamicResource CodeWFLogDesktopNotificationWindowBoxShadow}"
             PointerEntered="WindowRoot_OnPointerEntered"
             PointerExited="WindowRoot_OnPointerExited">
+        <Interaction.Behaviors>
+            <behaviors:DesktopLogNotificationAttentionBehavior />
+        </Interaction.Behaviors>
         <Grid RowDefinitions="46,Auto,Auto">
             <Border Grid.Row="0"
                     Background="{DynamicResource CodeWFLogDesktopNotificationTitleBarBackground}"

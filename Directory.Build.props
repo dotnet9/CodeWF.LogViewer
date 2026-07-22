@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Version>12.1.0.5</Version>
+    <Version>12.1.0.6</Version>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <DebugType>portable</DebugType>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
