@@ -2,10 +2,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="CodeWF.LogViewer.Avalonia.Views.DesktopLogNotificationWindow"
         Width="{DynamicResource CodeWFLogDesktopNotificationWindowWidth}"
-        Height="{DynamicResource CodeWFLogDesktopNotificationWindowHeight}"
         MinWidth="340"
         MinHeight="{DynamicResource CodeWFLogDesktopNotificationWindowMinHeight}"
         MaxHeight="{DynamicResource CodeWFLogDesktopNotificationWindowMaxHeight}"
+        SizeToContent="Height"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
         WindowDecorations="None"
@@ -65,6 +65,24 @@
 
         <Style Selector="Button.confirm:pointerover">
             <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationConfirmPointerOverBackground}" />
+        </Style>
+
+        <Style Selector="Button.openLogFolder">
+            <Setter Property="MinWidth" Value="132" />
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Padding" Value="16 0" />
+            <Setter Property="CornerRadius" Value="19" />
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationNavigationBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CodeWFLogDesktopNotificationNavigationBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationNavigationForeground}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button.openLogFolder:pointerover">
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationNavigationPointerOverBackground}" />
+            <Setter Property="BorderBrush" Value="#B7C4D6" />
         </Style>
 
         <Style Selector="Border.levelBadge.debug">
@@ -128,7 +146,7 @@
             BoxShadow="{DynamicResource CodeWFLogDesktopNotificationWindowBoxShadow}"
             PointerEntered="WindowRoot_OnPointerEntered"
             PointerExited="WindowRoot_OnPointerExited">
-        <Grid RowDefinitions="46,*,Auto">
+        <Grid RowDefinitions="46,Auto,Auto">
             <Border Grid.Row="0"
                     Background="{DynamicResource CodeWFLogDesktopNotificationTitleBarBackground}"
                     BorderBrush="{DynamicResource CodeWFLogDesktopNotificationTitleBarBorderBrush}"
@@ -160,10 +178,10 @@
 
             <Grid Grid.Row="1"
                   Margin="20 16 20 10"
-                  RowDefinitions="*,Auto">
+                  RowDefinitions="Auto,Auto">
                 <Grid Margin="0 0 0 10">
                     <Grid x:Name="DefaultContent">
-                        <Grid RowDefinitions="Auto,Auto,*,Auto">
+                        <Grid RowDefinitions="Auto,Auto,Auto,Auto">
                             <Border x:Name="LevelBadge"
                                     Classes="levelBadge error"
                                     Width="56"
@@ -234,12 +252,20 @@
                 </Grid>
             </Grid>
 
-            <Button Grid.Row="2"
-                    Classes="confirm"
-                    Margin="20 0 20 16"
-                    Content="确定"
-                    ToolTip.Tip="关闭通知（Enter）"
-                    Click="ConfirmButton_OnClick" />
+            <Grid Grid.Row="2"
+                  Margin="20 0 20 16"
+                  ColumnDefinitions="Auto,12,*">
+                <Button x:Name="OpenLogFolderButton"
+                        Classes="openLogFolder"
+                        Content="打开日志目录"
+                        ToolTip.Tip="打开本地日志目录（Ctrl+O）"
+                        Click="OpenLogFolderButton_OnClick" />
+                <Button Grid.Column="2"
+                        Classes="confirm"
+                        Content="确定"
+                        ToolTip.Tip="关闭通知（Enter）"
+                        Click="ConfirmButton_OnClick" />
+            </Grid>
         </Grid>
     </Border>
 </Window>

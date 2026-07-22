@@ -8,7 +8,6 @@ public static class LogNotificationResourceKeys
     private const string Prefix = "CodeWFLogDesktopNotification";
 
     public const string WindowWidth = Prefix + "WindowWidth";
-    public const string WindowHeight = Prefix + "WindowHeight";
     public const string WindowMinHeight = Prefix + "WindowMinHeight";
     public const string WindowMaxHeight = Prefix + "WindowMaxHeight";
     public const string WindowBackground = Prefix + "WindowBackground";

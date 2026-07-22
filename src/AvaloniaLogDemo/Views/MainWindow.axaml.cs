@@ -46,6 +46,7 @@ namespace AvaloniaLogDemo.Views
         private TextBox _notificationApplicationNameTextBox = null!;
         private ComboBox _notificationLevelSelector = null!;
         private ComboBox _notificationDurationSelector = null!;
+        private ComboBox _notificationAttentionModeSelector = null!;
 
         private int _totalCount;
         private int _debugCount;
@@ -141,6 +142,7 @@ namespace AvaloniaLogDemo.Views
             _notificationApplicationNameTextBox = FindRequired<TextBox>("NotificationApplicationNameTextBox");
             _notificationLevelSelector = FindRequired<ComboBox>("NotificationLevelSelector");
             _notificationDurationSelector = FindRequired<ComboBox>("NotificationDurationSelector");
+            _notificationAttentionModeSelector = FindRequired<ComboBox>("NotificationAttentionModeSelector");
             _mainLogView.NotificationHost = this;
         }
 
@@ -242,6 +244,12 @@ namespace AvaloniaLogDemo.Views
                 2 => TimeSpan.FromSeconds(15),
                 3 => TimeSpan.Zero,
                 _ => TimeSpan.FromSeconds(10)
+            };
+            _mainLogView.NotificationAttentionMode = _notificationAttentionModeSelector.SelectedIndex switch
+            {
+                0 => DesktopNotificationAttentionMode.None,
+                1 => DesktopNotificationAttentionMode.Pulse,
+                _ => DesktopNotificationAttentionMode.ShakeAndPulse
             };
 
             UpdateDashboard();

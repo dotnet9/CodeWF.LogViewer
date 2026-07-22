@@ -182,6 +182,13 @@
                             <ComboBoxItem Content="显示 15 秒" />
                             <ComboBoxItem Content="始终显示" />
                         </ComboBox>
+                        <ComboBox x:Name="NotificationAttentionModeSelector"
+                                  SelectedIndex="2"
+                                  SelectionChanged="NotificationSettings_OnChanged">
+                            <ComboBoxItem Content="无提醒动效" />
+                            <ComboBoxItem Content="仅图标脉冲" />
+                            <ComboBoxItem Content="微抖并脉冲" />
+                        </ComboBox>
                         <CheckBox x:Name="OutputToUiCheckBox"
                                   Content="写入 UI 通道（不影响重要日志 Tip）"
                                   IsChecked="True"
@@ -276,7 +283,8 @@
                                      FontSize="13"
                                      NotificationMode="DesktopWindow"
                                      NotificationLevel="Error"
-                                     NotificationDuration="0:0:10" />
+                                     NotificationDuration="0:0:10"
+                                     NotificationAttentionMode="ShakeAndPulse" />
                     </Border>
 
                     <Grid Grid.Row="2"

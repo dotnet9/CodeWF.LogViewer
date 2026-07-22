@@ -13,7 +13,6 @@ using CodeWF.Log.Core;
 using CodeWF.Log.Core.Extensions;
 using CodeWF.LogViewer.Avalonia.Extensions;
 using CodeWF.LogViewer.Avalonia.Views;
-using CodeWF.Tools.FileExtensions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -48,6 +47,11 @@ public partial class LogView : UserControl
 
     public static readonly StyledProperty<IDataTemplate?> DesktopNotificationContentTemplateProperty =
         AvaloniaProperty.Register<LogView, IDataTemplate?>(nameof(DesktopNotificationContentTemplate));
+
+    public static readonly StyledProperty<DesktopNotificationAttentionMode> NotificationAttentionModeProperty =
+        AvaloniaProperty.Register<LogView, DesktopNotificationAttentionMode>(
+            nameof(NotificationAttentionMode),
+            DesktopNotificationAttentionMode.ShakeAndPulse);
 
     private IClipboard? _clipboard;
     private ContextMenu _contextMenu = null!;
@@ -137,6 +141,15 @@ public partial class LogView : UserControl
     {
         get => GetValue(DesktopNotificationContentTemplateProperty);
         set => SetValue(DesktopNotificationContentTemplateProperty, value);
+    }
+
+    /// <summary>
+    /// 桌面重要日志窗口的提醒动效。默认对 Error/Fatal 使用微抖和图标脉冲。
+    /// </summary>
+    public DesktopNotificationAttentionMode NotificationAttentionMode
+    {
+        get => GetValue(NotificationAttentionModeProperty);
+        set => SetValue(NotificationAttentionModeProperty, value);
     }
 
     public LogView()
@@ -233,7 +246,8 @@ public partial class LogView : UserControl
         }
         else if (change.Property == NotificationApplicationNameProperty ||
                  change.Property == NotificationDurationProperty ||
-                 change.Property == DesktopNotificationContentTemplateProperty)
+                 change.Property == DesktopNotificationContentTemplateProperty ||
+                 change.Property == NotificationAttentionModeProperty)
         {
             ConfigureDesktopNotificationWindow();
         }
@@ -423,7 +437,8 @@ public partial class LogView : UserControl
             GetNotificationApplicationName(),
             GetNotificationDuration(),
             NotificationHost ?? TopLevel.GetTopLevel(this),
-            DesktopNotificationContentTemplate);
+            DesktopNotificationContentTemplate,
+            NotificationAttentionMode);
     }
 
     private string GetNotificationApplicationName()
@@ -714,19 +729,13 @@ public partial class LogView : UserControl
 
     private void Location_OnClick(object sender, RoutedEventArgs e)
     {
-        var logFolder = Path.Combine(Logger.LogDir, "Log");
-
         try
         {
-            if (!Directory.Exists(logFolder))
-            {
-                Directory.CreateDirectory(logFolder);
-            }
-            FileHelper.OpenFolder(logFolder);
+            LogFolderLauncher.Open();
         }
         catch (Exception ex)
         {
-            Logger.Error($"Open log dir exception, the dir is {logFolder}", ex);
+            Logger.Error($"Open log dir exception, the dir is {LogFolderLauncher.LogFolder}", ex);
         }
     }
 

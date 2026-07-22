@@ -4,11 +4,15 @@ using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Avalonia.Threading;
 using CodeWF.Log.Core;
 using CodeWF.Log.Core.Extensions;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CodeWF.LogViewer.Avalonia.Views;
 
@@ -17,7 +21,8 @@ internal partial class DesktopLogNotificationWindow : Window
     private const int MaxLogCount = 100;
     private const int ScreenMargin = 16;
     private const double DefaultWindowWidth = 390;
-    private const double DefaultWindowHeight = 430;
+    private const double FallbackWindowHeight = 430;
+    private static readonly TimeSpan AttentionCooldown = TimeSpan.FromSeconds(2);
     private static readonly string[] LevelClassNames = ["debug", "info", "warn", "error", "fatal"];
 
     private readonly List<LogNotificationContent> _logs = [];
@@ -25,6 +30,7 @@ internal partial class DesktopLogNotificationWindow : Window
 
     private TextBlock _titleText = null!;
     private TextBlock _countdownText = null!;
+    private Border _windowRoot = null!;
     private Border _levelBadge = null!;
     private PathIcon _levelIcon = null!;
     private TextBlock _levelText = null!;
@@ -34,8 +40,11 @@ internal partial class DesktopLogNotificationWindow : Window
     private ContentControl _customContent = null!;
     private Button _previousButton = null!;
     private Button _nextButton = null!;
+    private Button _openLogFolderButton = null!;
     private TextBlock _countText = null!;
     private Grid _navigationPanel = null!;
+    private readonly TranslateTransform _windowTranslateTransform = new();
+    private readonly ScaleTransform _badgeScaleTransform = new(1, 1);
 
     private string _applicationName = string.Empty;
     private TimeSpan _duration = TimeSpan.FromSeconds(10);
@@ -47,6 +56,12 @@ internal partial class DesktopLogNotificationWindow : Window
     private bool _isPointerInside;
     private bool _hasUserNavigated;
     private bool _isClosing;
+    private bool _hasPendingAttention;
+    private LogType _pendingAttentionLevel;
+    private LogType _lastAttentionLevel;
+    private DateTimeOffset _lastAttentionAt = DateTimeOffset.MinValue;
+    private DesktopNotificationAttentionMode _attentionMode = DesktopNotificationAttentionMode.ShakeAndPulse;
+    private CancellationTokenSource? _attentionCancellationTokenSource;
 
     public DesktopLogNotificationWindow()
     {
@@ -56,6 +71,7 @@ internal partial class DesktopLogNotificationWindow : Window
         _countdownTimer.Tick += CountdownTimer_OnTick;
         Opened += DesktopLogNotificationWindow_OnOpened;
         Closed += DesktopLogNotificationWindow_OnClosed;
+        SizeChanged += DesktopLogNotificationWindow_OnSizeChanged;
     }
 
     public bool IsClosing => _isClosing;
@@ -64,13 +80,22 @@ internal partial class DesktopLogNotificationWindow : Window
         string applicationName,
         TimeSpan duration,
         TopLevel? host,
-        IDataTemplate? contentTemplate)
+        IDataTemplate? contentTemplate,
+        DesktopNotificationAttentionMode attentionMode)
     {
         var normalizedDuration = duration < TimeSpan.Zero ? TimeSpan.FromSeconds(10) : duration;
         var durationChanged = _duration != normalizedDuration;
         _applicationName = applicationName;
         _duration = normalizedDuration;
         _host = host;
+        if (_attentionMode != attentionMode)
+        {
+            _attentionMode = attentionMode;
+            if (attentionMode == DesktopNotificationAttentionMode.None)
+            {
+                StopAttentionEffect();
+            }
+        }
         _customContent.ContentTemplate = contentTemplate;
         _customContent.IsVisible = contentTemplate != null;
         _defaultContent.IsVisible = contentTemplate == null;
@@ -93,9 +118,14 @@ internal partial class DesktopLogNotificationWindow : Window
         }
 
         var wasEmpty = _logs.Count == 0;
+        var highestLevel = logInfos[0].Level;
         foreach (var logInfo in logInfos)
         {
             _logs.Add(new LogNotificationContent(_applicationName, logInfo));
+            if (logInfo.Level > highestLevel)
+            {
+                highestLevel = logInfo.Level;
+            }
         }
 
         while (_logs.Count > MaxLogCount)
@@ -122,6 +152,8 @@ internal partial class DesktopLogNotificationWindow : Window
         {
             RestartCountdown(resetSessionDeadline: true);
         }
+
+        QueueAttention(highestLevel);
     }
 
     public void CloseNotification()
@@ -143,6 +175,7 @@ internal partial class DesktopLogNotificationWindow : Window
 
     private void ResolveControls()
     {
+        _windowRoot = FindRequired<Border>("WindowRoot");
         _titleText = FindRequired<TextBlock>("TitleText");
         _countdownText = FindRequired<TextBlock>("CountdownText");
         _levelBadge = FindRequired<Border>("LevelBadge");
@@ -154,8 +187,12 @@ internal partial class DesktopLogNotificationWindow : Window
         _customContent = FindRequired<ContentControl>("CustomContent");
         _previousButton = FindRequired<Button>("PreviousButton");
         _nextButton = FindRequired<Button>("NextButton");
+        _openLogFolderButton = FindRequired<Button>("OpenLogFolderButton");
         _countText = FindRequired<TextBlock>("CountText");
         _navigationPanel = FindRequired<Grid>("NavigationPanel");
+        _windowRoot.RenderTransform = _windowTranslateTransform;
+        _levelBadge.RenderTransformOrigin = RelativePoint.Center;
+        _levelBadge.RenderTransform = _badgeScaleTransform;
     }
 
     private T FindRequired<T>(string name) where T : Control
@@ -168,6 +205,12 @@ internal partial class DesktopLogNotificationWindow : Window
         _isWindowOpened = true;
         Screens.Changed += Screens_OnChanged;
         Dispatcher.UIThread.Post(PositionAtBottomRight, DispatcherPriority.Loaded);
+        if (_hasPendingAttention)
+        {
+            var level = _pendingAttentionLevel;
+            _hasPendingAttention = false;
+            Dispatcher.UIThread.Post(() => PlayAttention(level), DispatcherPriority.Loaded);
+        }
         StartInitialCountdown();
     }
 
@@ -175,13 +218,172 @@ internal partial class DesktopLogNotificationWindow : Window
     {
         _countdownTimer.Stop();
         Screens.Changed -= Screens_OnChanged;
+        StopAttentionEffect();
         _isWindowOpened = false;
         _logs.Clear();
+    }
+
+    private void DesktopLogNotificationWindow_OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (_isWindowOpened)
+        {
+            Dispatcher.UIThread.Post(PositionAtBottomRight, DispatcherPriority.Loaded);
+        }
     }
 
     private void Screens_OnChanged(object? sender, EventArgs e)
     {
         Dispatcher.UIThread.Post(PositionAtBottomRight, DispatcherPriority.Loaded);
+    }
+
+    private void QueueAttention(LogType level)
+    {
+        if (_attentionMode == DesktopNotificationAttentionMode.None || level < LogType.Warn)
+        {
+            return;
+        }
+
+        if (!_isWindowOpened)
+        {
+            if (!_hasPendingAttention || level > _pendingAttentionLevel)
+            {
+                _pendingAttentionLevel = level;
+            }
+
+            _hasPendingAttention = true;
+            return;
+        }
+
+        PlayAttention(level);
+    }
+
+    private async void PlayAttention(LogType level)
+    {
+        if (_attentionMode == DesktopNotificationAttentionMode.None || level < LogType.Warn || _isClosing)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        if (now - _lastAttentionAt < AttentionCooldown && level <= _lastAttentionLevel)
+        {
+            return;
+        }
+
+        _lastAttentionAt = now;
+        _lastAttentionLevel = level;
+
+        var cancellationTokenSource = new CancellationTokenSource();
+        var previousCancellationTokenSource = _attentionCancellationTokenSource;
+        _attentionCancellationTokenSource = cancellationTokenSource;
+        previousCancellationTokenSource?.Cancel();
+
+        try
+        {
+            var shouldShake = _attentionMode == DesktopNotificationAttentionMode.ShakeAndPulse &&
+                              level >= LogType.Error &&
+                              !_isPointerInside &&
+                              !_hasUserNavigated;
+            var isFatal = level == LogType.Fatal;
+            var duration = isFatal
+                ? TimeSpan.FromMilliseconds(380)
+                : level == LogType.Error
+                    ? TimeSpan.FromMilliseconds(280)
+                    : TimeSpan.FromMilliseconds(220);
+
+            await AnimateAttentionAsync(
+                shouldShake,
+                isFatal,
+                duration,
+                cancellationTokenSource.Token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(_attentionCancellationTokenSource, cancellationTokenSource))
+            {
+                _attentionCancellationTokenSource = null;
+                ResetAttentionTransforms();
+            }
+
+            cancellationTokenSource.Dispose();
+        }
+    }
+
+    private async Task AnimateAttentionAsync(
+        bool shouldShake,
+        bool isFatal,
+        TimeSpan duration,
+        CancellationToken cancellationToken)
+    {
+        var shakeFrames = isFatal
+            ? new (double Cue, double Value)[]
+            {
+                (0, 0), (0.11, -7), (0.22, 7), (0.33, -6), (0.44, 6),
+                (0.56, -4), (0.68, 4), (0.8, -2), (0.9, 2), (1, 0)
+            }
+            :
+            [
+                (0, 0), (0.14, -5), (0.28, 5), (0.42, -4),
+                (0.56, 4), (0.7, -2), (0.84, 2), (1, 0)
+            ];
+        var pulseFrames = isFatal
+            ? new (double Cue, double Value)[]
+            {
+                (0, 1), (0.18, 1.12), (0.38, 1), (0.62, 1.1), (0.8, 1), (1, 1)
+            }
+            : [(0, 1), (0.45, 1.1), (1, 1)];
+
+        var stopwatch = Stopwatch.StartNew();
+        while (stopwatch.Elapsed < duration)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var progress = Math.Clamp(stopwatch.Elapsed.TotalMilliseconds / duration.TotalMilliseconds, 0, 1);
+            _windowTranslateTransform.X = shouldShake ? InterpolateFrames(shakeFrames, progress) : 0;
+            var scale = InterpolateFrames(pulseFrames, progress);
+            _badgeScaleTransform.ScaleX = scale;
+            _badgeScaleTransform.ScaleY = scale;
+            await Task.Delay(16, cancellationToken);
+        }
+
+        ResetAttentionTransforms();
+    }
+
+    private static double InterpolateFrames(
+        IReadOnlyList<(double Cue, double Value)> frames,
+        double progress)
+    {
+        for (var index = 1; index < frames.Count; index++)
+        {
+            var next = frames[index];
+            if (progress > next.Cue)
+            {
+                continue;
+            }
+
+            var previous = frames[index - 1];
+            var frameProgress = (progress - previous.Cue) / (next.Cue - previous.Cue);
+            return previous.Value + (next.Value - previous.Value) * frameProgress;
+        }
+
+        return frames[^1].Value;
+    }
+
+    private void StopAttentionEffect()
+    {
+        var cancellationTokenSource = _attentionCancellationTokenSource;
+        _attentionCancellationTokenSource = null;
+        cancellationTokenSource?.Cancel();
+        ResetAttentionTransforms();
+    }
+
+    private void ResetAttentionTransforms()
+    {
+        _windowTranslateTransform.X = 0;
+        _badgeScaleTransform.ScaleX = 1;
+        _badgeScaleTransform.ScaleY = 1;
     }
 
     private void PositionAtBottomRight()
@@ -194,7 +396,7 @@ internal partial class DesktopLogNotificationWindow : Window
 
         var scaling = screen.Scaling;
         var width = GetPixelSize(Bounds.Width, Width, DefaultWindowWidth, scaling);
-        var height = GetPixelSize(Bounds.Height, Height, DefaultWindowHeight, scaling);
+        var height = GetPixelSize(Bounds.Height, Height, FallbackWindowHeight, scaling);
         var margin = (int)Math.Ceiling(ScreenMargin * scaling);
         var workingArea = screen.WorkingArea;
 
@@ -448,6 +650,10 @@ internal partial class DesktopLogNotificationWindow : Window
                 CloseNotification();
                 e.Handled = true;
                 break;
+            case Key.O when e.KeyModifiers.HasFlag(KeyModifiers.Control):
+                OpenLogFolder();
+                e.Handled = true;
+                break;
         }
     }
 
@@ -479,6 +685,26 @@ internal partial class DesktopLogNotificationWindow : Window
     private void CloseButton_OnClick(object? sender, RoutedEventArgs e)
     {
         CloseNotification();
+    }
+
+    private void OpenLogFolderButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        OpenLogFolder();
+    }
+
+    private void OpenLogFolder()
+    {
+        try
+        {
+            LogFolderLauncher.Open();
+            _openLogFolderButton.Content = "打开日志目录";
+            ToolTip.SetTip(_openLogFolderButton, "打开本地日志目录（Ctrl+O）");
+        }
+        catch (Exception ex)
+        {
+            _openLogFolderButton.Content = "打开失败，请重试";
+            ToolTip.SetTip(_openLogFolderButton, $"打开日志目录失败：{ex.Message}");
+        }
     }
 
     private void ConfirmButton_OnClick(object? sender, RoutedEventArgs e)
