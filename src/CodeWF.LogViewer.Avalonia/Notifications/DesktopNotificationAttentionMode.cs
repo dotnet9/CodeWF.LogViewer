@@ -1,7 +1,7 @@
 namespace CodeWF.LogViewer.Avalonia;
 
 /// <summary>
-/// 桌面重要日志窗口吸引用户注意的动效。
+/// 重要日志通知窗口吸引用户注意的动效。
 /// </summary>
 public enum DesktopNotificationAttentionMode
 {

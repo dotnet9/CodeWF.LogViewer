@@ -2,7 +2,7 @@ using CodeWF.Log.Core;
 using CodeWF.Tools.FileExtensions;
 using System.IO;
 
-namespace CodeWF.LogViewer.Avalonia;
+namespace CodeWF.LogViewer.Avalonia.Platform;
 
 internal static class LogFolderLauncher
 {

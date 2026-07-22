@@ -1,7 +1,7 @@
 namespace CodeWF.LogViewer.Avalonia;
 
 /// <summary>
-/// 桌面重要日志窗口可由调用方覆盖的资源键。
+/// 重要日志通知窗口可由调用方覆盖的资源键。
 /// </summary>
 public static class LogNotificationResourceKeys
 {

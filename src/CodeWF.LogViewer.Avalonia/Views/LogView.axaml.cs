@@ -12,7 +12,8 @@ using Avalonia.Threading;
 using CodeWF.Log.Core;
 using CodeWF.Log.Core.Extensions;
 using CodeWF.LogViewer.Avalonia.Extensions;
-using CodeWF.LogViewer.Avalonia.Views;
+using CodeWF.LogViewer.Avalonia.Notifications.Views;
+using CodeWF.LogViewer.Avalonia.Platform;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -62,7 +63,7 @@ public partial class LogView : UserControl
     private readonly CancellationTokenSource _cancellationTokenSource;
     private WindowNotificationManager? _notificationManager;
     private TopLevel? _notificationManagerHost;
-    private DesktopLogNotificationWindow? _desktopNotificationWindow;
+    private NotificationWindow? _notificationWindow;
     private readonly ConcurrentQueue<PendingNotificationLog> _pendingNotificationLogs = new();
     private bool _isAttachedToVisualTree;
     private bool _isNotificationSubscribed;
@@ -249,7 +250,7 @@ public partial class LogView : UserControl
                  change.Property == DesktopNotificationContentTemplateProperty ||
                  change.Property == NotificationAttentionModeProperty)
         {
-            ConfigureDesktopNotificationWindow();
+            ConfigureNotificationWindow();
         }
     }
 
@@ -359,7 +360,7 @@ public partial class LogView : UserControl
 
             if (NotificationMode == LogNotificationMode.DesktopWindow)
             {
-                ShowDesktopLogNotifications(logs);
+                ShowNotificationWindow(logs);
                 return;
             }
 
@@ -408,32 +409,32 @@ public partial class LogView : UserControl
             duration));
     }
 
-    private void ShowDesktopLogNotifications(IReadOnlyList<LogInfo> logInfos)
+    private void ShowNotificationWindow(IReadOnlyList<LogInfo> logInfos)
     {
-        if (_desktopNotificationWindow == null || _desktopNotificationWindow.IsClosing)
+        if (_notificationWindow == null || _notificationWindow.IsClosing)
         {
-            var window = new DesktopLogNotificationWindow();
+            var window = new NotificationWindow();
             window.Closed += (_, _) =>
             {
-                if (ReferenceEquals(_desktopNotificationWindow, window))
+                if (ReferenceEquals(_notificationWindow, window))
                 {
-                    _desktopNotificationWindow = null;
+                    _notificationWindow = null;
                 }
             };
-            _desktopNotificationWindow = window;
-            ConfigureDesktopNotificationWindow();
+            _notificationWindow = window;
+            ConfigureNotificationWindow();
             window.AddLogs(logInfos);
             window.Show();
             return;
         }
 
-        ConfigureDesktopNotificationWindow();
-        _desktopNotificationWindow.AddLogs(logInfos);
+        ConfigureNotificationWindow();
+        _notificationWindow.AddLogs(logInfos);
     }
 
-    private void ConfigureDesktopNotificationWindow()
+    private void ConfigureNotificationWindow()
     {
-        _desktopNotificationWindow?.Configure(
+        _notificationWindow?.Configure(
             GetNotificationApplicationName(),
             GetNotificationDuration(),
             NotificationHost ?? TopLevel.GetTopLevel(this),
@@ -462,8 +463,8 @@ public partial class LogView : UserControl
     private void CloseAllNotifications()
     {
         _notificationManager?.CloseAll();
-        _desktopNotificationWindow?.CloseNotification();
-        _desktopNotificationWindow = null;
+        _notificationWindow?.CloseNotification();
+        _notificationWindow = null;
     }
 
     private void EnsureNotificationManager()

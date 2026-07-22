@@ -4,7 +4,7 @@ using System;
 namespace CodeWF.LogViewer.Avalonia;
 
 /// <summary>
-/// 桌面重要日志窗口内容模板的数据源。
+/// 重要日志通知窗口内容模板的数据源。
 /// </summary>
 public sealed class LogNotificationContent
 {

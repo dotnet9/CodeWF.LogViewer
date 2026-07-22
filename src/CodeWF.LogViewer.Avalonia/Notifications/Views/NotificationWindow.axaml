@@ -1,12 +1,16 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:behaviors="using:CodeWF.LogViewer.Avalonia.Behaviors"
-        x:Class="CodeWF.LogViewer.Avalonia.Views.DesktopLogNotificationWindow"
+        xmlns:behaviors="using:CodeWF.LogViewer.Avalonia.Notifications.Behaviors"
+        xmlns:viewModels="using:CodeWF.LogViewer.Avalonia.Notifications.ViewModels"
+        x:Class="CodeWF.LogViewer.Avalonia.Notifications.Views.NotificationWindow"
+        x:DataType="viewModels:NotificationWindowViewModel"
         Width="{DynamicResource CodeWFLogDesktopNotificationWindowWidth}"
         MinWidth="340"
         MinHeight="{DynamicResource CodeWFLogDesktopNotificationWindowMinHeight}"
         MaxHeight="{DynamicResource CodeWFLogDesktopNotificationWindowMaxHeight}"
         SizeToContent="Height"
+        Title="{Binding ApplicationName}"
+        Opacity="{Binding WindowOpacity}"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
         WindowDecorations="None"
@@ -15,6 +19,11 @@
         ShowInTaskbar="False"
         Topmost="True"
         WindowStartupLocation="Manual">
+
+    <Interaction.Behaviors>
+        <behaviors:NotificationWindowInteractionBehavior />
+        <behaviors:NotificationWindowPlacementBehavior />
+    </Interaction.Behaviors>
 
     <Window.Styles>
         <Style Selector="Button.titleClose">
@@ -29,12 +38,10 @@
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
-
         <Style Selector="Button.titleClose:pointerover">
             <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationClosePointerOverBackground}" />
             <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationClosePointerOverForeground}" />
         </Style>
-
         <Style Selector="Button.navigation">
             <Setter Property="MinWidth" Value="86" />
             <Setter Property="Height" Value="34" />
@@ -46,12 +53,10 @@
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
-
         <Style Selector="Button.navigation:pointerover">
             <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationNavigationPointerOverBackground}" />
             <Setter Property="BorderBrush" Value="#B7C4D6" />
         </Style>
-
         <Style Selector="Button.confirm">
             <Setter Property="Height" Value="38" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -63,11 +68,9 @@
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
-
         <Style Selector="Button.confirm:pointerover">
             <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationConfirmPointerOverBackground}" />
         </Style>
-
         <Style Selector="Button.openLogFolder">
             <Setter Property="MinWidth" Value="132" />
             <Setter Property="Height" Value="38" />
@@ -80,12 +83,10 @@
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
-
         <Style Selector="Button.openLogFolder:pointerover">
             <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationNavigationPointerOverBackground}" />
             <Setter Property="BorderBrush" Value="#B7C4D6" />
         </Style>
-
         <Style Selector="Border.levelBadge.debug">
             <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationDebugBackground}" />
         </Style>
@@ -138,17 +139,14 @@
         </Style>
     </Window.Styles>
 
-    <Border x:Name="WindowRoot"
-            Margin="{DynamicResource CodeWFLogDesktopNotificationWindowMargin}"
+    <Border Margin="{DynamicResource CodeWFLogDesktopNotificationWindowMargin}"
             Background="{DynamicResource CodeWFLogDesktopNotificationWindowBackground}"
             BorderBrush="{DynamicResource CodeWFLogDesktopNotificationWindowBorderBrush}"
             BorderThickness="{DynamicResource CodeWFLogDesktopNotificationWindowBorderThickness}"
             CornerRadius="{DynamicResource CodeWFLogDesktopNotificationWindowCornerRadius}"
-            BoxShadow="{DynamicResource CodeWFLogDesktopNotificationWindowBoxShadow}"
-            PointerEntered="WindowRoot_OnPointerEntered"
-            PointerExited="WindowRoot_OnPointerExited">
+            BoxShadow="{DynamicResource CodeWFLogDesktopNotificationWindowBoxShadow}">
         <Interaction.Behaviors>
-            <behaviors:DesktopLogNotificationAttentionBehavior />
+            <behaviors:NotificationAttentionBehavior PulseTarget="{Binding #LevelBadge}" />
         </Interaction.Behaviors>
         <Grid RowDefinitions="46,Auto,Auto">
             <Border Grid.Row="0"
@@ -158,33 +156,30 @@
                     CornerRadius="{DynamicResource CodeWFLogDesktopNotificationTitleBarCornerRadius}"
                     Padding="16 6 8 6">
                 <Grid ColumnDefinitions="*,Auto,Auto">
-                    <TextBlock x:Name="TitleText"
-                               VerticalAlignment="Center"
+                    <TextBlock VerticalAlignment="Center"
                                FontSize="14"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource CodeWFLogDesktopNotificationTitleForeground}"
+                               Text="{Binding ApplicationName}"
                                TextTrimming="CharacterEllipsis" />
-
-                    <TextBlock x:Name="CountdownText"
-                               Grid.Column="1"
+                    <TextBlock Grid.Column="1"
                                Margin="12 0 8 0"
                                VerticalAlignment="Center"
                                FontSize="12"
-                               Foreground="{DynamicResource CodeWFLogDesktopNotificationMutedForeground}" />
-
+                               Foreground="{DynamicResource CodeWFLogDesktopNotificationMutedForeground}"
+                               IsVisible="{Binding IsCountdownVisible}"
+                               Text="{Binding CountdownText}" />
                     <Button Grid.Column="2"
                             Classes="titleClose"
                             Content="×"
-                            ToolTip.Tip="关闭"
-                            Click="CloseButton_OnClick" />
+                            Command="{Binding CloseCommand}"
+                            ToolTip.Tip="关闭" />
                 </Grid>
             </Border>
 
-            <Grid Grid.Row="1"
-                  Margin="20 16 20 10"
-                  RowDefinitions="Auto,Auto">
+            <Grid Grid.Row="1" Margin="20 16 20 10" RowDefinitions="Auto,Auto">
                 <Grid Margin="0 0 0 10">
-                    <Grid x:Name="DefaultContent">
+                    <Grid IsVisible="{Binding IsDefaultContentVisible}">
                         <Grid RowDefinitions="Auto,Auto,Auto,Auto">
                             <Border x:Name="LevelBadge"
                                     Classes="levelBadge error"
@@ -192,6 +187,11 @@
                                     Height="56"
                                     HorizontalAlignment="Center"
                                     CornerRadius="28">
+                                <Interaction.Behaviors>
+                                    <behaviors:NotificationLevelVisualBehavior
+                                        IconTarget="{Binding #LevelIcon}"
+                                        TextTarget="{Binding #LevelText}" />
+                                </Interaction.Behaviors>
                                 <PathIcon x:Name="LevelIcon"
                                           Classes="levelIcon error"
                                           Width="30"
@@ -199,76 +199,71 @@
                                           HorizontalAlignment="Center"
                                           VerticalAlignment="Center" />
                             </Border>
-
                             <TextBlock x:Name="LevelText"
                                        Grid.Row="1"
                                        Classes="levelText error"
                                        Margin="0 7 0 0"
                                        HorizontalAlignment="Center"
                                        FontSize="17"
-                                       FontWeight="SemiBold" />
-
+                                       FontWeight="SemiBold"
+                                       Text="{Binding LevelText}" />
                             <ScrollViewer Grid.Row="2"
                                           Margin="0 10 0 0"
                                           MaxHeight="{DynamicResource CodeWFLogDesktopNotificationContentMaxHeight}"
                                           HorizontalScrollBarVisibility="Disabled"
                                           VerticalScrollBarVisibility="Auto">
-                                <SelectableTextBlock x:Name="LogContentText"
+                                <SelectableTextBlock Text="{Binding LogContent}"
                                                      TextWrapping="Wrap"
                                                      FontSize="14"
                                                      LineHeight="22"
                                                      Foreground="{DynamicResource CodeWFLogDesktopNotificationContentForeground}" />
                             </ScrollViewer>
-
-                            <TextBlock x:Name="RecordTimeText"
-                                       Grid.Row="3"
+                            <TextBlock Grid.Row="3"
                                        Margin="0 8 0 0"
                                        HorizontalAlignment="Right"
                                        FontSize="12"
-                                       Foreground="{DynamicResource CodeWFLogDesktopNotificationMutedForeground}" />
+                                       Foreground="{DynamicResource CodeWFLogDesktopNotificationMutedForeground}"
+                                       Text="{Binding RecordTimeText}" />
                         </Grid>
                     </Grid>
-
-                    <ContentControl x:Name="CustomContent"
-                                    IsVisible="False" />
+                    <ContentControl Content="{Binding SelectedLog}"
+                                    ContentTemplate="{Binding ContentTemplate}"
+                                    IsVisible="{Binding IsCustomContentVisible}" />
                 </Grid>
 
-                <Grid x:Name="NavigationPanel"
-                      Grid.Row="1"
-                      ColumnDefinitions="Auto,*,Auto">
-                    <Button x:Name="PreviousButton"
-                            Classes="navigation"
+                <Grid Grid.Row="1"
+                      ColumnDefinitions="Auto,*,Auto"
+                      IsVisible="{Binding IsNavigationVisible}">
+                    <Button Classes="navigation"
                             Content="← 上一条"
-                            ToolTip.Tip="上一条日志（←）"
-                            Click="PreviousButton_OnClick" />
-                    <TextBlock x:Name="CountText"
-                               Grid.Column="1"
+                            Command="{Binding PreviousCommand}"
+                            IsEnabled="{Binding CanPrevious}"
+                            ToolTip.Tip="上一条日志（←）" />
+                    <TextBlock Grid.Column="1"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                FontSize="12"
-                               Foreground="{DynamicResource CodeWFLogDesktopNotificationMutedForeground}" />
-                    <Button x:Name="NextButton"
-                            Grid.Column="2"
+                               Foreground="{DynamicResource CodeWFLogDesktopNotificationMutedForeground}"
+                               Text="{Binding CountText}" />
+                    <Button Grid.Column="2"
                             Classes="navigation"
                             Content="下一条 →"
-                            ToolTip.Tip="下一条日志（→）"
-                            Click="NextButton_OnClick" />
+                            Command="{Binding NextCommand}"
+                            IsEnabled="{Binding CanNext}"
+                            ToolTip.Tip="下一条日志（→）" />
                 </Grid>
             </Grid>
 
-            <Grid Grid.Row="2"
-                  Margin="20 0 20 16"
-                  ColumnDefinitions="Auto,12,*">
-                <Button x:Name="OpenLogFolderButton"
-                        Classes="openLogFolder"
-                        Content="打开日志目录"
-                        ToolTip.Tip="打开本地日志目录（Ctrl+O）"
-                        Click="OpenLogFolderButton_OnClick" />
+            <Grid Grid.Row="2" Margin="20 0 20 16" ColumnDefinitions="Auto,12,*">
+                <Button Classes="openLogFolder"
+                        Content="{Binding OpenLogFolderButtonText}"
+                        Command="{Binding OpenLogFolderCommand}"
+                        ToolTip.Tip="{Binding OpenLogFolderToolTip}" />
                 <Button Grid.Column="2"
                         Classes="confirm"
                         Content="确定"
-                        ToolTip.Tip="关闭通知（Enter）"
-                        Click="ConfirmButton_OnClick" />
+                        Command="{Binding CloseCommand}"
+                        ToolTip.Tip="关闭通知（Enter）" />
             </Grid>
         </Grid>
     </Border>

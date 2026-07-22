@@ -26,10 +26,10 @@ internal static class LogNotificationResources
             }
 
             application.Resources.MergedDictionaries.Insert(0, new ResourceInclude(
-                new Uri("avares://CodeWF.LogViewer.Avalonia/Styles/"))
+                new Uri("avares://CodeWF.LogViewer.Avalonia/Notifications/Styles/"))
             {
                 Source = new Uri(
-                    "avares://CodeWF.LogViewer.Avalonia/Styles/DesktopLogNotificationResources.axaml")
+                    "avares://CodeWF.LogViewer.Avalonia/Notifications/Styles/NotificationResources.axaml")
             });
             RegisteredApplications.Add(application, new object());
         }

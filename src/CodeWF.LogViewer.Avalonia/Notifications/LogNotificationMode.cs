@@ -1,7 +1,7 @@
 namespace CodeWF.LogViewer.Avalonia;
 
 /// <summary>
-/// 重要日志的弹出方式。
+/// 重要日志的通知方式。
 /// </summary>
 public enum LogNotificationMode
 {

@@ -4,15 +4,17 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.Xaml.Interactivity;
 using CodeWF.Log.Core;
+using CodeWF.LogViewer.Avalonia.Notifications.ViewModels;
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 
-namespace CodeWF.LogViewer.Avalonia.Behaviors;
+namespace CodeWF.LogViewer.Avalonia.Notifications.Behaviors;
 
 /// <summary>
-/// 管理桌面重要日志窗口的微抖与级别图标脉冲。
+/// 管理重要日志通知窗口的微抖与级别图标脉冲。
 /// </summary>
-public sealed class DesktopLogNotificationAttentionBehavior : Behavior<Border>
+public sealed class NotificationAttentionBehavior : Behavior<Border>
 {
     private const long AttentionCooldownMilliseconds = 2000;
     private const long FrameIntervalMilliseconds = 16;
@@ -43,12 +45,7 @@ public sealed class DesktopLogNotificationAttentionBehavior : Behavior<Border>
     ];
 
     public static readonly StyledProperty<Control?> PulseTargetProperty =
-        AvaloniaProperty.Register<DesktopLogNotificationAttentionBehavior, Control?>(nameof(PulseTarget));
-
-    public static readonly StyledProperty<DesktopNotificationAttentionMode> ModeProperty =
-        AvaloniaProperty.Register<DesktopLogNotificationAttentionBehavior, DesktopNotificationAttentionMode>(
-            nameof(Mode),
-            DesktopNotificationAttentionMode.ShakeAndPulse);
+        AvaloniaProperty.Register<NotificationAttentionBehavior, Control?>(nameof(PulseTarget));
 
     private readonly DispatcherTimer _animationTimer = new()
     {
@@ -69,17 +66,12 @@ public sealed class DesktopLogNotificationAttentionBehavior : Behavior<Border>
     private long _lastAttentionTimestamp;
     private LogType _lastAttentionLevel;
     private bool _shouldShake;
+    private NotificationWindowViewModel? _viewModel;
 
     public Control? PulseTarget
     {
         get => GetValue(PulseTargetProperty);
         set => SetValue(PulseTargetProperty, value);
-    }
-
-    public DesktopNotificationAttentionMode Mode
-    {
-        get => GetValue(ModeProperty);
-        set => SetValue(ModeProperty, value);
     }
 
     protected override void OnAttached()
@@ -91,11 +83,15 @@ public sealed class DesktopLogNotificationAttentionBehavior : Behavior<Border>
         AssociatedObject.RenderTransform = _windowTransform;
         ConfigurePulseTarget(PulseTarget);
         _animationTimer.Tick += OnAnimationTimerTick;
+        AssociatedObject.DataContextChanged += OnAssociatedObjectDataContextChanged;
+        SubscribeViewModel(AssociatedObject.DataContext as NotificationWindowViewModel);
     }
 
     protected override void OnDetaching()
     {
         _animationTimer.Tick -= OnAnimationTimerTick;
+        if (AssociatedObject != null) AssociatedObject.DataContextChanged -= OnAssociatedObjectDataContextChanged;
+        SubscribeViewModel(null);
         Stop();
         RestorePulseTarget();
         if (AssociatedObject != null) AssociatedObject.RenderTransform = _originalWindowTransform;
@@ -111,15 +107,42 @@ public sealed class DesktopLogNotificationAttentionBehavior : Behavior<Border>
         {
             ConfigurePulseTarget(PulseTarget);
         }
-        else if (change.Property == ModeProperty && Mode == DesktopNotificationAttentionMode.None)
-        {
-            Stop();
-        }
     }
 
-    public void Play(LogType level, bool suppressShake)
+    private void OnAssociatedObjectDataContextChanged(object? sender, EventArgs e)
     {
-        if (AssociatedObject == null || Mode == DesktopNotificationAttentionMode.None || level < LogType.Warn)
+        SubscribeViewModel(AssociatedObject?.DataContext as NotificationWindowViewModel);
+    }
+
+    private void SubscribeViewModel(NotificationWindowViewModel? viewModel)
+    {
+        if (ReferenceEquals(_viewModel, viewModel)) return;
+
+        if (_viewModel != null)
+        {
+            _viewModel.AttentionRequested -= OnAttentionRequested;
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        }
+
+        _viewModel = viewModel;
+        if (_viewModel == null) return;
+
+        _viewModel.AttentionRequested += OnAttentionRequested;
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(NotificationWindowViewModel.AttentionMode) &&
+            _viewModel?.AttentionMode == DesktopNotificationAttentionMode.None)
+            Stop();
+    }
+
+    private void OnAttentionRequested(LogType level)
+    {
+        var viewModel = _viewModel;
+        if (AssociatedObject == null || viewModel == null ||
+            viewModel.AttentionMode == DesktopNotificationAttentionMode.None || level < LogType.Warn)
             return;
 
         var now = Stopwatch.GetTimestamp();
@@ -130,9 +153,9 @@ public sealed class DesktopLogNotificationAttentionBehavior : Behavior<Border>
 
         _lastAttentionTimestamp = now;
         _lastAttentionLevel = level;
-        _shouldShake = Mode == DesktopNotificationAttentionMode.ShakeAndPulse &&
+        _shouldShake = viewModel.AttentionMode == DesktopNotificationAttentionMode.ShakeAndPulse &&
                        level >= LogType.Error &&
-                       !suppressShake;
+                       !viewModel.SuppressShake;
 
         var isFatal = level == LogType.Fatal;
         _shakeFrames = isFatal ? FatalShakeFrames : ErrorShakeFrames;
@@ -149,7 +172,7 @@ public sealed class DesktopLogNotificationAttentionBehavior : Behavior<Border>
         _animationTimer.Start();
     }
 
-    public void Stop()
+    private void Stop()
     {
         _animationTimer.Stop();
         _animationStopwatch.Reset();
