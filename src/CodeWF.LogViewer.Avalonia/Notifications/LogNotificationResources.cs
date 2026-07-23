@@ -1,13 +1,16 @@
 using Avalonia;
 using Avalonia.Markup.Xaml.Styling;
 using System;
-using System.Runtime.CompilerServices;
+using System.Linq;
 
 namespace CodeWF.LogViewer.Avalonia;
 
 internal static class LogNotificationResources
 {
-    private static readonly ConditionalWeakTable<Application, object> RegisteredApplications = new();
+    private static readonly Uri BaseUri =
+        new("avares://CodeWF.LogViewer.Avalonia/Notifications/Styles/");
+    private static readonly Uri ResourceUri =
+        new("avares://CodeWF.LogViewer.Avalonia/Notifications/Styles/NotificationResources.axaml");
     private static readonly object SyncRoot = new();
 
     public static void EnsureRegistered()
@@ -20,18 +23,13 @@ internal static class LogNotificationResources
 
         lock (SyncRoot)
         {
-            if (RegisteredApplications.TryGetValue(application, out _))
-            {
-                return;
-            }
+            var dictionaries = application.Resources.MergedDictionaries;
+            if (dictionaries.OfType<ResourceInclude>().Any(include => Equals(include.Source, ResourceUri))) return;
 
-            application.Resources.MergedDictionaries.Insert(0, new ResourceInclude(
-                new Uri("avares://CodeWF.LogViewer.Avalonia/Notifications/Styles/"))
+            dictionaries.Insert(0, new ResourceInclude(BaseUri)
             {
-                Source = new Uri(
-                    "avares://CodeWF.LogViewer.Avalonia/Notifications/Styles/NotificationResources.axaml")
+                Source = ResourceUri
             });
-            RegisteredApplications.Add(application, new object());
         }
     }
 }

@@ -71,6 +71,20 @@
         <Style Selector="Button.confirm:pointerover">
             <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationConfirmPointerOverBackground}" />
         </Style>
+        <Style Selector="Button.confirm:pressed">
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationConfirmPressedBackground}" />
+        </Style>
+        <!-- Fluent 与 Semi 的交互态直接设置模板内容背景，需要在模板层同步覆盖。 -->
+        <Style Selector="Button.confirm /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationConfirmBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource CodeWFLogDesktopNotificationConfirmForeground}" />
+        </Style>
+        <Style Selector="Button.confirm:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationConfirmPointerOverBackground}" />
+        </Style>
+        <Style Selector="Button.confirm:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationConfirmPressedBackground}" />
+        </Style>
         <Style Selector="Button.openLogFolder">
             <Setter Property="MinWidth" Value="132" />
             <Setter Property="Height" Value="38" />
@@ -172,8 +186,7 @@
                     <Button Grid.Column="2"
                             Classes="titleClose"
                             Content="×"
-                            Command="{Binding CloseCommand}"
-                            ToolTip.Tip="关闭" />
+                            Command="{Binding CloseCommand}" />
                 </Grid>
             </Border>
 
@@ -237,8 +250,7 @@
                     <Button Classes="navigation"
                             Content="← 上一条"
                             Command="{Binding PreviousCommand}"
-                            IsEnabled="{Binding CanPrevious}"
-                            ToolTip.Tip="上一条日志（←）" />
+                            IsEnabled="{Binding CanPrevious}" />
                     <TextBlock Grid.Column="1"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
@@ -249,21 +261,18 @@
                             Classes="navigation"
                             Content="下一条 →"
                             Command="{Binding NextCommand}"
-                            IsEnabled="{Binding CanNext}"
-                            ToolTip.Tip="下一条日志（→）" />
+                            IsEnabled="{Binding CanNext}" />
                 </Grid>
             </Grid>
 
             <Grid Grid.Row="2" Margin="20 0 20 16" ColumnDefinitions="Auto,12,*">
                 <Button Classes="openLogFolder"
                         Content="{Binding OpenLogFolderButtonText}"
-                        Command="{Binding OpenLogFolderCommand}"
-                        ToolTip.Tip="{Binding OpenLogFolderToolTip}" />
+                        Command="{Binding OpenLogFolderCommand}" />
                 <Button Grid.Column="2"
                         Classes="confirm"
                         Content="确定"
-                        Command="{Binding CloseCommand}"
-                        ToolTip.Tip="关闭通知（Enter）" />
+                        Command="{Binding CloseCommand}" />
             </Grid>
         </Grid>
     </Border>

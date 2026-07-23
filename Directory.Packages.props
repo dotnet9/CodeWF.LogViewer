@@ -13,7 +13,7 @@
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="$(AvaloniaVersion)" />
     <PackageVersion Include="CodeWF.Tools.Core" Version="1.3.13.10" />
     <PackageVersion Include="VC-LTL" Version="$(VC_LTL)" />
-    <PackageVersion Include="YY-Thunks" Version="$(YY_Thunks)" />
+    <PackageVersion Include="YY-Thunks" Version="1.2.2" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.300" />
     <PackageVersion Include="Xaml.Behaviors" Version="12.0.5" />
   </ItemGroup>

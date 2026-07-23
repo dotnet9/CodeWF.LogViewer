@@ -14,6 +14,8 @@ internal partial class NotificationWindow : Window
 
     public NotificationWindow()
     {
+        // App.axaml 可能在应用级通知初始化后替换 Resources，创建窗口前再次确认默认资源仍在。
+        LogNotificationResources.EnsureRegistered();
         InitializeComponent();
         _viewModel = new NotificationWindowViewModel();
         DataContext = _viewModel;
@@ -29,7 +31,7 @@ internal partial class NotificationWindow : Window
         DesktopNotificationAttentionMode attentionMode) =>
         _viewModel.Configure(applicationName, duration, host, contentTemplate, attentionMode);
 
-    public void AddLogs(IReadOnlyList<LogInfo> logInfos) => _viewModel.AddLogs(logInfos);
+    public void AddLogs(IReadOnlyList<UserLogEntry> logEntries) => _viewModel.AddLogs(logEntries);
 
     public void CloseNotification() => _viewModel.RequestClose();
 

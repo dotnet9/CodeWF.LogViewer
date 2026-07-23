@@ -23,6 +23,7 @@
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNavigationForeground">#344054</SolidColorBrush>
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmBackground">#2563EB</SolidColorBrush>
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmPointerOverBackground">#1D4ED8</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmPressedBackground">#1E40AF</SolidColorBrush>
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmForeground">#FFFFFF</SolidColorBrush>
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationClosePointerOverBackground">#FEE2E2</SolidColorBrush>
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationClosePointerOverForeground">#DC2626</SolidColorBrush>

@@ -1,15 +1,16 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:log="https://codewf.com"
              x:Class="AvaloniaLogDemo.App"
-             RequestedThemeVariant="Default">
+             RequestedThemeVariant="Default"
+             log:LogNotifications.Mode="DesktopWindow"
+             log:LogNotifications.MinimumLevel="Error"
+             log:LogNotifications.MaximumLevel="Fatal"
+             log:LogNotifications.ApplicationName="CodeWF Log Demo"
+             log:LogNotifications.Duration="0:0:10"
+             log:LogNotifications.AttentionMode="ShakeAndPulse">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
-    <Application.Resources>
-        <SolidColorBrush x:Key="CodeWFLogDesktopNotificationTitleBarBackground">#EEF4FF</SolidColorBrush>
-        <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmBackground">#7C3AED</SolidColorBrush>
-        <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmPointerOverBackground">#6D28D9</SolidColorBrush>
-    </Application.Resources>
-  
     <Application.Styles>
         <FluentTheme />
     </Application.Styles>

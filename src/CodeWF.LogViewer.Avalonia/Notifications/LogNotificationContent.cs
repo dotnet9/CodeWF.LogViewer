@@ -8,15 +8,12 @@ namespace CodeWF.LogViewer.Avalonia;
 /// </summary>
 public sealed class LogNotificationContent
 {
-    internal LogNotificationContent(string applicationName, LogInfo logInfo)
+    internal LogNotificationContent(string applicationName, UserLogEntry logEntry)
     {
         ApplicationName = applicationName;
-        Level = logInfo.Level;
-        RecordTime = logInfo.RecordTime;
-        Content = string.IsNullOrWhiteSpace(logInfo.FriendlyDescription)
-            ? logInfo.Description
-            : logInfo.FriendlyDescription;
-        OriginalContent = logInfo.Description;
+        Level = logEntry.Level;
+        RecordTime = logEntry.Timestamp.LocalDateTime;
+        Content = logEntry.Message;
     }
 
     public string ApplicationName { get; }
@@ -27,5 +24,4 @@ public sealed class LogNotificationContent
 
     public string Content { get; }
 
-    public string OriginalContent { get; }
 }

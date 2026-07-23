@@ -5,416 +5,73 @@
         xmlns:log="https://codewf.com"
         x:Class="AvaloniaLogDemo.Views.MainWindow"
         mc:Ignorable="d"
-        d:DesignWidth="1220"
-        d:DesignHeight="920"
-        Width="1220"
-        Height="920"
-        MinWidth="1040"
-        MinHeight="920"
+        d:DesignWidth="1100"
+        d:DesignHeight="720"
+        Width="1100"
+        Height="720"
+        MinWidth="820"
+        MinHeight="560"
         Icon="/Assets/logo.ico"
-        Background="#F3F6FA"
-        Title="CodeWF Log Viewer - Avalonia Demo">
+        Title="CodeWF Log Viewer Demo">
 
     <Window.Styles>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="#FFFFFF" />
-            <Setter Property="BorderBrush" Value="#DDE4EE" />
+        <Style Selector="Border.log-panel">
+            <Setter Property="BorderBrush" Value="#D9D9D9" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="18" />
+            <Setter Property="Padding" Value="10" />
         </Style>
-
-        <Style Selector="Border.badge">
-            <Setter Property="Background" Value="#1F2937" />
-            <Setter Property="BorderBrush" Value="#374151" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Padding" Value="10 6" />
-        </Style>
-
-        <Style Selector="Button.command">
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="MinHeight" Value="40" />
-            <Setter Property="Padding" Value="14 8" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Background" Value="#F6F8FB" />
-            <Setter Property="BorderBrush" Value="#D7DEE8" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Foreground" Value="#172033" />
-        </Style>
-
-        <Style Selector="Button.command:pointerover">
-            <Setter Property="Background" Value="#EAF1FB" />
-            <Setter Property="BorderBrush" Value="#B8C7DA" />
-        </Style>
-
-        <Style Selector="TextBlock.sectionLabel">
-            <Setter Property="FontSize" Value="12" />
+        <Style Selector="TextBlock.log-title">
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#5B6678" />
-        </Style>
-
-        <Style Selector="TextBlock.metricValue">
-            <Setter Property="FontSize" Value="26" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#121826" />
-        </Style>
-
-        <Style Selector="TextBlock.metricCaption">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Foreground" Value="#667085" />
+            <Setter Property="Margin" Value="0 0 0 8" />
         </Style>
     </Window.Styles>
 
-    <Grid RowDefinitions="Auto,*">
-        <Border Grid.Row="0" Background="#111827" Padding="24 18">
-            <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="CodeWF Log Viewer"
-                               FontSize="23"
-                               FontWeight="SemiBold"
-                               Foreground="#FFFFFF" />
-                    <TextBlock Text="Avalonia 日志观察台"
-                               FontSize="13"
-                               Foreground="#B7C0CE" />
-                </StackPanel>
+    <Grid Margin="12" RowDefinitions="Auto,*">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="输出全部级别" Click="WriteAllLevels_OnClick" />
+            <Button Content="输出友好异常" Click="WriteFriendlyException_OnClick" />
+            <Button Content="仅写文件" Click="WriteFileOnly_OnClick" />
+            <Button Content="并发写入 500 条" Click="WriteBurst_OnClick" />
+            <Button Content="切换自定义通知样式" Click="ToggleNotificationTheme_OnClick" />
+        </StackPanel>
 
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            Spacing="10"
-                            VerticalAlignment="Center">
-                    <Border Classes="badge">
-                        <TextBlock x:Name="LevelStateText"
-                                   Text="Level: Debug"
-                                   Foreground="#DCE7F5" />
-                    </Border>
-                    <Border Classes="badge">
-                        <TextBlock x:Name="FileStateText"
-                                   Text="File: on"
-                                   Foreground="#DCE7F5" />
-                    </Border>
-                    <Border Classes="badge">
-                        <TextBlock x:Name="UiStateText"
-                                   Text="UI: on"
-                                   Foreground="#DCE7F5" />
-                    </Border>
-                    <Border Classes="badge">
-                        <TextBlock x:Name="NotificationStateText"
-                                   Text="Tip: DesktopWindow"
-                                   Foreground="#DCE7F5" />
-                    </Border>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <Grid Grid.Row="1"
-              Margin="20"
-              ColumnDefinitions="300,*,280">
-            <Border Grid.Column="0"
-                    Classes="panel"
-                    Margin="0 0 14 0">
-                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                              VerticalScrollBarVisibility="Auto">
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto">
-                    <StackPanel Spacing="3">
-                        <TextBlock Text="控制台"
-                                   FontSize="18"
-                                   FontWeight="SemiBold"
-                                   Foreground="#141A28" />
-                        <TextBlock Text="业务场景、输出通道与采样级别"
-                                   FontSize="12"
-                                   Foreground="#667085" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="1"
-                                Margin="0 18 0 0"
-                                Spacing="8">
-                        <TextBlock Classes="sectionLabel" Text="场景样本" />
-                        <Button Classes="command" Content="API 链路请求" Click="ApiScenario_OnClick" />
-                        <Button Classes="command" Content="任务队列积压" Click="QueueScenario_OnClick" />
-                        <Button Classes="command" Content="数据库慢查询" Click="DatabaseScenario_OnClick" />
-                        <Button Classes="command" Content="异常链路追踪" Click="ExceptionScenario_OnClick" />
-                        <Button Classes="command" Content="安全审计事件" Click="SecurityScenario_OnClick" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="2"
-                                Margin="0 20 0 0"
-                                Spacing="10">
-                        <TextBlock Classes="sectionLabel" Text="运行配置" />
-                        <ComboBox x:Name="LevelSelector"
-                                  SelectedIndex="0"
-                                  SelectionChanged="LevelSelector_OnSelectionChanged">
-                            <ComboBoxItem Content="Debug 及以上" />
-                            <ComboBoxItem Content="Info 及以上" />
-                            <ComboBoxItem Content="Warn 及以上" />
-                            <ComboBoxItem Content="Error 及以上" />
-                            <ComboBoxItem Content="Fatal only" />
-                        </ComboBox>
-
-                        <TextBlock Classes="sectionLabel"
-                                   Margin="0 8 0 0"
-                                   Text="重要日志通知" />
-                        <ComboBox x:Name="NotificationModeSelector"
-                                  SelectedIndex="2"
-                                  SelectionChanged="NotificationSettings_OnChanged">
-                            <ComboBoxItem Content="关闭" />
-                            <ComboBoxItem Content="应用内 Notification" />
-                            <ComboBoxItem Content="桌面右下角窗口" />
-                        </ComboBox>
-                        <TextBox x:Name="NotificationApplicationNameTextBox"
-                                 PlaceholderText="应用名称或标识"
-                                 TextChanged="NotificationSettings_OnChanged" />
-                        <ComboBox x:Name="NotificationLevelSelector"
-                                  SelectedIndex="3"
-                                  SelectionChanged="NotificationSettings_OnChanged">
-                            <ComboBoxItem Content="Debug 及以上" />
-                            <ComboBoxItem Content="Info 及以上" />
-                            <ComboBoxItem Content="Warn 及以上" />
-                            <ComboBoxItem Content="Error 及以上" />
-                            <ComboBoxItem Content="Fatal only" />
-                        </ComboBox>
-                        <ComboBox x:Name="NotificationDurationSelector"
-                                  SelectedIndex="1"
-                                  SelectionChanged="NotificationSettings_OnChanged">
-                            <ComboBoxItem Content="显示 5 秒" />
-                            <ComboBoxItem Content="显示 10 秒" />
-                            <ComboBoxItem Content="显示 15 秒" />
-                            <ComboBoxItem Content="始终显示" />
-                        </ComboBox>
-                        <ComboBox x:Name="NotificationAttentionModeSelector"
-                                  SelectedIndex="2"
-                                  SelectionChanged="NotificationSettings_OnChanged">
-                            <ComboBoxItem Content="无提醒动效" />
-                            <ComboBoxItem Content="仅图标脉冲" />
-                            <ComboBoxItem Content="微抖并脉冲" />
-                        </ComboBox>
-                        <CheckBox x:Name="OutputToUiCheckBox"
-                                  Content="写入 UI 通道（不影响重要日志 Tip）"
-                                  IsChecked="True"
-                                  IsCheckedChanged="Channels_OnChanged" />
-                        <CheckBox x:Name="OutputToFileCheckBox"
-                                  Content="写入文件"
-                                  IsChecked="True"
-                                  IsCheckedChanged="Channels_OnChanged" />
-                        <CheckBox x:Name="OutputToConsoleCheckBox"
-                                  Content="输出到控制台"
-                                  IsChecked="False"
-                                  IsCheckedChanged="Channels_OnChanged" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="3"
-                                Margin="0 22 0 0"
-                                Spacing="10">
-                        <Button Classes="command"
-                                Content="测试重要日志（5 条，UI off）"
-                                Click="NotificationTest_OnClick" />
-                        <Button x:Name="LiveTrafficButton"
-                                Classes="command"
-                                Content="启动实时流"
-                                Click="StartLiveTraffic_OnClick" />
-                        <Button x:Name="BurstTestButton"
-                                Classes="command"
-                                Content="批量写入 500 条"
-                                Click="BurstTest_OnClick" />
-
-                        <Border Background="#F7F9FC"
-                                BorderBrush="#E1E7F0"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="12"
-                                Margin="0 8 0 0">
-                            <StackPanel Spacing="5">
-                                <TextBlock Text="日志目录"
-                                           FontWeight="SemiBold"
-                                           Foreground="#202939" />
-                                <TextBlock x:Name="LogPathText"
-                                           TextWrapping="Wrap"
-                                           FontSize="12"
-                                           Foreground="#667085" />
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
+        <Grid Grid.Row="1" Margin="0 10" ColumnDefinitions="2*,*">
+            <Border Classes="log-panel" Margin="0 0 5 0">
+                <Grid RowDefinitions="Auto,*">
+                    <TextBlock Classes="log-title" Text="全部日志" />
+                    <log:LogView Grid.Row="1"
+                                 FontFamily="Consolas"
+                                 FontSize="13"
+                                 MinimumLevel="Debug"
+                                 MaximumLevel="Fatal"
+                                 MaxDisplayCount="1000" />
                 </Grid>
-                </ScrollViewer>
             </Border>
 
-            <Border Grid.Column="1"
-                    Classes="panel"
-                    Padding="0"
-                    Margin="0 0 14 0">
-                <Grid RowDefinitions="Auto,*,Auto">
-                    <Grid Grid.Row="0"
-                          ColumnDefinitions="*,Auto"
-                          Margin="18 16 18 12">
-                        <StackPanel Spacing="3">
-                            <TextBlock Text="实时日志流"
-                                       FontSize="18"
-                                       FontWeight="SemiBold"
-                                       Foreground="#141A28" />
-                            <TextBlock Text="结构化业务日志、异常栈与 UI 友好文案"
-                                       FontSize="12"
-                                       Foreground="#667085" />
-                        </StackPanel>
-
-                        <Border Grid.Column="1"
-                                Background="#EEF6FF"
-                                BorderBrush="#C8DFFC"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="10 6"
-                                VerticalAlignment="Center">
-                            <TextBlock x:Name="ThroughputText"
-                                       Text="0.0/s"
-                                       Foreground="#235A97"
-                                       FontWeight="SemiBold" />
-                        </Border>
-                    </Grid>
-
-                    <Border Grid.Row="1"
-                            Margin="18 0"
-                            Background="#FBFCFE"
-                            BorderBrush="#D8E0EA"
-                            BorderThickness="1"
-                            CornerRadius="6">
-                        <log:LogView x:Name="MainLogView"
-                                     Padding="14"
+            <Grid Grid.Column="1" Margin="5 0 0 0" RowDefinitions="*,*">
+                <Border Classes="log-panel" Margin="0 0 0 5">
+                    <Grid RowDefinitions="Auto,*">
+                        <TextBlock Classes="log-title" Text="仅 Info" />
+                        <log:LogView Grid.Row="1"
                                      FontFamily="Consolas"
                                      FontSize="13"
-                                     NotificationMode="DesktopWindow"
-                                     NotificationLevel="Error"
-                                     NotificationDuration="0:0:10"
-                                     NotificationAttentionMode="ShakeAndPulse" />
-                    </Border>
-
-                    <Grid Grid.Row="2"
-                          ColumnDefinitions="*,Auto"
-                          Margin="18 12 18 16">
-                        <TextBlock x:Name="LastEventText"
-                                   Text="Last: waiting for traffic"
-                                   Foreground="#667085"
-                                   TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Column="1"
-                                   Text="Batch 80 / UI 80ms / File 5MB"
-                                   Foreground="#667085" />
+                                     MinimumLevel="Info"
+                                     MaximumLevel="Info" />
                     </Grid>
-                </Grid>
-            </Border>
-
-            <StackPanel Grid.Column="2" Spacing="14">
-                <Border Classes="panel">
-                    <StackPanel Spacing="14">
-                        <StackPanel Spacing="3">
-                            <TextBlock Text="运行状态"
-                                       FontSize="18"
-                                       FontWeight="SemiBold"
-                                       Foreground="#141A28" />
-                            <TextBlock x:Name="HealthText"
-                                       Text="Healthy"
-                                       FontSize="12"
-                                       Foreground="#667085" />
-                        </StackPanel>
-
-                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
-                            <Border Background="#F7FAFF"
-                                    BorderBrush="#DFE8F7"
-                                    BorderThickness="1"
-                                    CornerRadius="6"
-                                    Padding="12"
-                                    Margin="0 0 8 8">
-                                <StackPanel>
-                                    <TextBlock x:Name="TotalLogsText"
-                                               Classes="metricValue"
-                                               Text="0" />
-                                    <TextBlock Classes="metricCaption" Text="Total logs" />
-                                </StackPanel>
-                            </Border>
-
-                            <Border Grid.Column="1"
-                                    Background="#FFF9F0"
-                                    BorderBrush="#F1DEC1"
-                                    BorderThickness="1"
-                                    CornerRadius="6"
-                                    Padding="12"
-                                    Margin="0 0 0 8">
-                                <StackPanel>
-                                    <TextBlock x:Name="ProblemLogsText"
-                                               Classes="metricValue"
-                                               Text="0" />
-                                    <TextBlock Classes="metricCaption" Text="Warn/Error/Fatal" />
-                                </StackPanel>
-                            </Border>
-
-                            <Border Grid.Row="1"
-                                    Background="#F4FBF6"
-                                    BorderBrush="#D6ECDD"
-                                    BorderThickness="1"
-                                    CornerRadius="6"
-                                    Padding="12"
-                                    Margin="0 0 8 0">
-                                <StackPanel>
-                                    <TextBlock x:Name="InfoLogsText"
-                                               Classes="metricValue"
-                                               Text="0" />
-                                    <TextBlock Classes="metricCaption" Text="Info" />
-                                </StackPanel>
-                            </Border>
-
-                            <Border Grid.Row="1"
-                                    Grid.Column="1"
-                                    Background="#FFF5F5"
-                                    BorderBrush="#F0D1D1"
-                                    BorderThickness="1"
-                                    CornerRadius="6"
-                                    Padding="12">
-                                <StackPanel>
-                                    <TextBlock x:Name="FatalLogsText"
-                                               Classes="metricValue"
-                                               Text="0" />
-                                    <TextBlock Classes="metricCaption" Text="Fatal" />
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-                    </StackPanel>
                 </Border>
 
-                <Border Classes="panel">
-                    <StackPanel Spacing="12">
-                        <TextBlock Text="链路快照"
-                                   FontSize="18"
-                                   FontWeight="SemiBold"
-                                   Foreground="#141A28" />
-                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*">
-                            <TextBlock Text="Debug" Foreground="#667085" />
-                            <TextBlock x:Name="DebugLogsText"
-                                       Grid.Column="1"
-                                       HorizontalAlignment="Right"
-                                       FontWeight="SemiBold" />
-
-                            <TextBlock Grid.Row="1" Text="Warn" Foreground="#667085" />
-                            <TextBlock x:Name="WarnLogsText"
-                                       Grid.Row="1"
-                                       Grid.Column="1"
-                                       HorizontalAlignment="Right"
-                                       FontWeight="SemiBold" />
-
-                            <TextBlock Grid.Row="2" Text="Error" Foreground="#667085" />
-                            <TextBlock x:Name="ErrorLogsText"
-                                       Grid.Row="2"
-                                       Grid.Column="1"
-                                       HorizontalAlignment="Right"
-                                       FontWeight="SemiBold" />
-
-                            <TextBlock Grid.Row="3" Text="Live batch" Foreground="#667085" />
-                            <TextBlock x:Name="LiveBatchText"
-                                       Grid.Row="3"
-                                       Grid.Column="1"
-                                       HorizontalAlignment="Right"
-                                       FontWeight="SemiBold" />
-                        </Grid>
-                    </StackPanel>
+                <Border Grid.Row="1" Classes="log-panel" Margin="0 5 0 0">
+                    <Grid RowDefinitions="Auto,*">
+                        <TextBlock Classes="log-title" Text="Warn ～ Error" />
+                        <log:LogView Grid.Row="1"
+                                     FontFamily="Consolas"
+                                     FontSize="13"
+                                     MinimumLevel="Warn"
+                                     MaximumLevel="Error" />
+                    </Grid>
                 </Border>
-            </StackPanel>
+            </Grid>
         </Grid>
+
     </Grid>
 </Window>

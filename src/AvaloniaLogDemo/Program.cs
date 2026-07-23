@@ -1,21 +1,43 @@
 using Avalonia;
+using CodeWF.Log.Core;
 using System;
+using System.IO;
 
-namespace AvaloniaLogDemo
+namespace AvaloniaLogDemo;
+
+internal static class Program
 {
-    internal sealed class Program
+    [STAThread]
+    public static void Main(string[] args)
     {
-        // 初始化代码。在调用AppMain之前不要使用任何Avalonia、第三方API或任何依赖SynchronizationContext的代码：此时事物尚未初始化，可能会导致程序崩溃。
-        [STAThread]
-        public static void Main(string[] args) => BuildAvaloniaApp()
-            .StartWithClassicDesktopLifetime(args);
+        Logger.Initialize(new LoggerOptions
+        {
+            MinimumLevel = LogType.Debug,
+            EnableConsole = false,
+            RecentUserLogCapacity = 2_000,
+            File = new FileLogOptions
+            {
+                DirectoryPath = Path.Combine(AppContext.BaseDirectory, "Log"),
+                BatchSize = 80,
+                FlushInterval = TimeSpan.FromMilliseconds(300),
+                MaxFileSizeBytes = 5L * 1024 * 1024
+            }
+        });
 
-        // Avalonia配置，不要删除；可视化设计器也会使用此配置。
-        public static AppBuilder BuildAvaloniaApp()
-            => AppBuilder.Configure<App>()
-                .UsePlatformDetect()
-                .With(new Win32PlatformOptions { RenderingMode = [Win32RenderingMode.Software]  })
-                .WithInterFont()
-                .LogToTrace();
+        try
+        {
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
+        finally
+        {
+            Logger.ShutdownAsync().GetAwaiter().GetResult();
+        }
     }
+
+    public static AppBuilder BuildAvaloniaApp() =>
+        AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+            .With(new Win32PlatformOptions { RenderingMode = [Win32RenderingMode.Software] })
+            .WithInterFont()
+            .LogToTrace();
 }

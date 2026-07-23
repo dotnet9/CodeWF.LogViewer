@@ -29,7 +29,6 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
     private string _logContent = string.Empty;
     private string _countText = string.Empty;
     private string _openLogFolderButtonText = "打开日志目录";
-    private string _openLogFolderToolTip = "打开本地日志目录（Ctrl+O）";
     private LogType _level = LogType.Error;
     private LogNotificationContent? _selectedLog;
     private IDataTemplate? _contentTemplate;
@@ -162,12 +161,6 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
         private set => SetField(ref _openLogFolderButtonText, value);
     }
 
-    public string OpenLogFolderToolTip
-    {
-        get => _openLogFolderToolTip;
-        private set => SetField(ref _openLogFolderToolTip, value);
-    }
-
     public double WindowOpacity
     {
         get => _windowOpacity;
@@ -213,16 +206,16 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
             RestartCountdown(resetSessionDeadline: true);
     }
 
-    public void AddLogs(IReadOnlyList<LogInfo> logInfos)
+    public void AddLogs(IReadOnlyList<UserLogEntry> logEntries)
     {
-        if (logInfos.Count == 0 || _isClosing) return;
+        if (logEntries.Count == 0 || _isClosing) return;
 
         var wasEmpty = _logs.Count == 0;
-        var highestLevel = logInfos[0].Level;
-        foreach (var logInfo in logInfos)
+        var highestLevel = logEntries[0].Level;
+        foreach (var logEntry in logEntries)
         {
-            _logs.Add(new LogNotificationContent(ApplicationName, logInfo));
-            if (logInfo.Level > highestLevel) highestLevel = logInfo.Level;
+            _logs.Add(new LogNotificationContent(ApplicationName, logEntry));
+            if (logEntry.Level > highestLevel) highestLevel = logEntry.Level;
         }
 
         TrimLogs();
@@ -291,12 +284,11 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
         {
             LogFolderLauncher.Open();
             OpenLogFolderButtonText = "打开日志目录";
-            OpenLogFolderToolTip = "打开本地日志目录（Ctrl+O）";
         }
         catch (Exception ex)
         {
             OpenLogFolderButtonText = "打开失败，请重试";
-            OpenLogFolderToolTip = $"打开日志目录失败：{ex.Message}";
+            System.Diagnostics.Trace.TraceError($"打开日志目录失败：{ex}");
         }
     }
 

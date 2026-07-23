@@ -1,224 +1,145 @@
 # CodeWF.Log
 
 [![NuGet](https://img.shields.io/nuget/v/CodeWF.Log.Core.svg)](https://www.nuget.org/packages/CodeWF.Log.Core/)
-[![NuGet](https://img.shields.io/nuget/dt/CodeWF.Log.Core.svg)](https://www.nuget.org/dt/CodeWF.Log.Core.svg)
 [![NuGet](https://img.shields.io/nuget/v/CodeWF.LogViewer.Avalonia.svg)](https://www.nuget.org/packages/CodeWF.LogViewer.Avalonia/)
-[![NuGet](https://img.shields.io/nuget/dt/CodeWF.LogViewer.Avalonia.svg)](https://www.nuget.org/packages/CodeWF.LogViewer.Avalonia/)
 [![License](https://img.shields.io/github/license/dotnet9/CodeWF.LogViewer)](LICENSE)
 
-轻量级、高性能 .NET 日志库，支持控制台和 Avalonia UI 应用程序。
+面向 .NET 和 Avalonia 的轻量日志组件。当前版本为 `12.1.0.16`，核心目标是把“给用户看的内容”和“给维护人员排障的内容”明确分开。
 
-## 仓库规范
+## 包
 
-- 当前版本：`12.1.0.4`，版本号统一维护在根目录 `Directory.Build.props` 的 `<Version>` 节点。
-- NuGet 包项目统一支持 `net8.0;net10.0`；Demo、App、测试与内部应用项目统一使用 `net11.0` / `net11.0-windows`。
-- 根目录 `logo.svg`、`logo.png`、`logo.ico` 是唯一图标源，子工程只通过 MSBuild `Link` 引用，不维护图标副本。
-- 运行时帮助、Markdown 示例、内置备忘录、设计说明等业务文档按功能保留；仓库级入口文档使用根目录 `README.md` 和 `UpdateLog.md`。
-
-## 两个 NuGet 包
-
-| 包名 | 说明 | 适用场景 |
-|------|------|---------|
-| **CodeWF.Log.Core** | 核心日志库，仅依赖 .NET | 控制台程序、WPF、Avalonia 等所有 C# 程序 |
-| **CodeWF.LogViewer.Avalonia** | Avalonia UI 控件，依赖 CodeWF.Log.Core | Avalonia UI 程序，提供日志展示控件 |
-
-## 脚本
-
-- `pack.bat`：还原、构建并打包 `CodeWF.Log.Core` 与 `CodeWF.LogViewer.Avalonia` 到 `artifacts\packages`。
-
----
-
-## CodeWF.Log.Core
-
-核心日志库，NuGet 包安装：
-
-```shell
-Install-Package CodeWF.Log.Core
-```
-
-### 基本使用
-
-```csharp
-Logger.Debug("调试日志");
-Logger.Info("普通日志");
-Logger.Warn("警告日志");
-Logger.Error("错误日志");
-Logger.Fatal("严重错误日志");
-```
-
-### 控制台程序初始化（重要）
-
-控制台程序使用文件日志时，需要在启动时初始化：
-
-```csharp
-// Program.cs 或 Main 方法中调用一次
-Logger.RecordToFile();
-
-// 程序退出时刷新缓冲区
-await Logger.FlushAsync();
-```
-
-### 日志输出目标控制
-
-每个日志方法支持参数控制输出目标：
-
-```csharp
-Logger.Info(
-    content: "写入文件的内容",
-    uiContent: "UI显示的友好内容",  // 可选，默认为null，此时UI显示content参数的内容
-    log2UI: true,       // 是否输出到UI
-    log2File: true,      // 是否输出到文件
-    log2Console: true    // 是否输出到控制台
-);
-
-// 快捷方法
-Logger.InfoToFile("仅写入文件");           // log2UI=false, log2Console=false
-Logger.LogToUI(LogType.Info, "仅显示UI");  // log2File=false
-```
-
-### 配置参数
-
-```csharp
-Logger.Level = LogType.Info;                    // 日志级别，低于此级别的日志被忽略
-Logger.LogDir = "/path/to/logs";                // 日志文件存储目录
-Logger.BatchProcessSize = 200;                  // 批量写入的日志条数阈值
-Logger.MaxLogFileSizeMB = 500;                   // 单个日志文件最大大小（MB）
-Logger.EnableConsoleOutput = true;               // 是否输出到控制台
-```
-
----
-
-## CodeWF.LogViewer.Avalonia
-
-Avalonia UI 日志展示控件，NuGet 包安装：
-
-```shell
-Install-Package CodeWF.LogViewer.Avalonia
-```
-
-### XAML 使用
-
-```html
-xmlns:log="https://codewf.com"
-```
-
-```html
-<log:LogView />
-```
-
-### Avalonia 程序初始化
-
-```csharp
-// 程序退出时调用
-await Logger.FlushAsync();
-```
-
-> 注意：`LogView` 控件内部会自动调用 `RecordToFile()` 启动文件日志记录，并从 UI 通道消费日志显示到界面。
-
-### 日志消费
-
-`LogView` 内部使用 `await foreach` 异步枚举模式消费 UI 通道日志，支持批量处理和防抖机制：
-- 日志数量达到 `BatchProcessSize` 时立即刷新 UI
-- 未达阈值时，最长延迟 `LogUIDuration`（默认100ms）后刷新
-
-### 重要日志弹出通知
-
-`LogView` 可以把达到指定级别的日志显示为应用内 Notification 或桌面右下角独立窗口。
-通知订阅独立于 UI 日志通道，因此 `log2UI=false` 或 `ErrorToFile`、`FatalToFile` 产生的重要日志仍然可以弹出。
-
-默认值：
-
-| 属性 | 默认值 | 说明 |
+| 包 | 用途 | 目标框架 |
 | --- | --- | --- |
-| `NotificationMode` | `None` | `None`、`InApp` 或 `DesktopWindow` |
-| `NotificationApplicationName` | 当前进程名 | 通知标题中的应用名称或标识 |
-| `NotificationLevel` | `Error` | 最低弹出级别，默认弹出 Error 和 Fatal |
-| `NotificationDuration` | `00:00:10` | 每条日志的自动显示时间；`TimeSpan.Zero` 表示不自动关闭 |
-| `NotificationHost` | `null` | 未设置时自动使用 `LogView` 所属的 TopLevel |
-| `DesktopNotificationContentTemplate` | `null` | 桌面窗口正文的自定义模板 |
-| `NotificationAttentionMode` | `ShakeAndPulse` | 桌面窗口提醒动效：`None`、`Pulse` 或 `ShakeAndPulse` |
+| `CodeWF.Log.Core` | 文件日志、控制台输出和用户日志 Feed | `net8.0;net10.0` |
+| `CodeWF.LogViewer.Avalonia` | `LogView` 和日志通知 | `net8.0;net10.0` |
 
-最简桌面窗口配置：
+版本统一维护在根目录 `Directory.Build.props`。运行 `pack.bat` 可将两个包输出到 `artifacts/packages`。
 
-```html
-<log:LogView NotificationMode="DesktopWindow" />
-```
+## 初始化
 
-应用内 Notification：
-
-```html
-<log:LogView NotificationMode="InApp" />
-```
-
-后台配置：
+每个进程必须在首次写日志或创建 `LogView` 前初始化一次：
 
 ```csharp
-MainLogView.NotificationMode = LogNotificationMode.DesktopWindow;
-MainLogView.NotificationApplicationName = "NURES历史数据服务";
-MainLogView.NotificationLevel = LogType.Error;
-MainLogView.NotificationDuration = TimeSpan.FromSeconds(10);
-MainLogView.NotificationHost = this; // Window / TopLevel，可省略并自动获取
-MainLogView.NotificationAttentionMode = DesktopNotificationAttentionMode.ShakeAndPulse;
+Logger.Initialize(new LoggerOptions
+{
+    MinimumLevel = LogType.Info,
+    EnableConsole = true,
+    QueueCapacity = 10_000,
+    RecentUserLogCapacity = 2_000,
+    File = new FileLogOptions
+    {
+        DirectoryPath = Path.Combine(Environment.CurrentDirectory, "Log"),
+        MaxFileSizeBytes = 100L * 1024 * 1024,
+        BatchSize = 200,
+        FlushInterval = TimeSpan.FromMilliseconds(500)
+    }
+});
 ```
 
-桌面窗口支持：
+`DirectoryPath` 是最终日志目录，组件不会再追加子目录。相对路径会在初始化时按当时的工作目录转换为绝对路径，因此多实例程序应由调用方按实例工作目录传入路径。
 
-- 标题栏显示进程/应用名和倒计时；Hover 时隐藏倒计时。
-- 正文依次显示级别图标、日志级别、可选择复制的日志内容和日志时间。
-- 序号仅显示在上一条/下一条导航区，单条日志时隐藏导航区。
-- 初始批次从第一条开始，每条自动显示指定时间；实时新增日志会立即切换到最新一条。
-- Warn 使用图标脉冲；Error/Fatal 使用分级微抖和图标脉冲。批量日志只按最高级别提醒一次，并通过冷却避免错误风暴造成持续晃动。
-- 鼠标位于窗口内或用户正在翻页时不播放微抖，只保留图标脉冲；窗口始终不抢输入焦点。
-- 窗口高度根据正文自动调整，短日志保持紧凑，长日志达到最大高度后在正文区域滚动。
-- 底部可直接打开本地日志目录，目录不存在时自动创建；支持 `Ctrl+O` 快捷键。
-- 上一条、下一条导航，鼠标 Hover 暂停，移出后重新开始倒计时，最后 3 秒渐隐。
-- 最多保留最近 100 条，无人操作的单次自动轮播最长 2 分钟。
-- `Enter`/`Esc` 关闭，`←`/`→` 切换日志。
+程序正常退出前调用：
 
-桌面窗口样式全部使用 `DynamicResource`。调用方可在 `Application.Resources` 中覆盖公开资源 Key：
-
-```html
-<Application.Resources>
-    <x:Double x:Key="CodeWFLogDesktopNotificationWindowMinHeight">300</x:Double>
-    <x:Double x:Key="CodeWFLogDesktopNotificationWindowMaxHeight">620</x:Double>
-    <x:Double x:Key="CodeWFLogDesktopNotificationContentMaxHeight">230</x:Double>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmBackground">#7C3AED</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationTitleBarBackground">#EEF4FF</SolidColorBrush>
-</Application.Resources>
+```csharp
+await Logger.ShutdownAsync();
 ```
 
-窗体宽度、最小/最大高度和正文最大高度均可覆盖；可用 Key 定义在 `LogNotificationResourceKeys`。默认资源包含在现有 `CodeWF.LogViewer.Avalonia` 包内，
-不需要额外引入 Semi、Ursa 或 Theme 包。
+需要在运行中确保已落盘时调用 `await Logger.FlushAsync()`；它不能替代退出时的 `ShutdownAsync()`。
 
----
+## 用户内容与技术内容
 
-## 更新日志
+普通方法写文件，并把用户内容发送到已启用的控制台、`LogView` 和通知订阅方：
 
-### V1.0.12（2026-04）
+```csharp
+Logger.Info("任务已保存。");
 
-1. ✨[优化]-重构为 Channel 架构，提升性能
-2. ✨[优化]-添加防抖机制，避免日志频繁刷新
-3. ✨[优化]-UI消费使用 `await foreach` 异步枚举模式
-4. 🐛[修复]-修复 FlushAsync 方法
+Logger.Error(
+    $"反序列化任务文件失败：{taskFilePath}",
+    exception,
+    "无法打开任务：任务文件内容不正确或与当前版本不兼容，请重新导出任务文件。");
+```
 
-### V1.0.11.3（2025-09-15）
+- 文件记录技术消息、用户提示和完整异常堆栈。
+- 控制台、`LogView` 和通知只接收 `userMessage`。
+- 未传 `userMessage` 时，普通 `message` 同时作为用户内容显示。
+- 用户日志对象 `UserLogEntry` 不持有异常对象，展示层不会意外泄露堆栈。
 
-1. 🐛[修复]-修复自定义日志目录打开异常问题
+只写文件时使用：
 
-TODO
+```csharp
+Logger.DebugToFile("连接参数：127.0.0.1:2700");
+Logger.ErrorToFile("关闭后台队列失败。", exception);
+```
 
-## 第三方开源组件审计（2026-05-20）
+可用方法包括 `Debug/Info/Warn/Error/Fatal` 和对应的 `*ToFile` 方法。`Logger.MinimumLevel` 是全局采集门槛，低于该级别的日志不会进入任何输出端。
 
-检查方式：NuGet 元数据、恢复后的 `project.assets.json`、NuGet.org 与源码仓库信息。优先接受 MIT / Apache-2.0 / BSD。
+## Avalonia LogView
 
-| 包 | 使用范围 | 协议 | 源码/项目地址 | 结论 |
-| --- | --- | --- | --- | --- |
-| `Avalonia` / `Avalonia.Desktop` / `Avalonia.Fonts.Inter` / `Avalonia.Themes.Fluent` | Avalonia 日志查看器和示例 | MIT | https://github.com/AvaloniaUI/Avalonia | 通过 |
-| `CodeWF.Tools.Core` | 日志核心辅助能力 | MIT | https://github.com/dotnet9/CodeWF.Tools | 自研开源包，已更新到 `1.3.13.2` |
-| `VC-LTL` | Windows 示例运行时兼容 | EPL-2.0 | https://github.com/Chuyu-Team/VC-LTL5 | 源码开放，按“非优先但可追溯”通过 |
-| `YY-Thunks` | Windows 示例运行时兼容 | MIT | https://github.com/Chuyu-Team/YY-Thunks | 通过 |
+```xml
+<Window
+    xmlns="https://github.com/avaloniaui"
+    xmlns:log="https://codewf.com">
+    <Grid>
+        <log:LogView
+            MinimumLevel="Warn"
+            MaximumLevel="Error"
+            MaxDisplayCount="1000"
+            RefreshInterval="00:00:00.100"
+            TimestampFormat="yyyy-MM-dd HH:mm:ss.fff" />
+    </Grid>
+</Window>
+```
 
-传递依赖检查结论：Avalonia/SkiaSharp/ANGLE 链均有公开源码，许可证为 MIT 或 BSD-style。未发现 `Semi.Avalonia.Dock`、`Semi.Avalonia.ProDataGrid`、`Semi.Avalonia.AvaloniaEdit` 或其它黑盒主题包。
-## 包版本维护约定
+`MinimumLevel` 和 `MaximumLevel` 都是强类型 `LogType` 属性，可以绑定到 ViewModel 中的枚举属性：
 
-XML 文件统一使用两个空格缩进。`Directory.Packages.props` 统一承载 NuGet 中央包管理开关和包版本变量，包括 `AvaloniaVersion` 等共享版本属性；`Directory.Build.props` 仅保留项目构建、编译选项和 NuGet 元数据。仓库如引用 `VC-LTL`、`YY-Thunks`，这两个兼容旧版操作系统的特殊包必须使用最新预览版。
+```csharp
+public LogType MinimumLevel { get; set; } = LogType.Info;
+public LogType MaximumLevel { get; set; } = LogType.Error;
+```
+
+每个 `LogView` 独立过滤和清空，互不影响。修改过滤范围时，控件会从最近用户日志缓存重新构建当前视图。
+
+全局级别与视图级别的关系：
+
+- `Logger.MinimumLevel` 决定日志是否被采集，是全局门槛。
+- `LogView.MinimumLevel/MaximumLevel` 只决定当前控件显示哪些已采集日志。
+- 视图不能显示低于全局门槛、从未被采集的日志。
+
+## Avalonia 通知
+
+通知独立于 `LogView`，在 `App.axaml` 中统一配置一次：
+
+```xml
+<Application
+    xmlns="https://github.com/avaloniaui"
+    xmlns:log="https://codewf.com"
+    log:LogNotifications.Mode="DesktopWindow"
+    log:LogNotifications.MinimumLevel="Error"
+    log:LogNotifications.MaximumLevel="Fatal"
+    log:LogNotifications.Duration="00:00:10"
+    log:LogNotifications.ApplicationName="设备服务客户端">
+</Application>
+```
+
+`Mode` 支持：
+
+- `None`：关闭通知。
+- `InApp`：在当前活动窗口内显示通知。
+- `DesktopWindow`：显示桌面通知窗口。
+
+通知只接收启用后的新用户日志，不回放历史，也不会接收 `*ToFile` 日志。最小/最大级别同样是强类型 `LogType` 属性。组件在显示时动态选择活动窗口或主窗口，多窗口程序仍只创建一个通知订阅。桌面通知是主窗口的 owned window，主窗口关闭时会立即随之关闭，不会延迟应用退出。桌面窗口继续支持自定义正文模板、显示时间和 `DesktopNotificationAttentionMode`。
+
+## Demo
+
+- `ConsoleLogDemo`：演示用户/技术内容分流、异常堆栈、文件专用日志、并发写入、Flush 和文件轮转。
+- `AvaloniaLogDemo`：用操作按钮和三个日志视图演示友好异常、文件专用日志、并发写入以及独立级别过滤；通知在 `App.axaml` 中统一配置，默认无需注册主题资源，并可动态切换一组自定义资源覆盖。
+
+## 12.1 升级提示
+
+这是一次不保留旧语义的主版本升级。需要删除旧的 `RecordToFile`、`LogDir`、`EnableConsoleOutput`、`log2UI/log2File/log2Console` 和 `LogView.Notification*` 用法，统一改为：
+
+1. 启动时调用 `Logger.Initialize(LoggerOptions)`。
+2. 技术异常使用 `Logger.Error(technicalMessage, exception, userMessage)`。
+3. 内部诊断使用 `*ToFile`。
+4. 通知在 `App.axaml` 中使用应用级 `LogNotifications` 附加属性。
+5. 退出时调用 `Logger.ShutdownAsync()`。

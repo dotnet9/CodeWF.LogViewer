@@ -30,6 +30,7 @@ public static class LogNotificationResourceKeys
     public const string NavigationForeground = Prefix + "NavigationForeground";
     public const string ConfirmBackground = Prefix + "ConfirmBackground";
     public const string ConfirmPointerOverBackground = Prefix + "ConfirmPointerOverBackground";
+    public const string ConfirmPressedBackground = Prefix + "ConfirmPressedBackground";
     public const string ConfirmForeground = Prefix + "ConfirmForeground";
     public const string ClosePointerOverBackground = Prefix + "ClosePointerOverBackground";
     public const string ClosePointerOverForeground = Prefix + "ClosePointerOverForeground";

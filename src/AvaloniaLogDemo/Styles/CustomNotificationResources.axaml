@@ -1,0 +1,12 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationTitleBarBackground">#FFF7ED</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationWindowBorderBrush">#FDBA74</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmBackground">#EA580C</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmPointerOverBackground">#C2410C</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmPressedBackground">#9A3412</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationErrorBackground">#FFEDD5</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationErrorForeground">#C2410C</SolidColorBrush>
+    <CornerRadius x:Key="CodeWFLogDesktopNotificationWindowCornerRadius">18</CornerRadius>
+    <CornerRadius x:Key="CodeWFLogDesktopNotificationTitleBarCornerRadius">18 18 0 0</CornerRadius>
+</ResourceDictionary>
