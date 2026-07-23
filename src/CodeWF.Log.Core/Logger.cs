@@ -30,6 +30,15 @@ public static class Logger
     }
 
     /// <summary>
+    /// 全局最低输出级别。保留旧式属性名，等同于 <see cref="MinimumLevel"/>。
+    /// </summary>
+    public static LogLevel Level
+    {
+        get => MinimumLevel;
+        set => MinimumLevel = value;
+    }
+
+    /// <summary>
     /// 当前文件日志目录；未启用文件日志时为 <see langword="null"/>。
     /// </summary>
     public static string? LogDirectory => CurrentOptions?.File?.DirectoryPath;
