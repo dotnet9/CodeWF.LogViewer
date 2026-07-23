@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace CodeWF.Log.Core;
 
 /// <summary>
@@ -6,9 +8,9 @@ namespace CodeWF.Log.Core;
 public sealed record LoggerOptions
 {
     /// <summary>
-    /// 全局最低采集级别。低于此级别的日志不会进入任何输出端。
+    /// Sink 级别的最低输出级别。MEL Provider 场景仍优先使用 MEL 自身过滤。
     /// </summary>
-    public LogType MinimumLevel { get; init; } = LogType.Info;
+    public LogLevel MinimumLevel { get; init; } = LogLevel.Information;
 
     /// <summary>
     /// 文件日志配置；为 <see langword="null"/> 时不写文件。
@@ -16,9 +18,16 @@ public sealed record LoggerOptions
     public FileLogOptions? File { get; init; }
 
     /// <summary>
-    /// 是否输出用户日志到控制台。
+    /// 是否把用户可见日志输出到控制台。
     /// </summary>
     public bool EnableConsole { get; init; } = true;
+
+    public ConsoleLogOptions? Console { get; init; }
+
+    /// <summary>
+    /// 用户日志投影模式。
+    /// </summary>
+    public UserLogMode UserLogMode { get; init; } = UserLogMode.ExplicitOnly;
 
     /// <summary>
     /// 后台日志队列容量。队列满时调用方会等待，日志不会被静默丢弃。
@@ -34,12 +43,15 @@ public sealed record LoggerOptions
     {
         if (!Enum.IsDefined(MinimumLevel))
             throw new ArgumentOutOfRangeException(nameof(MinimumLevel), "最低日志级别无效。");
+        if (!Enum.IsDefined(UserLogMode))
+            throw new ArgumentOutOfRangeException(nameof(UserLogMode), "用户日志模式无效。");
         if (QueueCapacity <= 0)
             throw new ArgumentOutOfRangeException(nameof(QueueCapacity), "日志队列容量必须大于 0。");
         if (RecentUserLogCapacity <= 0)
             throw new ArgumentOutOfRangeException(nameof(RecentUserLogCapacity), "用户日志缓存容量必须大于 0。");
 
         File?.Validate();
+        Console?.Validate();
     }
 
     internal LoggerOptions Normalize()

@@ -27,6 +27,6 @@
     <TrimmerRootDescriptor Include="Roots.xml" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CodeWF.LogViewer.Avalonia\CodeWF.LogViewer.Avalonia.csproj" />
+    <ProjectReference Include="..\CodeWF.Log.Avalonia\CodeWF.Log.Avalonia.csproj" />
   </ItemGroup>
 </Project>

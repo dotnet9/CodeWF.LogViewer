@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
 
 namespace CodeWF.Log.Core;
@@ -7,19 +8,27 @@ internal sealed class LoggerHost : IAsyncDisposable
     private readonly Channel<LogCommand> _commands;
     private readonly FileLogSink? _fileSink;
     private readonly ConsoleLogSink? _consoleSink;
+    private readonly UserLogMode _userLogMode;
     private readonly Task _processingTask;
     private int _minimumLevel;
     private int _shutdownStarted;
     private long _sequence;
 
-    public LoggerHost(LoggerOptions options)
+    public LoggerHost(LoggerOptions options, UserLogFeed? userLogs = null)
     {
         _minimumLevel = (int)options.MinimumLevel;
-        UserLogs = new UserLogFeed(options.RecentUserLogCapacity);
+        _userLogMode = options.UserLogMode;
+        UserLogs = userLogs ?? new UserLogFeed(options.RecentUserLogCapacity);
+        UserLogs.UpdateCapacity(options.RecentUserLogCapacity);
         _fileSink = options.File is null ? null : new FileLogSink(options.File);
-        _consoleSink = options.EnableConsole
-            ? new ConsoleLogSink(options.File?.TimestampFormat ?? "yyyy-MM-dd HH:mm:ss.fff")
-            : null;
+        var consoleOptions = options.Console ??
+                             (options.EnableConsole
+                                 ? new ConsoleLogOptions
+                                 {
+                                     TimestampFormat = options.File?.TimestampFormat ?? "yyyy-MM-dd HH:mm:ss.fff"
+                                 }
+                                 : null);
+        _consoleSink = consoleOptions is null ? null : new ConsoleLogSink(consoleOptions);
         _commands = Channel.CreateBounded<LogCommand>(new BoundedChannelOptions(options.QueueCapacity)
         {
             SingleReader = true,
@@ -31,28 +40,44 @@ internal sealed class LoggerHost : IAsyncDisposable
 
     public UserLogFeed UserLogs { get; }
 
-    public LogType MinimumLevel
+    public LogLevel MinimumLevel
     {
-        get => (LogType)Volatile.Read(ref _minimumLevel);
+        get => (LogLevel)Volatile.Read(ref _minimumLevel);
         set => Volatile.Write(ref _minimumLevel, (int)value);
     }
 
-    public void Write(LogType level, string message, Exception? exception, string? userMessage, bool userVisible)
+    public void Write(LogLevel level, string message, Exception? exception, string? userMessage, bool userVisible)
     {
-        if ((int)level < Volatile.Read(ref _minimumLevel)) return;
+        ArgumentException.ThrowIfNullOrWhiteSpace(message);
+
+        var normalizedUserMessage = string.IsNullOrWhiteSpace(userMessage) ? message : userMessage;
+        var payload = userVisible
+            ? new UserLogPayload { Message = normalizedUserMessage }
+            : null;
+
+        Write(new CodeWFLogEvent
+        {
+            Sequence = 0,
+            Timestamp = DateTimeOffset.Now,
+            Level = level,
+            CategoryName = "CodeWF.Log.Logger",
+            Message = message,
+            UserLog = payload,
+            Exception = exception
+        });
+    }
+
+    public void Write(CodeWFLogEvent logEvent)
+    {
+        ArgumentNullException.ThrowIfNull(logEvent);
+        if (!IsEnabled(logEvent.Level)) return;
         if (Volatile.Read(ref _shutdownStarted) != 0) return;
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(message);
-        var normalizedUserMessage = string.IsNullOrWhiteSpace(userMessage) ? message : userMessage;
-        var logEvent = new LogEvent(
-            Interlocked.Increment(ref _sequence),
-            DateTimeOffset.Now,
-            level,
-            message,
-            normalizedUserMessage,
-            exception,
-            userVisible);
-        Enqueue(new WriteLogCommand(logEvent));
+        var eventToWrite = logEvent.Sequence > 0
+            ? logEvent
+            : logEvent with { Sequence = Interlocked.Increment(ref _sequence) };
+
+        Enqueue(new WriteLogCommand(eventToWrite));
     }
 
     public async Task FlushAsync()
@@ -94,6 +119,11 @@ internal sealed class LoggerHost : IAsyncDisposable
         await ShutdownAsync().ConfigureAwait(false);
     }
 
+    private bool IsEnabled(LogLevel level)
+    {
+        return level != LogLevel.None && (int)level >= Volatile.Read(ref _minimumLevel);
+    }
+
     private void Enqueue(LogCommand command)
     {
         if (_commands.Writer.TryWrite(command)) return;
@@ -104,7 +134,7 @@ internal sealed class LoggerHost : IAsyncDisposable
         }
         catch (ChannelClosedException)
         {
-            // 进程关闭期间晚到的日志不应反向破坏业务退出流程。
+            // Logs written during shutdown should not break application shutdown.
         }
     }
 
@@ -129,22 +159,48 @@ internal sealed class LoggerHost : IAsyncDisposable
         if (_consoleSink is not null) await _consoleSink.DisposeAsync().ConfigureAwait(false);
     }
 
-    private async Task ProcessLogAsync(LogEvent logEvent)
+    private async Task ProcessLogAsync(CodeWFLogEvent logEvent)
     {
         if (_fileSink is not null)
             await WriteSafelyAsync(_fileSink, logEvent, "写入日志文件失败。").ConfigureAwait(false);
         if (_consoleSink is not null)
             await WriteSafelyAsync(_consoleSink, logEvent, "输出控制台日志失败。").ConfigureAwait(false);
 
-        if (logEvent.UserVisible)
-            UserLogs.Publish(new UserLogEntry(
-                logEvent.Sequence,
-                logEvent.Timestamp,
-                logEvent.Level,
-                logEvent.UserMessage));
+        var userEntry = CreateUserLogEntry(logEvent);
+        if (userEntry is not null) UserLogs.Publish(userEntry);
     }
 
-    private static async Task WriteSafelyAsync(ILogSink sink, LogEvent logEvent, string failureMessage)
+    private UserLogEntry? CreateUserLogEntry(CodeWFLogEvent logEvent)
+    {
+        if (_userLogMode == UserLogMode.Disabled) return null;
+
+        var userMessage = logEvent.UserLog?.Message;
+        var userProperties = logEvent.UserLog?.Properties ?? [];
+        if (string.IsNullOrWhiteSpace(userMessage))
+        {
+            if (_userLogMode != UserLogMode.FormattedMessage) return null;
+            userMessage = logEvent.Message;
+            userProperties = [];
+        }
+
+        if (string.IsNullOrWhiteSpace(userMessage)) return null;
+
+        return new UserLogEntry
+        {
+            Sequence = logEvent.Sequence,
+            Timestamp = logEvent.Timestamp,
+            Level = logEvent.Level,
+            Message = userMessage,
+            CategoryName = logEvent.CategoryName,
+            EventId = logEvent.EventId,
+            TraceId = logEvent.TraceId,
+            Properties = userProperties
+                .Where(property => property.Visibility == LogPropertyVisibility.UserSafe)
+                .ToArray()
+        };
+    }
+
+    private static async Task WriteSafelyAsync(ILogSink sink, CodeWFLogEvent logEvent, string failureMessage)
     {
         try
         {
@@ -176,7 +232,7 @@ internal sealed class LoggerHost : IAsyncDisposable
 
     private abstract record LogCommand;
 
-    private sealed record WriteLogCommand(LogEvent LogEvent) : LogCommand;
+    private sealed record WriteLogCommand(CodeWFLogEvent LogEvent) : LogCommand;
 
     private sealed record FlushLogCommand(TaskCompletionSource Completion) : LogCommand;
 }

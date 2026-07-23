@@ -1,26 +1,26 @@
 using CodeWF.Log.Core.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace CodeWF.Log.Core;
 
 internal sealed class ConsoleLogSink : ILogSink
 {
-    private readonly string _timestampFormat;
+    private readonly ConsoleLogOptions _options;
 
-    public ConsoleLogSink(string timestampFormat)
+    public ConsoleLogSink(ConsoleLogOptions options)
     {
-        _timestampFormat = timestampFormat;
+        _options = options;
     }
 
-    public ValueTask WriteAsync(LogEvent logEvent, CancellationToken cancellationToken)
+    public ValueTask WriteAsync(CodeWFLogEvent logEvent, CancellationToken cancellationToken)
     {
-        if (!logEvent.UserVisible) return ValueTask.CompletedTask;
+        if (_options.UserLogOnly && logEvent.UserLog is null) return ValueTask.CompletedTask;
 
         var previousColor = Console.ForegroundColor;
         try
         {
             Console.ForegroundColor = GetColor(logEvent.Level);
-            Console.WriteLine(
-                $"{logEvent.Timestamp.ToString(_timestampFormat)} [{logEvent.Level.Description()}] {logEvent.UserMessage}");
+            Console.Write(Format(logEvent));
         }
         finally
         {
@@ -34,14 +34,34 @@ internal sealed class ConsoleLogSink : ILogSink
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
-    private static ConsoleColor GetColor(LogType level)
+    private string Format(CodeWFLogEvent logEvent)
+    {
+        if (!string.IsNullOrWhiteSpace(_options.OutputTemplate))
+        {
+            var text = LogOutputTemplateFormatter.Format(
+                logEvent,
+                _options.OutputTemplate,
+                _options.TimestampFormat);
+            return text.EndsWith(Environment.NewLine, StringComparison.Ordinal)
+                ? text
+                : text + Environment.NewLine;
+        }
+
+        var message = _options.UserLogOnly
+            ? logEvent.UserLog?.Message ?? logEvent.Message
+            : logEvent.Message;
+
+        return $"{logEvent.Timestamp.ToString(_options.TimestampFormat)} [{logEvent.Level.Description()}] {message}{Environment.NewLine}";
+    }
+
+    private static ConsoleColor GetColor(LogLevel level)
     {
         return level switch
         {
-            LogType.Debug => ConsoleColor.Cyan,
-            LogType.Info => ConsoleColor.Green,
-            LogType.Warn => ConsoleColor.Yellow,
-            LogType.Error or LogType.Fatal => ConsoleColor.Red,
+            LogLevel.Trace or LogLevel.Debug => ConsoleColor.Cyan,
+            LogLevel.Information => ConsoleColor.Green,
+            LogLevel.Warning => ConsoleColor.Yellow,
+            LogLevel.Error or LogLevel.Critical => ConsoleColor.Red,
             _ => ConsoleColor.White
         };
     }

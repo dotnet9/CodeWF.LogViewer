@@ -1,0 +1,60 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:log="https://codewf.com"
+        x:Class="MicrosoftLoggingAvaloniaDemo.Views.MainWindow"
+        mc:Ignorable="d"
+        d:DesignWidth="1040"
+        d:DesignHeight="660"
+        Width="1040"
+        Height="660"
+        MinWidth="820"
+        MinHeight="520"
+        Icon="/Assets/logo.ico"
+        Title="CodeWF ILogger Avalonia Demo">
+
+  <Window.Styles>
+    <Style Selector="Border.side">
+      <Setter Property="BorderBrush" Value="#D0D7DE" />
+      <Setter Property="BorderThickness" Value="0 0 1 0" />
+      <Setter Property="Padding" Value="14" />
+    </Style>
+    <Style Selector="Button.action">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Padding" Value="12 8" />
+    </Style>
+    <Style Selector="TextBlock.heading">
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0 0 0 8" />
+    </Style>
+  </Window.Styles>
+
+  <Grid ColumnDefinitions="260,*">
+    <Border Classes="side">
+      <StackPanel Spacing="8">
+        <TextBlock Classes="heading" Text="ILogger&lt;T&gt; 场景" />
+        <Button Classes="action" Content="写入全部级别" Click="WriteAllLevels_OnClick" />
+        <Button Classes="action" Content="普通诊断日志" Click="WriteDiagnosticOnly_OnClick" />
+        <Button Classes="action" Content="友好异常提示" Click="WriteFriendlyException_OnClick" />
+        <Button Classes="action" Content="批量写入 300 条" Click="WriteBurst_OnClick" />
+        <TextBlock Margin="0 10 0 0"
+                   Foreground="#667085"
+                   TextWrapping="Wrap"
+                   Text="普通 LogError 只进入文件；LogUser* 会进入右侧 LogView 和通知。" />
+      </StackPanel>
+    </Border>
+
+    <Grid Grid.Column="1" Margin="14" RowDefinitions="Auto,*">
+      <TextBlock Classes="heading" Text="用户安全日志" />
+      <log:LogView Grid.Row="1"
+                   FontFamily="Consolas"
+                   FontSize="13"
+                   MinimumLevel="Trace"
+                   MaximumLevel="Critical"
+                   MaxDisplayCount="1000" />
+    </Grid>
+  </Grid>
+</Window>

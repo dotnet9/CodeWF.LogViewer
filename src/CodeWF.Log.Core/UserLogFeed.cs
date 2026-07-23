@@ -5,7 +5,7 @@ namespace CodeWF.Log.Core;
 /// </summary>
 public sealed class UserLogFeed
 {
-    private readonly int _capacity;
+    private int _capacity;
     private readonly object _syncRoot = new();
     private readonly Queue<UserLogEntry> _recentEntries = new();
     private readonly Dictionary<long, Action<UserLogEntry>> _subscribers = new();
@@ -14,6 +14,16 @@ public sealed class UserLogFeed
     internal UserLogFeed(int capacity)
     {
         _capacity = capacity;
+    }
+
+    internal void UpdateCapacity(int capacity)
+    {
+        lock (_syncRoot)
+        {
+            _capacity = capacity;
+            while (_recentEntries.Count > _capacity)
+                _recentEntries.Dequeue();
+        }
     }
 
     /// <summary>

@@ -1,0 +1,19 @@
+@host = http://localhost:5179
+
+GET {{host}}/
+
+###
+
+GET {{host}}/diagnostic/task-001
+
+###
+
+GET {{host}}/user-error/task-002
+
+###
+
+GET {{host}}/scope/PLC-01
+
+###
+
+GET {{host}}/recent-user-logs

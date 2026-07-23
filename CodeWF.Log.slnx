@@ -2,6 +2,8 @@
   <Folder Name="/Demo/">
     <Project Path="src/AvaloniaLogDemo/AvaloniaLogDemo.csproj" />
     <Project Path="src/ConsoleLogDemo/ConsoleLogDemo.csproj" />
+    <Project Path="src/MicrosoftLoggingAvaloniaDemo/MicrosoftLoggingAvaloniaDemo.csproj" />
+    <Project Path="src/MicrosoftLoggingWebApiDemo/MicrosoftLoggingWebApiDemo.csproj" />
   </Folder>
   <Folder Name="/Solution Files/">
     <File Path=".gitignore" />
@@ -18,6 +20,6 @@
     <File Path="UpdateAssemblyVersion.ps1" />
   </Folder>
   <Project Path="src/CodeWF.Log.Core/CodeWF.Log.Core.csproj" />
-  <Project Path="src/CodeWF.LogViewer.Avalonia/CodeWF.LogViewer.Avalonia.csproj" />
-  
+  <Project Path="src/CodeWF.Log.Extensions.Logging/CodeWF.Log.Extensions.Logging.csproj" />
+  <Project Path="src/CodeWF.Log.Avalonia/CodeWF.Log.Avalonia.csproj" />
 </Solution>

@@ -2,7 +2,7 @@ namespace CodeWF.Log.Core;
 
 internal interface ILogSink : IAsyncDisposable
 {
-    ValueTask WriteAsync(LogEvent logEvent, CancellationToken cancellationToken);
+    ValueTask WriteAsync(CodeWFLogEvent logEvent, CancellationToken cancellationToken);
 
     Task FlushAsync(CancellationToken cancellationToken);
 }

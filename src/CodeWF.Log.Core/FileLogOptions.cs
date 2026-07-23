@@ -8,27 +8,32 @@ public sealed record FileLogOptions
     /// <summary>
     /// 最终日志目录。组件不会再自动追加子目录。
     /// </summary>
-    public required string DirectoryPath { get; init; }
+    public required string DirectoryPath { get; set; }
 
     /// <summary>
     /// 单个日志文件最大字节数。
     /// </summary>
-    public long MaxFileSizeBytes { get; init; } = 100L * 1024 * 1024;
+    public long MaxFileSizeBytes { get; set; } = 100L * 1024 * 1024;
 
     /// <summary>
     /// 累积到此数量后立即刷新文件缓冲区。
     /// </summary>
-    public int BatchSize { get; init; } = 200;
+    public int BatchSize { get; set; } = 200;
 
     /// <summary>
     /// 文件缓冲区最长刷新间隔。
     /// </summary>
-    public TimeSpan FlushInterval { get; init; } = TimeSpan.FromMilliseconds(500);
+    public TimeSpan FlushInterval { get; set; } = TimeSpan.FromMilliseconds(500);
 
     /// <summary>
     /// 日志时间格式。
     /// </summary>
-    public string TimestampFormat { get; init; } = "yyyy-MM-dd HH:mm:ss.fff";
+    public string TimestampFormat { get; set; } = "yyyy-MM-dd HH:mm:ss.fff";
+
+    /// <summary>
+    /// 文本输出模板；为空时使用 CodeWF 默认详细格式。
+    /// </summary>
+    public string? OutputTemplate { get; set; }
 
     internal void Validate()
     {

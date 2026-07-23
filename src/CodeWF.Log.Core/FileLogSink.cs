@@ -21,7 +21,7 @@ internal sealed class FileLogSink : ILogSink
         _flushTask = FlushPeriodicallyAsync(_flushCancellation.Token);
     }
 
-    public async ValueTask WriteAsync(LogEvent logEvent, CancellationToken cancellationToken)
+    public async ValueTask WriteAsync(CodeWFLogEvent logEvent, CancellationToken cancellationToken)
     {
         var text = Format(logEvent);
         var byteCount = Encoding.UTF8.GetByteCount(text);
@@ -162,20 +162,100 @@ internal sealed class FileLogSink : ILogSink
         _fileSize = 0;
     }
 
-    private string Format(LogEvent logEvent)
+    private string Format(CodeWFLogEvent logEvent)
     {
+        if (!string.IsNullOrWhiteSpace(_options.OutputTemplate))
+        {
+            var text = LogOutputTemplateFormatter.Format(
+                logEvent,
+                _options.OutputTemplate,
+                _options.TimestampFormat);
+            return text.EndsWith(Environment.NewLine, StringComparison.Ordinal)
+                ? text
+                : text + Environment.NewLine;
+        }
+
         var builder = new StringBuilder();
         builder.Append(logEvent.Timestamp.ToString(_options.TimestampFormat))
             .Append(" [")
             .Append(logEvent.Level.Description())
-            .Append("] ")
-            .AppendLine(logEvent.Message);
+            .Append("] ");
 
-        if (!string.Equals(logEvent.UserMessage, logEvent.Message, StringComparison.Ordinal))
-            builder.Append("用户提示：").AppendLine(logEvent.UserMessage);
+        if (!string.IsNullOrWhiteSpace(logEvent.CategoryName))
+            builder.Append('(').Append(logEvent.CategoryName).Append(") ");
+
+        if (logEvent.EventId.Id != 0 || !string.IsNullOrWhiteSpace(logEvent.EventId.Name))
+            builder.Append("EventId=")
+                .Append(logEvent.EventId.Id)
+                .Append(string.IsNullOrWhiteSpace(logEvent.EventId.Name) ? string.Empty : $":{logEvent.EventId.Name}")
+                .Append(' ');
+
+        builder.AppendLine(logEvent.Message);
+
+        if (!string.IsNullOrWhiteSpace(logEvent.MessageTemplate) &&
+            !string.Equals(logEvent.MessageTemplate, logEvent.Message, StringComparison.Ordinal))
+            builder.Append("Template: ").AppendLine(logEvent.MessageTemplate);
+
+        if (logEvent.UserLog is not null &&
+            !string.Equals(logEvent.UserLog.Message, logEvent.Message, StringComparison.Ordinal))
+            builder.Append("用户提示: ").AppendLine(logEvent.UserLog.Message);
+
+        AppendProperties(builder, "Properties", logEvent.Properties);
+        AppendScopes(builder, logEvent.Scopes);
+        AppendActivity(builder, logEvent);
+
         if (logEvent.Exception is not null)
             builder.AppendLine(logEvent.Exception.ToString());
 
         return builder.ToString();
+    }
+
+    private static void AppendProperties(StringBuilder builder, string title, IReadOnlyList<LogProperty> properties)
+    {
+        if (properties.Count == 0) return;
+
+        builder.AppendLine($"{title}:");
+        foreach (var property in properties)
+        {
+            builder.Append("  ")
+                .Append(property.Name)
+                .Append(" = ")
+                .AppendLine(LogValueFormatter.ToDisplayString(property.Value));
+        }
+    }
+
+    private static void AppendScopes(StringBuilder builder, IReadOnlyList<LogScope> scopes)
+    {
+        if (scopes.Count == 0) return;
+
+        builder.AppendLine("Scopes:");
+        foreach (var scope in scopes)
+        {
+            if (!string.IsNullOrWhiteSpace(scope.Text))
+                builder.Append("  => ").AppendLine(scope.Text);
+            AppendProperties(builder, "  ScopeProperties", scope.Properties);
+        }
+    }
+
+    private static void AppendActivity(StringBuilder builder, CodeWFLogEvent logEvent)
+    {
+        if (string.IsNullOrWhiteSpace(logEvent.TraceId) &&
+            string.IsNullOrWhiteSpace(logEvent.SpanId) &&
+            string.IsNullOrWhiteSpace(logEvent.ParentId) &&
+            string.IsNullOrWhiteSpace(logEvent.TraceState))
+            return;
+
+        builder.Append("Activity:");
+        AppendActivityPart(builder, "TraceId", logEvent.TraceId);
+        AppendActivityPart(builder, "SpanId", logEvent.SpanId);
+        AppendActivityPart(builder, "ParentId", logEvent.ParentId);
+        AppendActivityPart(builder, "TraceState", logEvent.TraceState);
+        builder.AppendLine();
+    }
+
+    private static void AppendActivityPart(StringBuilder builder, string name, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+            builder.Append(' ').Append(name).Append('=').Append(value);
     }
 }

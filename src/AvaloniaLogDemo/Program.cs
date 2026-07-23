@@ -2,6 +2,7 @@ using Avalonia;
 using CodeWF.Log.Core;
 using System;
 using System.IO;
+using Microsoft.Extensions.Logging;
 
 namespace AvaloniaLogDemo;
 
@@ -12,7 +13,7 @@ internal static class Program
     {
         Logger.Initialize(new LoggerOptions
         {
-            MinimumLevel = LogType.Debug,
+            MinimumLevel = LogLevel.Debug,
             EnableConsole = false,
             RecentUserLogCapacity = 2_000,
             File = new FileLogOptions

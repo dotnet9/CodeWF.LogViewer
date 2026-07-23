@@ -23,6 +23,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <None Include="..\..\README.md" Pack="true" PackagePath="" />
     <None Include="..\..\logo.png" Pack="true" PackagePath="" Link="logo.png" Visible="false" />
   </ItemGroup>

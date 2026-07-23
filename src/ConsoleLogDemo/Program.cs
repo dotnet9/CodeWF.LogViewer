@@ -1,9 +1,10 @@
 using CodeWF.Log.Core;
+using Microsoft.Extensions.Logging;
 
 var logDirectory = Path.Combine(AppContext.BaseDirectory, "Log");
 Logger.Initialize(new LoggerOptions
 {
-    MinimumLevel = LogType.Debug,
+    MinimumLevel = LogLevel.Debug,
     EnableConsole = true,
     QueueCapacity = 2_000,
     File = new FileLogOptions

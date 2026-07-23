@@ -16,7 +16,7 @@
 1. 新业务代码的主入口是 MEL 标准 `ILogger<T>`，不设计替代 MEL 的新业务日志 API。
 2. CodeWF 的接入形态是 `builder.Logging.AddCodeWF()`，由 MEL `LoggerFactory` 负责 Provider 编排、级别过滤、Category 过滤和多 Provider 并行。
 3. `CodeWF.Log.Core` 可以直接引用 `Microsoft.Extensions.Logging`，把 `LogLevel`、`EventId` 等 MEL 类型作为核心公共契约。
-4. Core 不再定义 `LogType`，不保留旧枚举值，不提供 `Trace = -1`、`Info`、`Warn`、`Fatal` 等旧版兼容别名。
+4. Core 不再定义 `LogType`，不保留旧枚举值，也不为旧枚举提供 `Trace = -1`、`Info`、`Warn`、`Fatal` 等兼容别名；静态 `Logger.Info/Warn/Fatal` 方法作为迁移门面继续保留。
 5. 全局采集过滤交给 MEL 的 `Logging:LogLevel` 和 Provider 专属过滤；CodeWF 只做 Sink 级输出过滤。
 6. CodeWF 的差异化能力是文件诊断日志、用户安全日志流 `UserLogFeed`、Avalonia `LogView` 和通知。
 7. 普通 `ILogger` 日志默认是诊断日志，不默认进入 `UserLogFeed`。
@@ -96,6 +96,8 @@ builder.Logging.AddCodeWF();
 
 控制台日志遵循 .NET 习惯：应用需要控制台输出时，可以继续使用 Microsoft Console Provider；只有希望 CodeWF 接管控制台格式时，才显式启用 CodeWF ConsoleSink。
 
+文件和控制台的文本格式只通过 `OutputTemplate` 配置。CodeWF 不提供 `IncludeEventId`、`IncludeScopes`、`IncludeProperties` 这类字段开关；模板中出现哪个占位符就输出哪个字段，未出现的字段不输出。
+
 ## 5. 级别模型
 
 全新版本统一使用 MEL 标准级别：
@@ -133,7 +135,7 @@ CodeWF 内部、配置、Provider 和 Avalonia 控件的公开级别属性都使
 }
 ```
 
-CodeWF 不再定义第二套 `LoggerOptions.MinimumLevel`，避免出现 `appsettings.json` 配了 `Trace` 但 Core 默认值又拦掉日志的双重过滤问题。
+MEL Provider 场景不推荐再配置第二套全局采集级别。`CodeWFLoggerOptions.MinimumLevel` 只作为 CodeWF Provider 内部的保险阈值，默认 `Trace`，正常项目应优先使用 `Logging:LogLevel` 和 `Logging:CodeWF:LogLevel`。旧式静态 API 仍保留 `LoggerOptions.MinimumLevel`，它只服务于非 Host 场景的输出过滤。
 
 Provider 专属过滤使用标准 MEL 约定：
 
@@ -362,6 +364,7 @@ FileSink：
 
 - 默认启用。
 - 默认记录 Timestamp、Level、Category、EventId、Message、MessageTemplate、Properties、Scopes、Activity 和完整 Exception。
+- 配置 `OutputTemplate` 后按模板输出；模板未包含的字段不输出。
 - 相对路径在 Host 场景下相对 `IHostEnvironment.ContentRootPath`，非 Host 场景下相对 `AppContext.BaseDirectory`。
 
 ConsoleSink：
@@ -369,6 +372,7 @@ ConsoleSink：
 - 默认关闭。
 - 启用后默认输出 Timestamp、Level、Message。
 - 默认不输出完整 Exception 堆栈。
+- 配置 `OutputTemplate` 后按模板输出；Web API 默认控制台仍建议使用 Microsoft Console Provider。
 
 UserLogSink：
 
@@ -447,12 +451,66 @@ builder.Logging.AddCodeWF();
     },
     "CodeWF": {
       "File": {
-        "DirectoryPath": "logs"
+        "Enabled": true,
+        "DirectoryPath": "logs",
+        "OutputTemplate": "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] ({Category}) {Message} {Properties}{NewLine}{Exception}"
+      },
+      "Console": {
+        "Enabled": false
+      },
+      "UserLog": {
+        "Mode": "ExplicitOnly",
+        "RecentCapacity": 2000
+      },
+      "Capture": {
+        "Scopes": true,
+        "Activity": true
+      },
+      "Queue": {
+        "Capacity": 10000
       }
     }
   }
 }
 ```
+
+代码配置：
+
+```csharp
+builder.Logging.AddCodeWF(options =>
+{
+    options.File.Enabled = true;
+    options.File.DirectoryPath = "logs";
+    options.File.OutputTemplate =
+        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] ({Category}) {Message} {Properties}{NewLine}{Exception}";
+
+    options.Console.Enabled = false;
+    options.UserLog.Mode = UserLogMode.ExplicitOnly;
+    options.UserLog.RecentCapacity = 2_000;
+    options.Capture.Scopes = true;
+    options.Capture.Activity = true;
+    options.Queue.Capacity = 10_000;
+});
+```
+
+`OutputTemplate` 常用占位符：
+
+| 占位符 | 含义 |
+|---|---|
+| `Timestamp` | 时间，支持 `{Timestamp:yyyy-MM-dd HH:mm:ss.fff}` |
+| `Level` | MEL 日志级别，支持 `{Level:u3}`、`{Level:u4}`、`{Level:zh}` |
+| `Category` / `CategoryName` | 日志 Category |
+| `EventId` / `EventName` | MEL EventId |
+| `Message` | MEL formatter 生成的消息 |
+| `MessageTemplate` | `{OriginalFormat}` 原始模板 |
+| `UserMessage` | CodeWF 用户消息 |
+| `Properties` / `UserProperties` | 结构化属性 |
+| `Scopes` | Scope 快照 |
+| `Activity` / `TraceId` / `SpanId` | Activity/Trace 信息 |
+| `Exception` | 异常详情 |
+| `NewLine` | 当前平台换行 |
+
+模板中未出现的字段不会输出，因此不再设计 `IncludeEventId`、`IncludeScopes`、`IncludeProperties` 等布尔配置。
 
 与 Serilog/NLog/log4net 并行时，如果第三方 Provider 已负责文件和控制台，CodeWF 只保留 `UserLogFeed`：
 
@@ -462,7 +520,7 @@ builder.Logging.AddCodeWF(options =>
 {
     options.File.Enabled = false;
     options.Console.Enabled = false;
-    options.UserLog.Enabled = true;
+    options.UserLog.Mode = UserLogMode.ExplicitOnly;
 });
 ```
 
@@ -473,6 +531,8 @@ builder.Logging.ClearProviders();
 builder.Logging.AddCodeWF(options =>
 {
     options.Console.Enabled = true;
+    options.Console.OutputTemplate =
+        "{Timestamp:HH:mm:ss} [{Level:u3}] ({Category}) {Message}{NewLine}{Exception}";
 });
 ```
 
