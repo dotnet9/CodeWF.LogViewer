@@ -13,7 +13,7 @@
         Opacity="{Binding WindowOpacity}"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
-        WindowDecorations="None"
+        SystemDecorations="None"
         CanResize="False"
         ShowActivated="False"
         ShowInTaskbar="False"

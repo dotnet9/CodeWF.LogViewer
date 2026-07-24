@@ -143,6 +143,8 @@ await Logger.ShutdownAsync();
 
 ## Avalonia
 
+`v11.3.14` 分支支持 Avalonia `[11.3.14, 12.0.0)`，组件包版本为 `11.3.14.x`。
+
 XAML 命名空间保持不变：
 
 ```xml

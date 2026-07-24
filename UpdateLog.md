@@ -1,5 +1,10 @@
 # 更新日志（Known）
 
+## 11.3.14.2 (2026-07-24)
+
+- 🔨[优化]-同步 12.1.0.18 日志管线、MEL Provider、Avalonia Demo 和自动化验证能力，并保持 Avalonia `[11.3.14, 12.0.0)` 兼容范围。
+- 🔨[优化]-使用 Avalonia 11 兼容的 `Xaml.Behaviors` 和窗口装饰属性，三个 NuGet 包继续只支持 `net10.0` 及以上应用。
+
 ## 12.1.0.18 (2026-07-24)
 
 - 💥[重构]-三个 NuGet 包统一目标 `net10.0`，删除 `UserLogEntry`、`UserLogFeed`、`UserLogPayload` 和 `UserLogMode`，所有通道改用完整不可变 `CodeWFLogEvent`。
