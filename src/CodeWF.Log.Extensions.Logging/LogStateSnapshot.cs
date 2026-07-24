@@ -5,31 +5,27 @@ namespace CodeWF.Log.Extensions.Logging;
 internal sealed record LogStateSnapshot(
     string? MessageTemplate,
     IReadOnlyList<LogProperty> Properties,
-    UserLogPayload? UserLog)
+    string? UserMessage)
 {
     public static LogStateSnapshot Capture<TState>(TState state)
     {
+        var userMessage = (state as ICodeWFUserLogState)?.UserMessage;
         if (state is IEnumerable<KeyValuePair<string, object?>> properties)
-            return CaptureProperties(properties);
-
-        return new LogStateSnapshot(null, [], null);
+            return CaptureProperties(properties) with { UserMessage = userMessage };
+        return new LogStateSnapshot(null, [], userMessage);
     }
 
     public static LogScope CaptureScope(object? scope)
     {
         if (scope is IEnumerable<KeyValuePair<string, object?>> properties)
-            return new LogScope(scope.ToString(), CaptureProperties(properties).Properties);
-
-        return new LogScope(scope?.ToString(), []);
+            return new LogScope(SafeToString(scope), CaptureProperties(properties).Properties);
+        return new LogScope(SafeToString(scope), []);
     }
 
     private static LogStateSnapshot CaptureProperties(IEnumerable<KeyValuePair<string, object?>> properties)
     {
         string? messageTemplate = null;
-        string? userMessage = null;
-        var diagnosticProperties = new List<LogProperty>();
-        var userProperties = new List<LogProperty>();
-
+        var captured = new List<LogProperty>();
         foreach (var property in properties)
         {
             if (property.Key == CodeWFLogPropertyNames.OriginalFormat)
@@ -37,35 +33,14 @@ internal sealed record LogStateSnapshot(
                 messageTemplate = property.Value as string;
                 continue;
             }
-
-            if (property.Key == CodeWFLogPropertyNames.UserMessage)
-            {
-                userMessage = property.Value?.ToString();
-                continue;
-            }
-
-            if (property.Key.StartsWith(CodeWFLogPropertyNames.UserPropertyPrefix, StringComparison.Ordinal))
-            {
-                var name = property.Key[CodeWFLogPropertyNames.UserPropertyPrefix.Length..];
-                if (!string.IsNullOrWhiteSpace(name))
-                    userProperties.Add(new LogProperty(
-                        name,
-                        LogValueFormatter.Capture(property.Value),
-                        LogPropertyVisibility.UserSafe));
-                continue;
-            }
-
-            diagnosticProperties.Add(new LogProperty(property.Key, LogValueFormatter.Capture(property.Value)));
+            captured.Add(new LogProperty(property.Key, LogValueFormatter.Capture(property.Value)));
         }
+        return new LogStateSnapshot(messageTemplate, captured, null);
+    }
 
-        var userLog = string.IsNullOrWhiteSpace(userMessage)
-            ? null
-            : new UserLogPayload
-            {
-                Message = userMessage,
-                Properties = userProperties
-            };
-
-        return new LogStateSnapshot(messageTemplate, diagnosticProperties, userLog);
+    private static string? SafeToString(object? value)
+    {
+        try { return value?.ToString(); }
+        catch { return value?.GetType().FullName; }
     }
 }

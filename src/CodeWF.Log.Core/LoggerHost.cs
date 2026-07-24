@@ -8,28 +8,35 @@ internal sealed class LoggerHost : IAsyncDisposable
     private readonly Channel<LogCommand> _commands;
     private readonly FileLogSink? _fileSink;
     private readonly ConsoleLogSink? _consoleSink;
-    private readonly UserLogMode _userLogMode;
+    private readonly LoggerOptions _options;
     private readonly Task _processingTask;
     private int _minimumLevel;
     private int _shutdownStarted;
     private long _sequence;
 
-    public LoggerHost(LoggerOptions options, UserLogFeed? userLogs = null)
+    public LoggerHost(
+        LoggerOptions options,
+        LogEventFeed? eventFeed = null,
+        ILineTemplateController? lineTemplate = null,
+        CodeWFLogHealth? health = null)
     {
-        _minimumLevel = (int)options.MinimumLevel;
-        _userLogMode = options.UserLogMode;
-        UserLogs = userLogs ?? new UserLogFeed(options.RecentUserLogCapacity);
-        UserLogs.UpdateCapacity(options.RecentUserLogCapacity);
-        _fileSink = options.File is null ? null : new FileLogSink(options.File);
-        var consoleOptions = options.Console ??
-                             (options.EnableConsole
+        _options = options.Normalize();
+        _minimumLevel = (int)_options.MinimumLevel;
+        LineTemplate = lineTemplate ?? eventFeed?.LineTemplate ?? new LineTemplateController(_options.LineTemplate);
+        FileOutputTemplate = new FileOutputTemplateController(_options.File?.OutputTemplate);
+        Events = eventFeed ?? new LogEventFeed(_options.RecentEventCapacity, LineTemplate);
+        Health = health ?? new CodeWFLogHealth();
+        Events.UpdateCapacity(_options.RecentEventCapacity);
+        _fileSink = _options.File is null ? null : new FileLogSink(_options.File, FileOutputTemplate);
+        var consoleOptions = _options.Console ??
+                             (_options.EnableConsole
                                  ? new ConsoleLogOptions
                                  {
-                                     TimestampFormat = options.File?.TimestampFormat ?? "yyyy-MM-dd HH:mm:ss.fff"
+                                     TimestampFormat = _options.File?.TimestampFormat ?? "yyyy-MM-dd HH:mm:ss.fff"
                                  }
                                  : null);
-        _consoleSink = consoleOptions is null ? null : new ConsoleLogSink(consoleOptions);
-        _commands = Channel.CreateBounded<LogCommand>(new BoundedChannelOptions(options.QueueCapacity)
+        _consoleSink = consoleOptions is null ? null : new ConsoleLogSink(consoleOptions, LineTemplate);
+        _commands = Channel.CreateBounded<LogCommand>(new BoundedChannelOptions(_options.QueueCapacity)
         {
             SingleReader = true,
             SingleWriter = false,
@@ -38,7 +45,10 @@ internal sealed class LoggerHost : IAsyncDisposable
         _processingTask = ProcessAsync();
     }
 
-    public UserLogFeed UserLogs { get; }
+    public LogEventFeed Events { get; }
+    public ILineTemplateController LineTemplate { get; }
+    public IFileOutputTemplateController FileOutputTemplate { get; }
+    public CodeWFLogHealth Health { get; }
 
     public LogLevel MinimumLevel
     {
@@ -46,38 +56,11 @@ internal sealed class LoggerHost : IAsyncDisposable
         set => Volatile.Write(ref _minimumLevel, (int)value);
     }
 
-    public void Write(LogLevel level, string message, Exception? exception, string? userMessage, bool userVisible)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(message);
-
-        var normalizedUserMessage = string.IsNullOrWhiteSpace(userMessage) ? message : userMessage;
-        var payload = userVisible
-            ? new UserLogPayload { Message = normalizedUserMessage }
-            : null;
-
-        Write(new CodeWFLogEvent
-        {
-            Sequence = 0,
-            Timestamp = DateTimeOffset.Now,
-            Level = level,
-            CategoryName = "CodeWF.Log.Logger",
-            Message = message,
-            UserLog = payload,
-            Exception = exception
-        });
-    }
-
-    public void Write(CodeWFLogEvent logEvent)
+    public void Write(CodeWFLogEvent logEvent, bool fileOnly = false)
     {
         ArgumentNullException.ThrowIfNull(logEvent);
-        if (!IsEnabled(logEvent.Level)) return;
-        if (Volatile.Read(ref _shutdownStarted) != 0) return;
-
-        var eventToWrite = logEvent.Sequence > 0
-            ? logEvent
-            : logEvent with { Sequence = Interlocked.Increment(ref _sequence) };
-
-        Enqueue(new WriteLogCommand(eventToWrite));
+        if (!IsEnabled(logEvent.Level) || Volatile.Read(ref _shutdownStarted) != 0) return;
+        EnqueueLog(new WriteLogCommand(logEvent with { Sequence = 0 }, fileOnly));
     }
 
     public async Task FlushAsync()
@@ -89,16 +72,8 @@ internal sealed class LoggerHost : IAsyncDisposable
         }
 
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        try
-        {
-            await _commands.Writer.WriteAsync(new FlushLogCommand(completion)).ConfigureAwait(false);
-        }
-        catch (ChannelClosedException)
-        {
-            await _processingTask.ConfigureAwait(false);
-            return;
-        }
-
+        try { await _commands.Writer.WriteAsync(new FlushLogCommand(completion)).ConfigureAwait(false); }
+        catch (ChannelClosedException) { await _processingTask.ConfigureAwait(false); return; }
         await completion.Task.ConfigureAwait(false);
     }
 
@@ -114,28 +89,35 @@ internal sealed class LoggerHost : IAsyncDisposable
         await _processingTask.ConfigureAwait(false);
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        await ShutdownAsync().ConfigureAwait(false);
-    }
+    public async ValueTask DisposeAsync() => await ShutdownAsync().ConfigureAwait(false);
 
-    private bool IsEnabled(LogLevel level)
-    {
-        return level != LogLevel.None && (int)level >= Volatile.Read(ref _minimumLevel);
-    }
+    private bool IsEnabled(LogLevel level) =>
+        level != LogLevel.None && (int)level >= Volatile.Read(ref _minimumLevel);
 
-    private void Enqueue(LogCommand command)
+    private void EnqueueLog(WriteLogCommand command)
     {
         if (_commands.Writer.TryWrite(command)) return;
+        if (_options.QueueFullMode == LogQueueFullMode.DropNewest ||
+            (_options.QueueFullMode == LogQueueFullMode.DropTraceAndDebug &&
+             command.LogEvent.Level is LogLevel.Trace or LogLevel.Debug))
+        {
+            Health.RecordDropped(command.LogEvent.Level);
+            return;
+        }
 
         try
         {
-            _commands.Writer.WriteAsync(command).AsTask().GetAwaiter().GetResult();
+            if (_options.QueueFullMode == LogQueueFullMode.Wait)
+            {
+                _commands.Writer.WriteAsync(command).AsTask().GetAwaiter().GetResult();
+                return;
+            }
+
+            using var timeout = new CancellationTokenSource(_options.EnqueueTimeout);
+            _commands.Writer.WriteAsync(command, timeout.Token).AsTask().GetAwaiter().GetResult();
         }
-        catch (ChannelClosedException)
-        {
-            // Logs written during shutdown should not break application shutdown.
-        }
+        catch (OperationCanceledException) { Health.RecordDropped(command.LogEvent.Level); }
+        catch (ChannelClosedException) { }
     }
 
     private async Task ProcessAsync()
@@ -145,7 +127,8 @@ internal sealed class LoggerHost : IAsyncDisposable
             switch (command)
             {
                 case WriteLogCommand write:
-                    await ProcessLogAsync(write.LogEvent).ConfigureAwait(false);
+                    var sequenced = write.LogEvent with { Sequence = ++_sequence };
+                    await ProcessLogAsync(sequenced, write.FileOnly).ConfigureAwait(false);
                     break;
                 case FlushLogCommand flush:
                     await FlushSinksAsync(CancellationToken.None).ConfigureAwait(false);
@@ -155,84 +138,52 @@ internal sealed class LoggerHost : IAsyncDisposable
         }
 
         await FlushSinksAsync(CancellationToken.None).ConfigureAwait(false);
-        if (_fileSink is not null) await _fileSink.DisposeAsync().ConfigureAwait(false);
-        if (_consoleSink is not null) await _consoleSink.DisposeAsync().ConfigureAwait(false);
+        await DisposeSinkSafelyAsync(_fileSink, "释放日志文件失败。").ConfigureAwait(false);
+        await DisposeSinkSafelyAsync(_consoleSink, "释放控制台日志失败。").ConfigureAwait(false);
     }
 
-    private async Task ProcessLogAsync(CodeWFLogEvent logEvent)
+    private async Task ProcessLogAsync(CodeWFLogEvent logEvent, bool fileOnly)
     {
-        if (_fileSink is not null)
+        if (_fileSink is not null && _options.File is { } file && logEvent.Level >= file.MinimumLevel)
             await WriteSafelyAsync(_fileSink, logEvent, "写入日志文件失败。").ConfigureAwait(false);
+
+        if (fileOnly) return;
+
         if (_consoleSink is not null)
-            await WriteSafelyAsync(_consoleSink, logEvent, "输出控制台日志失败。").ConfigureAwait(false);
-
-        var userEntry = CreateUserLogEntry(logEvent);
-        if (userEntry is not null) UserLogs.Publish(userEntry);
-    }
-
-    private UserLogEntry? CreateUserLogEntry(CodeWFLogEvent logEvent)
-    {
-        if (_userLogMode == UserLogMode.Disabled) return null;
-
-        var userMessage = logEvent.UserLog?.Message;
-        var userProperties = logEvent.UserLog?.Properties ?? [];
-        if (string.IsNullOrWhiteSpace(userMessage))
         {
-            if (_userLogMode != UserLogMode.FormattedMessage) return null;
-            userMessage = logEvent.Message;
-            userProperties = [];
+            var minimumLevel = _options.Console?.MinimumLevel ?? LogLevel.Trace;
+            if (logEvent.Level >= minimumLevel)
+                await WriteSafelyAsync(_consoleSink, logEvent, "输出控制台日志失败。").ConfigureAwait(false);
         }
 
-        if (string.IsNullOrWhiteSpace(userMessage)) return null;
-
-        return new UserLogEntry
-        {
-            Sequence = logEvent.Sequence,
-            Timestamp = logEvent.Timestamp,
-            Level = logEvent.Level,
-            Message = userMessage,
-            CategoryName = logEvent.CategoryName,
-            EventId = logEvent.EventId,
-            TraceId = logEvent.TraceId,
-            Properties = userProperties
-                .Where(property => property.Visibility == LogPropertyVisibility.UserSafe)
-                .ToArray()
-        };
+        if (_options.EnableEventFeed) Events.Publish(logEvent);
     }
 
     private static async Task WriteSafelyAsync(ILogSink sink, CodeWFLogEvent logEvent, string failureMessage)
     {
-        try
-        {
-            await sink.WriteAsync(logEvent, CancellationToken.None).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            LoggerSelfDiagnostics.Report(failureMessage, ex);
-        }
+        try { await sink.WriteAsync(logEvent, CancellationToken.None).ConfigureAwait(false); }
+        catch (Exception ex) { LoggerSelfDiagnostics.Report(failureMessage, ex); }
     }
 
     private async Task FlushSinksAsync(CancellationToken cancellationToken)
     {
         if (_fileSink is not null)
         {
-            try
-            {
-                await _fileSink.FlushAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                LoggerSelfDiagnostics.Report("刷新日志文件失败。", ex);
-            }
+            try { await _fileSink.FlushAsync(cancellationToken).ConfigureAwait(false); }
+            catch (Exception ex) { LoggerSelfDiagnostics.Report("刷新日志文件失败。", ex); }
         }
 
-        if (_consoleSink is not null)
-            await _consoleSink.FlushAsync(cancellationToken).ConfigureAwait(false);
+        if (_consoleSink is not null) await _consoleSink.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task DisposeSinkSafelyAsync(ILogSink? sink, string failureMessage)
+    {
+        if (sink is null) return;
+        try { await sink.DisposeAsync().ConfigureAwait(false); }
+        catch (Exception ex) { LoggerSelfDiagnostics.Report(failureMessage, ex); }
     }
 
     private abstract record LogCommand;
-
-    private sealed record WriteLogCommand(CodeWFLogEvent LogEvent) : LogCommand;
-
+    private sealed record WriteLogCommand(CodeWFLogEvent LogEvent, bool FileOnly) : LogCommand;
     private sealed record FlushLogCommand(TaskCompletionSource Completion) : LogCommand;
 }

@@ -31,7 +31,7 @@ internal partial class NotificationWindow : Window
         DesktopNotificationAttentionMode attentionMode) =>
         _viewModel.Configure(applicationName, duration, host, contentTemplate, attentionMode);
 
-    public void AddLogs(IReadOnlyList<UserLogEntry> logEntries) => _viewModel.AddLogs(logEntries);
+    public void AddLogs(IReadOnlyList<(CodeWFLogEvent Entry, string Content)> logEntries) => _viewModel.AddLogs(logEntries);
 
     public void CloseNotification() => _viewModel.RequestClose();
 

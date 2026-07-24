@@ -5,56 +5,121 @@
         xmlns:log="https://codewf.com"
         x:Class="MicrosoftLoggingAvaloniaDemo.Views.MainWindow"
         mc:Ignorable="d"
-        d:DesignWidth="1040"
-        d:DesignHeight="660"
-        Width="1040"
-        Height="660"
-        MinWidth="820"
-        MinHeight="520"
+        d:DesignWidth="1240"
+        d:DesignHeight="860"
+        Width="1240"
+        Height="860"
+        MinWidth="980"
+        MinHeight="650"
         Icon="/Assets/logo.ico"
-        Title="CodeWF ILogger Avalonia Demo">
+        Title="CodeWF Microsoft.Extensions.Logging Avalonia Demo">
 
   <Window.Styles>
-    <Style Selector="Border.side">
+    <Style Selector="Border.panel">
       <Setter Property="BorderBrush" Value="#D0D7DE" />
-      <Setter Property="BorderThickness" Value="0 0 1 0" />
-      <Setter Property="Padding" Value="14" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="12" />
     </Style>
     <Style Selector="Button.action">
-      <Setter Property="HorizontalAlignment" Value="Stretch" />
-      <Setter Property="HorizontalContentAlignment" Value="Left" />
-      <Setter Property="Padding" Value="12 8" />
+      <Setter Property="Padding" Value="11 7" />
+      <Setter Property="MinWidth" Value="92" />
     </Style>
     <Style Selector="TextBlock.heading">
       <Setter Property="FontSize" Value="15" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Margin" Value="0 0 0 8" />
     </Style>
   </Window.Styles>
 
-  <Grid ColumnDefinitions="260,*">
-    <Border Classes="side">
+  <Grid Margin="14" RowDefinitions="Auto,Auto,*">
+    <Border Classes="panel">
+      <Grid ColumnDefinitions="Auto,220,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+        <TextBlock Classes="heading" Text="共享 LineTemplate" VerticalAlignment="Center" />
+        <ComboBox x:Name="TemplatePresetBox"
+                  Grid.Column="1"
+                  Margin="12 0"
+                  SelectionChanged="TemplatePresetBox_OnSelectionChanged">
+          <ComboBoxItem Content="简洁格式" />
+          <ComboBoxItem Content="上下文格式" />
+          <ComboBoxItem Content="自定义" />
+        </ComboBox>
+        <TextBox x:Name="TemplateEditor"
+                 Grid.Column="2"
+                 FontFamily="Consolas"
+                 TextChanged="TemplateEditor_OnTextChanged" />
+        <Button Grid.Column="3" Margin="10 0 0 0" Content="恢复简洁格式" Click="RestoreTemplate_OnClick" />
+
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0 10 12 0" Text="即时预览" FontWeight="SemiBold" />
+        <TextBlock x:Name="TemplatePreview"
+                   Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2"
+                   Margin="0 10 0 0" FontFamily="Consolas" TextWrapping="Wrap" />
+        <TextBlock x:Name="TemplateError"
+                   Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2"
+                   Margin="0 6 0 0" Foreground="#D92D20" TextWrapping="Wrap" />
+
+        <Border Grid.Row="3" Grid.ColumnSpan="4" Margin="0 10 0 10" BorderBrush="#E4E7EC" BorderThickness="0 1 0 0" />
+        <TextBlock Grid.Row="3" Classes="heading" Margin="0 12 0 0" Text="文件 OutputTemplate" VerticalAlignment="Center" />
+        <ComboBox x:Name="OutputTemplatePresetBox"
+                  Grid.Row="3" Grid.Column="1" Margin="12 12 12 0"
+                  SelectionChanged="OutputTemplatePresetBox_OnSelectionChanged">
+          <ComboBoxItem Content="诊断格式" />
+          <ComboBoxItem Content="完整上下文" />
+          <ComboBoxItem Content="自定义" />
+        </ComboBox>
+        <TextBox x:Name="OutputTemplateEditor"
+                 Grid.Row="3" Grid.Column="2" Margin="0 12 0 0"
+                 FontFamily="Consolas" TextChanged="OutputTemplateEditor_OnTextChanged" />
+        <Button Grid.Row="3" Grid.Column="3" Margin="10 12 0 0" Content="恢复诊断格式" Click="RestoreOutputTemplate_OnClick" />
+
+        <TextBlock Grid.Row="4" Grid.ColumnSpan="2" Margin="0 10 12 0" Text="文件行预览" FontWeight="SemiBold" />
+        <TextBlock x:Name="OutputTemplatePreview"
+                   Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2"
+                   Margin="0 10 0 0" FontFamily="Consolas" TextWrapping="Wrap" />
+        <TextBlock x:Name="OutputTemplateError"
+                   Grid.Row="5" Grid.Column="2" Grid.ColumnSpan="2"
+                   Margin="0 6 0 0" Foreground="#D92D20" TextWrapping="Wrap" />
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1" Classes="panel" Margin="0 10 0 10">
       <StackPanel Spacing="8">
-        <TextBlock Classes="heading" Text="ILogger&lt;T&gt; 场景" />
-        <Button Classes="action" Content="写入全部级别" Click="WriteAllLevels_OnClick" />
-        <Button Classes="action" Content="普通诊断日志" Click="WriteDiagnosticOnly_OnClick" />
-        <Button Classes="action" Content="友好异常提示" Click="WriteFriendlyException_OnClick" />
-        <Button Classes="action" Content="批量写入 300 条" Click="WriteBurst_OnClick" />
-        <TextBlock Margin="0 10 0 0"
-                   Foreground="#667085"
-                   TextWrapping="Wrap"
-                   Text="普通 LogError 只进入文件；LogUser* 会进入右侧 LogView 和通知。" />
+        <Grid ColumnDefinitions="Auto,180,*">
+          <TextBlock Classes="heading" Text="动态日志场景" VerticalAlignment="Center" />
+          <ComboBox x:Name="NotificationModeBox"
+                    Grid.Column="1" Margin="14 0 0 0"
+                    SelectionChanged="NotificationModeBox_OnSelectionChanged">
+            <ComboBoxItem Content="不显示通知" />
+            <ComboBoxItem Content="应用内弹窗" />
+            <ComboBoxItem Content="桌面右下角窗口" />
+          </ComboBox>
+          <TextBlock Grid.Column="2" Margin="12 0 0 0" VerticalAlignment="Center"
+                     Foreground="#667085" Text="File 使用独立 OutputTemplate；Console、LogView、Notification 共用上方模板。" />
+        </Grid>
+        <WrapPanel Orientation="Horizontal">
+          <Button Classes="action" Margin="0 0 8 8" Content="Trace" Tag="Trace" Click="WriteLevel_OnClick" />
+          <Button Classes="action" Margin="0 0 8 8" Content="Debug" Tag="Debug" Click="WriteLevel_OnClick" />
+          <Button Classes="action" Margin="0 0 8 8" Content="Information" Tag="Information" Click="WriteLevel_OnClick" />
+          <Button Classes="action" Margin="0 0 8 8" Content="Warning" Tag="Warning" Click="WriteLevel_OnClick" />
+          <Button Classes="action" Margin="0 0 8 8" Content="Error" Tag="Error" Click="WriteLevel_OnClick" />
+          <Button Classes="action" Margin="0 0 8 8" Content="Critical" Tag="Critical" Click="WriteLevel_OnClick" />
+          <Button Classes="action" Margin="0 0 8 8" Content="全部级别" Click="WriteAllLevels_OnClick" />
+          <Button Classes="action" Margin="0 0 8 8" Content="普通 / UserMessage" Click="WriteMessageComparison_OnClick" />
+          <Button Classes="action" Margin="0 0 8 8" Content="异常 + 友好提示" Click="WriteFriendlyException_OnClick" />
+          <Button Classes="action" Margin="0 0 8 8" Content="EventId / Scope / Activity" Click="WriteContext_OnClick" />
+          <Button Classes="action" Margin="0 0 8 8" Content="LoggerMessage" Click="WriteLoggerMessage_OnClick" />
+          <Button Classes="action" Margin="0 0 8 8" Content="并发突发 300 条" Click="WriteBurst_OnClick" />
+        </WrapPanel>
       </StackPanel>
     </Border>
 
-    <Grid Grid.Column="1" Margin="14" RowDefinitions="Auto,*">
-      <TextBlock Classes="heading" Text="用户安全日志" />
-      <log:LogView Grid.Row="1"
-                   FontFamily="Consolas"
-                   FontSize="13"
-                   MinimumLevel="Trace"
-                   MaximumLevel="Critical"
-                   MaxDisplayCount="1000" />
-    </Grid>
+    <Border Grid.Row="2" Classes="panel">
+      <Grid RowDefinitions="Auto,*">
+        <TextBlock Classes="heading" Text="统一 CodeWFLogEvent（默认显示 Information ～ Critical）" />
+        <log:LogView Grid.Row="1" Margin="0 8 0 0"
+                     FontFamily="Consolas"
+                     FontSize="13"
+                     MaxDisplayCount="2000" />
+      </Grid>
+    </Border>
   </Grid>
 </Window>

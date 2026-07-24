@@ -26,6 +26,12 @@ public sealed class LogNotifications
             "Duration",
             TimeSpan.FromSeconds(10));
 
+    public static readonly AttachedProperty<int> MaxVisibleCountProperty =
+        AvaloniaProperty.RegisterAttached<LogNotifications, Application, int>("MaxVisibleCount", 3);
+
+    public static readonly AttachedProperty<int> QueueCapacityProperty =
+        AvaloniaProperty.RegisterAttached<LogNotifications, Application, int>("QueueCapacity", 100);
+
     public static readonly AttachedProperty<string?> ApplicationNameProperty =
         AvaloniaProperty.RegisterAttached<LogNotifications, Application, string?>("ApplicationName");
 
@@ -45,6 +51,9 @@ public sealed class LogNotifications
         ModeProperty.Changed.AddClassHandler<Application>(OnConfigurationChanged);
         MinimumLevelProperty.Changed.AddClassHandler<Application>(OnConfigurationChanged);
         DurationProperty.Changed.AddClassHandler<Application>(OnConfigurationChanged);
+        MaxVisibleCountProperty.Changed.AddClassHandler<Application>(OnConfigurationChanged);
+        QueueCapacityProperty.Changed.AddClassHandler<Application>(OnConfigurationChanged);
+        LogContext.SourceProperty.Changed.AddClassHandler<Application>(OnConfigurationChanged);
         ApplicationNameProperty.Changed.AddClassHandler<Application>(OnConfigurationChanged);
         DesktopContentTemplateProperty.Changed.AddClassHandler<Application>(OnConfigurationChanged);
         AttentionModeProperty.Changed.AddClassHandler<Application>(OnConfigurationChanged);
@@ -62,6 +71,12 @@ public sealed class LogNotifications
 
     public static TimeSpan GetDuration(Application target) => target.GetValue(DurationProperty);
     public static void SetDuration(Application target, TimeSpan value) => target.SetValue(DurationProperty, value);
+
+    public static int GetMaxVisibleCount(Application target) => target.GetValue(MaxVisibleCountProperty);
+    public static void SetMaxVisibleCount(Application target, int value) => target.SetValue(MaxVisibleCountProperty, value);
+
+    public static int GetQueueCapacity(Application target) => target.GetValue(QueueCapacityProperty);
+    public static void SetQueueCapacity(Application target, int value) => target.SetValue(QueueCapacityProperty, value);
 
     public static string? GetApplicationName(Application target) => target.GetValue(ApplicationNameProperty);
     public static void SetApplicationName(Application target, string? value) =>
@@ -97,9 +112,12 @@ public sealed class LogNotifications
         }
 
         presenter.Configure(
+            LogContext.GetSource(target) ?? Logger.Events,
             mode,
             GetMinimumLevel(target),
             GetDuration(target),
+            Math.Max(1, GetMaxVisibleCount(target)),
+            Math.Max(1, GetQueueCapacity(target)),
             GetApplicationName(target),
             GetDesktopContentTemplate(target),
             GetAttentionMode(target));

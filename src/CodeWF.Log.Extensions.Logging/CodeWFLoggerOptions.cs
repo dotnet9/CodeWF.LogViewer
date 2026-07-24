@@ -5,42 +5,39 @@ namespace CodeWF.Log.Extensions.Logging;
 
 public sealed class CodeWFLoggerOptions
 {
-    public LogLevel MinimumLevel { get; set; } = LogLevel.Trace;
-
+    public string LineTemplate { get; set; } = LineTemplateController.DefaultTemplate;
+    public bool BridgeStaticLogger { get; set; } = true;
     public CodeWFFileLoggerOptions File { get; set; } = new();
-
     public CodeWFConsoleLoggerOptions Console { get; set; } = new();
-
-    public CodeWFUserLogOptions UserLog { get; set; } = new();
-
+    public CodeWFEventFeedOptions EventFeed { get; set; } = new();
     public CodeWFCaptureOptions Capture { get; set; } = new();
-
     public CodeWFQueueOptions Queue { get; set; } = new();
 
-    internal LoggerOptions ToCoreOptions()
+    internal LoggerOptions ToCoreOptions(string contentRootPath)
     {
         Validate();
-
         return new LoggerOptions
         {
-            MinimumLevel = MinimumLevel,
-            File = File.Enabled ? File.ToCoreOptions() : null,
+            MinimumLevel = LogLevel.Trace,
+            LineTemplate = LineTemplate,
+            File = File.Enabled ? File.ToCoreOptions(contentRootPath) : null,
             EnableConsole = Console.Enabled,
             Console = Console.Enabled ? Console.ToCoreOptions() : null,
-            UserLogMode = UserLog.Mode,
+            EnableEventFeed = EventFeed.Enabled,
+            RecentEventCapacity = EventFeed.RecentCapacity,
             QueueCapacity = Queue.Capacity,
-            RecentUserLogCapacity = UserLog.RecentCapacity
+            QueueFullMode = Queue.FullMode,
+            EnqueueTimeout = Queue.EnqueueTimeout
         };
     }
 
     internal void Validate()
     {
-        if (!Enum.IsDefined(MinimumLevel))
-            throw new ArgumentOutOfRangeException(nameof(MinimumLevel), "CodeWF 最低日志级别无效。");
-
+        if (!LogTemplateFormatter.TryValidate(LineTemplate, out var error))
+            throw new ArgumentException(error, nameof(LineTemplate));
         File.Validate();
         Console.Validate();
-        UserLog.Validate();
+        EventFeed.Validate();
         Queue.Validate();
     }
 }
@@ -48,104 +45,91 @@ public sealed class CodeWFLoggerOptions
 public sealed class CodeWFFileLoggerOptions
 {
     public bool Enabled { get; set; } = true;
-
+    public LogLevel MinimumLevel { get; set; } = LogLevel.Trace;
     public string DirectoryPath { get; set; } = "logs";
-
-    public long MaxFileSizeBytes { get; set; } = 100L * 1024 * 1024;
-
+    public long MaxFileSizeBytes { get; set; } = 1_000L * 1024 * 1024;
+    public int RetentionDays { get; set; } = 30;
+    public int? RetainedFileCountLimit { get; set; }
+    public long? MaxDirectorySizeBytes { get; set; }
     public int BatchSize { get; set; } = 200;
-
     public TimeSpan FlushInterval { get; set; } = TimeSpan.FromMilliseconds(500);
-
     public string TimestampFormat { get; set; } = "yyyy-MM-dd HH:mm:ss.fff";
-
     public string? OutputTemplate { get; set; }
 
-    internal FileLogOptions ToCoreOptions()
+    internal FileLogOptions ToCoreOptions(string contentRootPath) => new()
     {
-        return new FileLogOptions
-        {
-            DirectoryPath = ResolveLogDirectory(DirectoryPath),
-            MaxFileSizeBytes = MaxFileSizeBytes,
-            BatchSize = BatchSize,
-            FlushInterval = FlushInterval,
-            TimestampFormat = TimestampFormat,
-            OutputTemplate = OutputTemplate
-        };
-    }
+        DirectoryPath = ResolveLogDirectory(DirectoryPath, contentRootPath),
+        MinimumLevel = MinimumLevel,
+        MaxFileSizeBytes = MaxFileSizeBytes,
+        RetentionDays = RetentionDays,
+        RetainedFileCountLimit = RetainedFileCountLimit,
+        MaxDirectorySizeBytes = MaxDirectorySizeBytes,
+        BatchSize = BatchSize,
+        FlushInterval = FlushInterval,
+        TimestampFormat = TimestampFormat,
+        OutputTemplate = OutputTemplate
+    };
 
     internal void Validate()
     {
         if (!Enabled) return;
-        ToCoreOptions().Validate();
+        if (string.IsNullOrWhiteSpace(DirectoryPath))
+            throw new ArgumentException("日志目录不能为空。", nameof(DirectoryPath));
+        ToCoreOptions(AppContext.BaseDirectory).Validate();
     }
 
-    private static string ResolveLogDirectory(string directoryPath)
-    {
-        var path = string.IsNullOrWhiteSpace(directoryPath)
-            ? "logs"
-            : directoryPath;
-
-        return Path.IsPathRooted(path)
-            ? path
-            : Path.Combine(AppContext.BaseDirectory, path);
-    }
+    private static string ResolveLogDirectory(string path, string contentRootPath) =>
+        Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(contentRootPath, path));
 }
 
 public sealed class CodeWFConsoleLoggerOptions
 {
     public bool Enabled { get; set; }
-
+    public LogLevel MinimumLevel { get; set; } = LogLevel.Trace;
     public string TimestampFormat { get; set; } = "yyyy-MM-dd HH:mm:ss.fff";
 
-    public string? OutputTemplate { get; set; }
-
-    internal ConsoleLogOptions ToCoreOptions()
+    internal ConsoleLogOptions ToCoreOptions() => new()
     {
-        return new ConsoleLogOptions
-        {
-            TimestampFormat = TimestampFormat,
-            OutputTemplate = OutputTemplate,
-            UserLogOnly = false
-        };
-    }
+        MinimumLevel = MinimumLevel,
+        TimestampFormat = TimestampFormat
+    };
 
     internal void Validate()
     {
-        if (!Enabled) return;
-        ToCoreOptions().Validate();
+        if (Enabled) ToCoreOptions().Validate();
     }
 }
 
-public sealed class CodeWFUserLogOptions
+public sealed class CodeWFEventFeedOptions
 {
-    public UserLogMode Mode { get; set; } = UserLogMode.ExplicitOnly;
-
+    public bool Enabled { get; set; } = true;
     public int RecentCapacity { get; set; } = 2_000;
 
     internal void Validate()
     {
-        if (!Enum.IsDefined(Mode))
-            throw new ArgumentOutOfRangeException(nameof(Mode), "CodeWF 用户日志模式无效。");
         if (RecentCapacity <= 0)
-            throw new ArgumentOutOfRangeException(nameof(RecentCapacity), "CodeWF 用户日志缓存容量必须大于 0。");
+            throw new ArgumentOutOfRangeException(nameof(RecentCapacity), "事件缓存容量必须大于 0。");
     }
 }
 
 public sealed class CodeWFCaptureOptions
 {
     public bool Scopes { get; set; } = true;
-
     public bool Activity { get; set; } = true;
+    public bool ActivityTags { get; set; }
+    public bool ActivityBaggage { get; set; }
 }
 
 public sealed class CodeWFQueueOptions
 {
     public int Capacity { get; set; } = 10_000;
+    public LogQueueFullMode FullMode { get; set; } = LogQueueFullMode.DropTraceAndDebug;
+    public TimeSpan EnqueueTimeout { get; set; } = TimeSpan.FromMilliseconds(100);
 
     internal void Validate()
     {
-        if (Capacity <= 0)
-            throw new ArgumentOutOfRangeException(nameof(Capacity), "CodeWF 日志队列容量必须大于 0。");
+        if (Capacity <= 0) throw new ArgumentOutOfRangeException(nameof(Capacity), "日志队列容量必须大于 0。");
+        if (!Enum.IsDefined(FullMode)) throw new ArgumentOutOfRangeException(nameof(FullMode), "日志队列满策略无效。");
+        if (EnqueueTimeout < TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(EnqueueTimeout), "入队超时不能小于 0。");
     }
 }

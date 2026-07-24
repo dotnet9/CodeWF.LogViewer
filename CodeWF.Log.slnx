@@ -4,6 +4,7 @@
     <Project Path="src/ConsoleLogDemo/ConsoleLogDemo.csproj" />
     <Project Path="src/MicrosoftLoggingAvaloniaDemo/MicrosoftLoggingAvaloniaDemo.csproj" />
     <Project Path="src/MicrosoftLoggingWebApiDemo/MicrosoftLoggingWebApiDemo.csproj" />
+    <Project Path="src/MultiProviderAvaloniaDemo/MultiProviderAvaloniaDemo.csproj" />
   </Folder>
   <Folder Name="/Solution Files/">
     <File Path=".gitignore" />
@@ -22,4 +23,11 @@
   <Project Path="src/CodeWF.Log.Core/CodeWF.Log.Core.csproj" />
   <Project Path="src/CodeWF.Log.Extensions.Logging/CodeWF.Log.Extensions.Logging.csproj" />
   <Project Path="src/CodeWF.Log.Avalonia/CodeWF.Log.Avalonia.csproj" />
+  <Folder Name="/Tests/">
+    <Project Path="tests/CodeWF.Log.Core.Tests/CodeWF.Log.Core.Tests.csproj" />
+    <Project Path="tests/CodeWF.Log.Extensions.Logging.Tests/CodeWF.Log.Extensions.Logging.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Smoke/">
+    <Project Path="tests/CodeWF.Log.AotSmoke/CodeWF.Log.AotSmoke.csproj" />
+  </Folder>
 </Solution>

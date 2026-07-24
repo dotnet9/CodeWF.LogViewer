@@ -16,4 +16,4 @@ GET {{host}}/scope/PLC-01
 
 ###
 
-GET {{host}}/recent-user-logs
+GET {{host}}/recent-logs

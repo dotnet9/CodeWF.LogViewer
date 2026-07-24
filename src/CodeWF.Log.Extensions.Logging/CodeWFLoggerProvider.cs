@@ -1,6 +1,4 @@
-using CodeWF.Log.Core;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 
 namespace CodeWF.Log.Extensions.Logging;
@@ -9,24 +7,17 @@ namespace CodeWF.Log.Extensions.Logging;
 public sealed class CodeWFLoggerProvider : ILoggerProvider, ISupportExternalScope
 {
     private readonly ConcurrentDictionary<string, CodeWFLogger> _loggers = new(StringComparer.Ordinal);
-    private readonly IDisposable? _optionsReload;
+    private readonly CodeWFLoggerRuntime _runtime;
     private IExternalScopeProvider _scopeProvider = new LoggerExternalScopeProvider();
-    private CodeWFLoggerOptions _options;
-    private readonly bool _ownsCoreHost;
     private int _disposed;
 
-    public CodeWFLoggerProvider(IOptionsMonitor<CodeWFLoggerOptions> options)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-
-        _options = options.CurrentValue;
-        _ownsCoreHost = Logger.TryInitialize(_options.ToCoreOptions());
-        _optionsReload = options.OnChange(UpdateOptions);
-    }
-
-    internal CodeWFLoggerOptions Options => _options;
+    public CodeWFLoggerProvider(CodeWFLoggerRuntime runtime) => _runtime = runtime;
 
     internal IExternalScopeProvider ScopeProvider => _scopeProvider;
+    internal bool CaptureScopes => _runtime.CaptureScopes;
+    internal bool CaptureActivity => _runtime.CaptureActivity;
+    internal bool CaptureActivityTags => _runtime.CaptureActivityTags;
+    internal bool CaptureActivityBaggage => _runtime.CaptureActivityBaggage;
 
     public ILogger CreateLogger(string categoryName)
     {
@@ -34,38 +25,18 @@ public sealed class CodeWFLoggerProvider : ILoggerProvider, ISupportExternalScop
         return _loggers.GetOrAdd(categoryName, static (name, provider) => new CodeWFLogger(name, provider), this);
     }
 
-    public void SetScopeProvider(IExternalScopeProvider scopeProvider)
-    {
+    public void SetScopeProvider(IExternalScopeProvider scopeProvider) =>
         _scopeProvider = scopeProvider ?? new LoggerExternalScopeProvider();
-    }
 
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-
-        _optionsReload?.Dispose();
         _loggers.Clear();
-
-        if (_ownsCoreHost)
-            Logger.ShutdownAsync().GetAwaiter().GetResult();
+        _runtime.Dispose();
     }
 
-    internal bool IsEnabled(LogLevel level)
-    {
-        var options = _options;
-        return level != LogLevel.None && (int)level >= (int)options.MinimumLevel;
-    }
+    internal bool IsEnabled(LogLevel level) =>
+        Volatile.Read(ref _disposed) == 0 && level != LogLevel.None;
 
-    internal void Write(CodeWFLogEvent logEvent)
-    {
-        if (Volatile.Read(ref _disposed) != 0) return;
-        Logger.Write(logEvent);
-    }
-
-    private void UpdateOptions(CodeWFLoggerOptions options)
-    {
-        options.Validate();
-        _options = options;
-        Logger.MinimumLevel = options.MinimumLevel;
-    }
+    internal void Write(CodeWF.Log.Core.CodeWFLogEvent logEvent) => _runtime.Write(logEvent);
 }

@@ -6,6 +6,7 @@ namespace CodeWF.Log.Core;
 internal sealed class FileLogSink : ILogSink
 {
     private readonly FileLogOptions _options;
+    private readonly IFileOutputTemplateController _outputTemplate;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly CancellationTokenSource _flushCancellation = new();
     private readonly Task _flushTask;
@@ -14,10 +15,12 @@ internal sealed class FileLogSink : ILogSink
     private long _fileSize;
     private int _pendingCount;
 
-    public FileLogSink(FileLogOptions options)
+    public FileLogSink(FileLogOptions options, IFileOutputTemplateController outputTemplate)
     {
         _options = options;
+        _outputTemplate = outputTemplate;
         Directory.CreateDirectory(_options.DirectoryPath);
+        CleanupFiles();
         _flushTask = FlushPeriodicallyAsync(_flushCancellation.Token);
     }
 
@@ -93,6 +96,7 @@ internal sealed class FileLogSink : ILogSink
 
         await CloseWriterAsync().ConfigureAwait(false);
         Directory.CreateDirectory(_options.DirectoryPath);
+        CleanupFiles();
 
         var filePath = GetAvailableFilePath(date, incomingBytes);
         var stream = new FileStream(
@@ -164,11 +168,11 @@ internal sealed class FileLogSink : ILogSink
 
     private string Format(CodeWFLogEvent logEvent)
     {
-        if (!string.IsNullOrWhiteSpace(_options.OutputTemplate))
+        if (_outputTemplate.Current is { } outputTemplate)
         {
-            var text = LogOutputTemplateFormatter.Format(
+            var text = LogTemplateFormatter.Format(
                 logEvent,
-                _options.OutputTemplate,
+                outputTemplate,
                 _options.TimestampFormat);
             return text.EndsWith(Environment.NewLine, StringComparison.Ordinal)
                 ? text
@@ -196,9 +200,9 @@ internal sealed class FileLogSink : ILogSink
             !string.Equals(logEvent.MessageTemplate, logEvent.Message, StringComparison.Ordinal))
             builder.Append("Template: ").AppendLine(logEvent.MessageTemplate);
 
-        if (logEvent.UserLog is not null &&
-            !string.Equals(logEvent.UserLog.Message, logEvent.Message, StringComparison.Ordinal))
-            builder.Append("用户提示: ").AppendLine(logEvent.UserLog.Message);
+        if (!string.IsNullOrWhiteSpace(logEvent.UserMessage) &&
+            !string.Equals(logEvent.UserMessage, logEvent.Message, StringComparison.Ordinal))
+            builder.Append("用户提示: ").AppendLine(logEvent.UserMessage);
 
         AppendProperties(builder, "Properties", logEvent.Properties);
         AppendScopes(builder, logEvent.Scopes);
@@ -257,5 +261,43 @@ internal sealed class FileLogSink : ILogSink
     {
         if (!string.IsNullOrWhiteSpace(value))
             builder.Append(' ').Append(name).Append('=').Append(value);
+    }
+
+    private void CleanupFiles()
+    {
+        try
+        {
+            var directory = new DirectoryInfo(_options.DirectoryPath);
+            if (!directory.Exists) return;
+
+            var files = directory.GetFiles("Log_*.log")
+                .OrderBy(file => file.LastWriteTimeUtc)
+                .ToList();
+            var cutoff = DateTime.UtcNow.AddDays(-_options.RetentionDays);
+            foreach (var file in files.Where(file => file.LastWriteTimeUtc < cutoff).ToArray())
+            {
+                file.Delete();
+                files.Remove(file);
+            }
+
+            while (_options.RetainedFileCountLimit is { } countLimit && files.Count > countLimit)
+            {
+                files[0].Delete();
+                files.RemoveAt(0);
+            }
+
+            if (_options.MaxDirectorySizeBytes is not { } sizeLimit) return;
+            var totalSize = files.Sum(file => file.Length);
+            while (files.Count > 0 && totalSize > sizeLimit)
+            {
+                totalSize -= files[0].Length;
+                files[0].Delete();
+                files.RemoveAt(0);
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerSelfDiagnostics.Report("清理历史日志文件失败。", ex);
+        }
     }
 }

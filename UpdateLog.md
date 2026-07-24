@@ -1,5 +1,17 @@
 # 更新日志（Known）
 
+## 12.1.0.18 (2026-07-24)
+
+- 💥[重构]-三个 NuGet 包统一目标 `net10.0`，删除 `UserLogEntry`、`UserLogFeed`、`UserLogPayload` 和 `UserLogMode`，所有通道改用完整不可变 `CodeWFLogEvent`。
+- 😄[新增]-File 使用可原子更新的独立 `OutputTemplate`；Console、LogView 和通知共享可原子更新的 `LineTemplate`，`{UserMessage}` 为空白时回退 `{Message}`。
+- 😄[新增]-MEL Provider 使用实例级 Pipeline，支持完整 State、Scope、Activity、EventId、LoggerMessage、异常快照、ContentRoot 路径和可选静态 Logger 桥接。
+- 🔨[优化]-文件默认单文件 1000 MB、保留 30 天；队列增加满载策略、超时、按级别丢弃健康统计，Feed 慢订阅不再阻塞 Pipeline。
+- 🔨[优化]-LogView 默认 Information 至 Critical；通知只按 MinimumLevel 判断，增加 InApp 三条上限、DesktopWindow 单窗口和容量 100 的展示队列。
+- 😄[新增]-Avalonia Demo 提供自动应用的 LineTemplate/OutputTemplate 预设和手工编辑，不再需要“应用”按钮；MultiProvider Demo 只编辑 CodeWF LineTemplate；另含纯 appsettings Web API Demo。
+- 🐛[修复]-LogView 与通知窗口打开日志目录改用应用/控件目录上下文，不再要求静态 Logger 已初始化，兼容 Serilog 文件 + CodeWF UI 的组合。
+- 🔨[优化]-MEL Capture 配置在 Runtime 启动时固定快照，避免外部修改 Options 形成未声明的局部热更新；多个 Host 的 CodeWF Console 输出按整行串行化，避免颜色和文本交错。
+- ✅[验证]-增加 Core/MEL 自动化测试、稳定 .NET 10 构建、Native AOT 执行和 Avalonia trim publish smoke。
+
 ## 12.1.0.16 (2026-07-23)
 
 - 🔨[优化]-桌面通知确认按钮新增独立按下态资源，并在按钮模板层覆盖悬浮和按下背景，避免被宿主主题回退为灰色。

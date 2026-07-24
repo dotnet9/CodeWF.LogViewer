@@ -104,7 +104,7 @@ builder.Logging.AddCodeWF();
 | 结构化属性捕获 | 启用 |
 | 消息模板捕获 | 启用 |
 | Flush/Shutdown | 跟随 Host / LoggerFactory 生命周期；DI Provider 和 legacy 静态 Logger 互不影响 |
-| CodeWF pipeline 配置刷新 | 除共享 `LineTemplate` 外启动时固定；修改 File、Console、Queue、EventFeed 等配置后需重启应用 |
+| CodeWF pipeline 配置刷新 | 除共享 `LineTemplate` 和文件 `OutputTemplate` 外启动时固定；修改 File、Console、Queue、EventFeed 等结构配置后需重启应用 |
 
 控制台日志遵循 .NET 习惯：应用需要控制台输出时，可以继续使用 Microsoft Console Provider；只有希望 CodeWF 接管控制台格式时，才显式启用 CodeWF ConsoleSink。
 
@@ -149,7 +149,7 @@ CodeWF 内部、配置、Provider 和 Avalonia 控件的公开级别属性都使
 }
 ```
 
-MEL Provider 场景不推荐再配置第二套全局采集级别。`CodeWFLoggerOptions.MinimumLevel` 只作为 CodeWF Provider 内部的保险阈值，默认 `Trace`，正常项目应优先使用 `Logging:LogLevel` 和 `Logging:CodeWF:LogLevel`。旧式静态 API 仍保留 `LoggerOptions.MinimumLevel`，它只服务于非 Host 场景的输出过滤。
+MEL Provider 不再配置第二套全局采集级别，也不提供 `CodeWFLoggerOptions.MinimumLevel`。全局、Category 和 Provider 专属过滤统一使用 `Logging:LogLevel` 与 `Logging:CodeWF:LogLevel`；File 和 Console 只保留 Sink 级 `MinimumLevel`。旧式静态 API 仍保留 `LoggerOptions.MinimumLevel`，它服务于非 Host 场景的 Pipeline 过滤。
 
 Provider 专属过滤使用标准 MEL 约定：
 
@@ -596,8 +596,8 @@ builder.Logging.AddCodeWF(options =>
 - Host 场景通过 `IHostEnvironment.ContentRootPath` 解析相对日志目录；非 Host 场景才使用 `AppContext.BaseDirectory`。
 - `Logging:LogLevel` 和 `Logging:CodeWF:LogLevel` 继续由 MEL 按标准方式动态刷新。
 - File、Console、EventFeed、Capture 和 Queue 属于 pipeline 启动配置，第一版不做部分热更新；配置文件变化后需重启应用。不能使用 `IOptionsMonitor` 只更新其中少数字段而让其余字段静默保持旧值。
-- 共享 `LineTemplate` 是唯一例外：模板必须先完成解析和校验，再通过共享模板状态原子替换；无效模板不得覆盖上一份有效值。LogView 重新渲染当前保留日志，已经写出的 Console 行和已经弹出的通知不追溯修改。
-- 运行时修改通过实例级 `ILineTemplateController` 完成，不直接修改 Options，也不把更新方法塞入 `LogEventFeed`：
+- 共享 `LineTemplate` 和文件 `OutputTemplate` 是格式配置例外：模板必须先完成解析和校验，再通过各自的模板状态原子替换；无效模板不得覆盖上一份有效值。LineTemplate 更新后 LogView 重新渲染当前保留日志，已经写出的 Console 行和已经弹出的通知不追溯修改；OutputTemplate 更新只影响后续写入的文件日志。
+- 运行时修改通过实例级 `ILineTemplateController` 和 `IFileOutputTemplateController` 完成，不直接修改 Options，也不把更新方法塞入 `LogEventFeed`：
 
 ```csharp
 public interface ILineTemplateController
@@ -605,9 +605,15 @@ public interface ILineTemplateController
     string Current { get; }
     bool TryUpdate(string template, out string? error);
 }
+
+public interface IFileOutputTemplateController
+{
+    string? Current { get; }
+    bool TryUpdate(string? template, out string? error);
+}
 ```
 
-- 每个 DI pipeline 和 legacy pipeline 各自持有一个 Controller；Console、该 pipeline 的 Feed、LogView 和 LogNotifications 共享它。多 Host 之间互不影响。
+- 每个 DI pipeline 和 legacy pipeline 各自持有两个 Controller；Console、该 pipeline 的 Feed、LogView 和 LogNotifications 共享 LineTemplate Controller，FileSink 独占 OutputTemplate Controller。多 Host 之间互不影响。
 - 配置文件和代码 Options 只确定 Controller 的初始模板；第一版不监听配置文件变化做隐式模板热重载。Demo 的预设和手工编辑器通过注入的 Controller 显式更新。
 - AOT 场景不得依赖复杂反射绑定；必要时提供代码配置、手写绑定或 source-generated binding 路径。
 
@@ -707,6 +713,7 @@ public static class CodeWFLoggerExtensions
 - 提供独立的 Trace、Debug、Information、Warning、Error、Critical 按钮，以及“全部级别”“普通诊断日志”“用户友好日志”“带异常”“EventId + Scope + Activity”“并发突发”等组合按钮。
 - 页面显示本次动态上下文，方便用户对照 Serilog 文件、CodeWF LogView 和通知中的字段。
 - 动态场景生成逻辑放入仅供 Demo 使用的共享项目或共享源码，避免多个 Avalonia Demo 复制同一批随机数据和按钮处理代码；该项目不参与 NuGet 打包。
+- `AvaloniaLogDemo` 和 `MicrosoftLoggingAvaloniaDemo` 同时提供共享 `LineTemplate`、文件 `OutputTemplate` 的预设下拉框和手工编辑；选择或编辑出有效模板后立即自动应用，不提供额外“应用”按钮。`MultiProviderAvaloniaDemo` 的文件输出由 Serilog 负责，因此只提供 CodeWF `LineTemplate` 编辑。
 
 ### 16.1 MicrosoftLoggingAvaloniaDemo
 
@@ -714,11 +721,11 @@ public static class CodeWFLoggerExtensions
 - Demo 保持 `net11.0` / `net11.0-windows`，验证目标框架高于库目标框架时的正常引用和运行。
 - UI、ViewModel、Service 全部通过注入的 `ILogger<T>` 输出。
 - 从 DI 注入实例级 `LogEventFeed`，在 Avalonia Application 上设置一次全局 `LogContext.Source`；普通 LogView 不再重复设置 Source，另增加一个局部 Source 示例验证多日志源覆盖。
-- 页面提供共享 `LineTemplate` 选择和编辑区。下拉框内置“简洁格式”和“上下文格式”两套预设；用户修改预设文本后，选择状态自动变为“自定义”。
+- 页面分别提供共享 `LineTemplate` 和文件 `OutputTemplate` 选择、编辑区。两者均内置两套预设和“自定义”；用户修改预设文本后，选择状态自动变为“自定义”。
 - 简洁格式默认使用 `{Timestamp:HH:mm:ss} [{Level:zh}] {UserMessage}{NewLine}`；上下文格式用于演示 Category、EventId、TraceId、Properties、Exception 等字段。
-- 模板采用“编辑、即时预览、应用”的交互：编辑过程只更新预览，点击应用并通过占位符及格式校验后才影响实际行输出；校验失败时保留上一份有效模板并显示明确错误。
-- 模板编辑同时作用于 Console、LogView 和 LogNotifications 严格共享的 `LineTemplate`，不修改独立的 `File.OutputTemplate`，也不把 Demo 的运行时选择写回 `appsettings.json`。
-- 应用新模板后，LogView 重新渲染当前保留的日志；已经写出的 Console 行和已经弹出的通知不追溯修改，后续使用 `LineTemplate` 的输出采用新模板。
+- 模板采用“编辑、即时预览、自动应用”的交互：选择预设或手工文本通过占位符及格式校验后立即影响对应输出；校验失败时保留上一份有效模板并显示明确错误。
+- LineTemplate 编辑同时作用于 Console、LogView 和 LogNotifications；OutputTemplate 编辑只影响后续文件日志。Demo 的运行时选择不写回启动 Options 或 `appsettings.json`。
+- LineTemplate 自动更新后，LogView 重新渲染当前保留的日志；已经写出的 Console 行和已经弹出的通知不追溯修改，后续使用 `LineTemplate` 的输出采用新模板。
 - 编辑区同时展示支持的占位符和恢复预设按钮，避免用户必须查文档才能试用模板。
 - 展示 Trace、Debug、Information、Warning、Error、Critical。
 - 展示 EventId、结构化属性、Scope、Activity。
@@ -746,6 +753,7 @@ public static class CodeWFLoggerExtensions
 - `logger.LogUserError(...)` 在 CodeWF 事件中额外设置 `UserMessage`；Serilog 仍接收标准诊断 `Message`、结构化属性和 Exception。
 - 验证 Serilog 不会收到 CodeWF 私有 UserMessage 元数据，只收到标准 MEL State 和 `{OriginalFormat}`。
 - 页面提供通知模式选择：`None`、`InApp`、`DesktopWindow`，运行时切换并立即验证。
+- 页面只提供 CodeWF `LineTemplate` 预设和手工编辑，不提供 CodeWF `OutputTemplate`，因为文件格式应在 Serilog 配置中验证。
 - `InApp` 在当前 Avalonia TopLevel 内弹出；`DesktopWindow` 使用独立 Avalonia 窗口显示在桌面工作区右下角。
 - 并发突发场景验证 InApp 最多同时显示 3 条、DesktopWindow 复用单窗口、队列溢出计数可见，且通知溢出不额外删除 LogView 的 Feed 事件。
 - 提供各日志级别、动态用户消息、普通诊断与用户日志对照、异常、Scope/Activity/EventId、源生成 `LoggerMessage` 和并发突发按钮。
@@ -757,20 +765,22 @@ public static class CodeWFLoggerExtensions
 
 | 能力 | 当前状态 | 说明 |
 |---|---|---|
-| `AddCodeWF()`、Provider Alias、基础配置绑定 | 已实现 | 已能作为 MEL Provider 注册 |
-| Trace 至 Critical、EventId、结构化 State、Scope、Activity、Exception 捕获 | 部分实现 | 当前仍持有原始 Exception；目标设计改为有界不可变 `LogExceptionInfo` 快照 |
-| 统一 `CodeWFLogEvent` 与完整 `LogEventFeed` | 未实现 | 当前实现仍存在 `UserLogEntry`/用户日志投影，需要 breaking 重构 |
-| File `OutputTemplate` | 已实现 | Sink 级过滤、保留策略待完善 |
-| Console/LogView/LogNotifications 共享 `LineTemplate` | 未实现 | 当前 Console 仍有独立模板，Avalonia 使用固定格式 |
-| 实例级 DI pipeline 与 legacy 静态 pipeline 分离 | 未实现 | 当前 Provider 仍复用进程级静态 `LoggerHost` |
-| 多 Host、重复启动和并行 `LoggerFactory` 隔离 | 未实现 | 依赖实例级 pipeline 改造 |
-| Queue FullMode、超时、丢弃计数、顺序保证 | 部分实现 | 当前只有有界 Wait 队列 |
-| Options 启动校验与明确的重启生效语义 | 部分实现 | 当前存在部分热更新语义不一致 |
-| Host ContentRoot 相对路径解析 | 未实现 | 当前仍基于 `AppContext.BaseDirectory`，Demo 手工指定绝对路径 |
-| `LogContext.Source`、`LogView.Source`、共享 `LineTemplate` | 未实现 | 当前 Avalonia 组件仍固定使用全局 Feed 和固定行格式 |
-| 实例级 `ILineTemplateController` 与原子模板更新 | 未实现 | Demo 和三个行输出通道需要共享同一 Controller |
-| MultiProviderAvaloniaDemo | 未实现 | 使用 Serilog 验证第三方 Provider 不接收 CodeWF 私有用户元数据 |
-| 自动化测试、trim、Native AOT CI | 未实现 | 当前只有 Demo 和 TrimmerRoot 配置 |
+| `AddCodeWF()`、Provider Alias、AOT-safe 配置绑定 | 已实现 | 支持代码配置和 `Logging:CodeWF` appsettings 结构 |
+| Trace 至 Critical、EventId、结构化 State、Scope、Activity、Exception 捕获 | 已实现 | Exception 在调用线程转换为有界不可变 `LogExceptionInfo` |
+| 统一 `CodeWFLogEvent` 与完整 `LogEventFeed` | 已实现 | 普通日志与 `LogUser*` 使用同一种完整事件 |
+| File `OutputTemplate` | 已实现 | 包含 Sink 阈值、滚动、30 天保留、显式容量保护和运行时原子更新 |
+| Console/LogView/LogNotifications 共享 `LineTemplate` | 已实现 | 三者读取同一个实例级 Controller |
+| 实例级 DI pipeline 与 legacy 静态 pipeline 分离 | 已实现 | Provider 拥有生命周期，可选桥接静态 facade |
+| 多 Host、重复启动和并行 `LoggerFactory` 隔离 | 已实现 | 自动化测试覆盖独立 Feed 与释放 |
+| Queue FullMode、超时、丢弃计数、顺序保证 | 已实现 | `CodeWFLogHealth` 提供总数与各级别统计 |
+| Options 启动校验与明确的重启生效语义 | 已实现 | `LineTemplate` 与文件 `OutputTemplate` 支持显式运行时原子更新 |
+| Host ContentRoot 相对路径解析 | 已实现 | Provider 通过 `IHostEnvironment.ContentRootPath` 解析 |
+| `LogContext.Source`、`LogView.Source`、共享 `LineTemplate` | 已实现 | 全局 Source 与控件级覆盖均支持 |
+| 实例级 `ILineTemplateController` 与原子模板更新 | 已实现 | 无效模板不覆盖当前值，LogView 自动重绘 |
+| 实例级 `IFileOutputTemplateController` 与原子模板更新 | 已实现 | 无效模板不覆盖当前值，更新只影响后续文件日志 |
+| `LogContext.LogDirectory`、`LogView.LogDirectory` | 已实现 | 打开目录不依赖静态 Logger 初始化，支持全局目录与控件级覆盖 |
+| MultiProviderAvaloniaDemo | 已实现 | Serilog 文件/控制台，CodeWF LogView/通知，均由 appsettings 配置 |
+| 自动化测试、trim、Native AOT smoke | 已实现 | 19 项 Core/MEL 测试、稳定 .NET 10 AOT 和 Avalonia trim publish 已通过 |
 
 ## 18. 当前版本发布门槛
 
@@ -778,7 +788,7 @@ public static class CodeWFLoggerExtensions
 
 - 三个包统一目标框架为 `net10.0`，使用稳定版 .NET 10 SDK 完成 Release build/test/pack；所有 Demo 使用 .NET 11 SDK 完成构建和 smoke test。
 - MEL Provider 使用实例级 pipeline；多个 Host、多个 `LoggerFactory`、顺序重启和并行测试互不抢占配置与生命周期。
-- legacy `Logger.*` 继续可用，但不与 MEL Provider 共用静态 Host；原 `<log:LogView />` 无 Source 用法仍可回退到 legacy Feed。
+- legacy `Logger.*` 继续可用；Provider 可通过 `BridgeStaticLogger` 将静态 facade 路由到实例级 Host，但实例生命周期仍由 DI Provider 独立拥有。原 `<log:LogView />` 无 Source 用法仍可回退到 legacy Feed。
 - `ILogger<T>` 的 Trace、Debug、Information、Warning、Error、Critical 均能进入 CodeWF Provider。
 - MEL 全局过滤、Category 过滤、Provider 专属过滤和 CodeWF Sink 级过滤均生效。
 - EventId、`{OriginalFormat}`、结构化 State、Scope、Activity 和 Exception 可被捕获。
@@ -796,9 +806,10 @@ public static class CodeWFLoggerExtensions
 - Queue FullMode 和 EnqueueTimeout 生效，丢弃数量通过独立健康状态可观测，慢订阅者不能阻塞 pipeline。
 - Host 停止或 LoggerFactory Dispose 时可以 Flush 和 Shutdown；Flush 屏障语义通过并发测试验证。
 - Sink、Formatter、State 快照和订阅者失败不会默认抛回业务线程。
-- Options 非法值在启动阶段给出清晰错误；除 `LineTemplate` 的原子运行时切换外，pipeline 配置明确为修改后重启生效，不存在部分静默热更新。
+- Options 非法值在启动阶段给出清晰错误；除 `LineTemplate` 和文件 `OutputTemplate` 的显式原子运行时切换外，pipeline 配置明确为修改后重启生效，不存在部分静默热更新。
 - FileSink 具备有界保留策略，并明确单进程/多进程写入约束。
 - MicrosoftLoggingWebApiDemo 只通过 `appsettings.json` 配置 CodeWF。
+- AvaloniaLogDemo 和 MicrosoftLoggingAvaloniaDemo 可切换 LineTemplate 与 OutputTemplate；MultiProviderAvaloniaDemo 只切换 CodeWF LineTemplate。
 - MultiProviderAvaloniaDemo 验证 Serilog 负责诊断输出、CodeWF 只负责 LogView 和 InApp/DesktopWindow 通知，并覆盖动态日志按钮场景。
 - `CodeWF.Log.Core`、`CodeWF.Log.Extensions.Logging`、`CodeWF.Log.Avalonia` 通过 trim/Native AOT smoke test。
 
@@ -830,7 +841,7 @@ public static class CodeWFLoggerExtensions
 - breaking 删除 `UserLogEntry`、公开 `UserLogPayload`、`UserLogFeed` 和 `UserLogMode`。
 - 完成统一不可变 `CodeWFLogEvent`、可选 `UserMessage`、`LogExceptionInfo` 和有界属性/异常快照。
 - 实现完整 `LogEventFeed`、recent buffer、按 Sequence 淘汰及原子“订阅并重放”。
-- 实现实例级 `ILineTemplateController`、模板解析校验、原子更新和 `{UserMessage}` 空白回退语义。
+- 实现实例级 `ILineTemplateController`、`IFileOutputTemplateController`、模板解析校验、原子更新和 `{UserMessage}` 空白回退语义。
 - File 使用 `OutputTemplate`；Console 直接消费全部事件并使用共享 `LineTemplate`；EventFeedSink 发布同一事件实例。
 - 保留 legacy `Logger.*`；`Logger.*ToFile` 通过内部路由信息只进入 FileSink，不引入第二种公开事件模型。
 - 完成队列满策略、Sequence、Flush 屏障、Self Diagnostics 和文件滚动保留策略。
@@ -861,7 +872,7 @@ public static class CodeWFLoggerExtensions
 
 - 抽取只供 Demo 使用的动态场景生成器，所有按钮使用固定消息模板和动态结构化参数。
 - 更新 AvaloniaLogDemo、ConsoleLogDemo、MicrosoftLoggingAvaloniaDemo 和 MicrosoftLoggingWebApiDemo 适配 breaking API。
-- MicrosoftLoggingAvaloniaDemo 增加“简洁格式、上下文格式、自定义”模板编辑、预览、校验、应用和恢复交互。
+- AvaloniaLogDemo 和 MicrosoftLoggingAvaloniaDemo 增加 LineTemplate/OutputTemplate 的预设、自定义、校验与自动应用交互；MultiProviderAvaloniaDemo 只增加 CodeWF LineTemplate 交互。
 - MicrosoftLoggingWebApiDemo 的 CodeWF 配置只保留在 `appsettings.json`，接口改为 `/recent-logs`。
 - 新增 MultiProviderAvaloniaDemo：Serilog 负责文件/控制台，CodeWF 只启用 EventFeed、LogView 和通知；覆盖 InApp/DesktopWindow 及并发突发。
 

@@ -15,13 +15,15 @@ internal static class Program
         {
             MinimumLevel = LogLevel.Debug,
             EnableConsole = false,
-            RecentUserLogCapacity = 2_000,
+            RecentEventCapacity = 2_000,
             File = new FileLogOptions
             {
                 DirectoryPath = Path.Combine(AppContext.BaseDirectory, "Log"),
                 BatchSize = 80,
                 FlushInterval = TimeSpan.FromMilliseconds(300),
-                MaxFileSizeBytes = 5L * 1024 * 1024
+                MaxFileSizeBytes = 5L * 1024 * 1024,
+                OutputTemplate =
+                    "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message}{NewLine}{Exception}"
             }
         });
 

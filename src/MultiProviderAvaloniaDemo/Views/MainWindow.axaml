@@ -1,0 +1,61 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:log="https://codewf.com"
+        x:Class="MultiProviderAvaloniaDemo.Views.MainWindow"
+        mc:Ignorable="d"
+        Width="1200" Height="780" MinWidth="920" MinHeight="620"
+        Icon="/Assets/logo.ico"
+        Title="Serilog + CodeWF Multi-Provider Demo">
+  <Grid Margin="14" RowDefinitions="Auto,Auto,Auto,*">
+    <TextBlock FontSize="18" FontWeight="SemiBold" Text="同一个 ILogger&lt;T&gt;，两个 Provider 各司其职" />
+    <Border Grid.Row="1" Margin="0 12 0 0" BorderBrush="#D0D7DE" BorderThickness="1" CornerRadius="6" Padding="10">
+      <Grid ColumnDefinitions="150,190,*" RowDefinitions="Auto,Auto">
+        <TextBlock FontWeight="SemiBold" VerticalAlignment="Center" Text="CodeWF LineTemplate" />
+        <ComboBox x:Name="LineTemplatePresetBox" Grid.Column="1" Margin="8 0"
+                  SelectionChanged="LineTemplatePresetBox_OnSelectionChanged">
+          <ComboBoxItem Content="简洁格式" />
+          <ComboBoxItem Content="上下文格式" />
+          <ComboBoxItem Content="自定义" />
+        </ComboBox>
+        <TextBox x:Name="LineTemplateEditor" Grid.Column="2" FontFamily="Consolas"
+                 TextChanged="LineTemplateEditor_OnTextChanged" />
+        <TextBlock x:Name="LineTemplateStatus" Grid.Row="1" Grid.Column="2"
+                   Margin="0 4 0 0" TextWrapping="Wrap" />
+      </Grid>
+    </Border>
+    <Grid Grid.Row="2" Margin="0 12" ColumnDefinitions="Auto,190,*">
+      <TextBlock VerticalAlignment="Center" Text="CodeWF 通知模式" />
+      <ComboBox x:Name="NotificationModeBox" Grid.Column="1" Margin="12 0"
+                SelectionChanged="NotificationModeBox_OnSelectionChanged">
+        <ComboBoxItem Content="不显示通知" />
+        <ComboBoxItem Content="应用内弹窗" />
+        <ComboBoxItem Content="桌面右下角窗口" />
+      </ComboBox>
+      <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="#667085" TextWrapping="Wrap"
+                 Text="Serilog：文件 + Console；CodeWF：仅 LogEventFeed、LogView 和通知。UserMessage 不作为公开属性传给 Serilog。" />
+    </Grid>
+    <Grid Grid.Row="3" ColumnDefinitions="250,*">
+      <Border BorderBrush="#D0D7DE" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0 0 10 0">
+        <StackPanel Spacing="8">
+          <Button Content="普通 Information" Tag="Information" Click="WriteLevel_OnClick" />
+          <Button Content="普通 Warning" Tag="Warning" Click="WriteLevel_OnClick" />
+          <Button Content="普通 Error" Tag="Error" Click="WriteLevel_OnClick" />
+          <Button Content="LogUser Information" Click="WriteUserInformation_OnClick" />
+          <Button Content="LogUser Error + Exception" Click="WriteUserError_OnClick" />
+          <Button Content="EventId + Scope + Activity" Click="WriteContext_OnClick" />
+          <Button Content="并发突发 300 条" Click="WriteBurst_OnClick" />
+          <TextBlock Margin="0 10 0 0" Foreground="#667085" TextWrapping="Wrap"
+                     Text="观察 Serilog 文件可确认：诊断 Message 和结构化属性正常，CodeWF 私有 UserMessage 不会泄露为 Serilog 属性。" />
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="1" BorderBrush="#D0D7DE" BorderThickness="1" CornerRadius="6" Padding="12">
+        <Grid RowDefinitions="Auto,*">
+          <TextBlock FontWeight="SemiBold" Text="CodeWF LogView（默认 Information ～ Critical）" />
+          <log:LogView Grid.Row="1" Margin="0 8 0 0" FontFamily="Consolas" FontSize="13" MaxDisplayCount="2000" />
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</Window>

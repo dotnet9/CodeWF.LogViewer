@@ -47,6 +47,20 @@ public static class CodeWFLoggerExtensions
         logger.LogUser(LogLevel.Information, default, null, userMessage, messageTemplate, args);
     }
 
+    public static void LogUserTrace(
+        this ILogger logger,
+        string userMessage,
+        string messageTemplate,
+        params object?[] args) =>
+        logger.LogUser(LogLevel.Trace, default, null, userMessage, messageTemplate, args);
+
+    public static void LogUserDebug(
+        this ILogger logger,
+        string userMessage,
+        string messageTemplate,
+        params object?[] args) =>
+        logger.LogUser(LogLevel.Debug, default, null, userMessage, messageTemplate, args);
+
     public static void LogUserWarning(
         this ILogger logger,
         string userMessage,

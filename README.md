@@ -11,9 +11,9 @@ CodeWF.Log 是面向 .NET 和 Avalonia 的轻量日志组件。新版本以 `Mic
 
 | Package | Purpose | Targets |
 | --- | --- | --- |
-| `CodeWF.Log.Core` | 文件日志、用户日志 feed、静态 `Logger` API | `net8.0;net10.0` |
-| `CodeWF.Log.Extensions.Logging` | `Microsoft.Extensions.Logging` Provider 和 `AddCodeWF()` | `net8.0;net10.0` |
-| `CodeWF.Log.Avalonia` | `LogView` 和日志通知 | `net8.0;net10.0` |
+| `CodeWF.Log.Core` | 文件/控制台日志、完整事件 Feed、静态 `Logger` API | `net10.0` |
+| `CodeWF.Log.Extensions.Logging` | `Microsoft.Extensions.Logging` Provider 和 `AddCodeWF()` | `net10.0` |
+| `CodeWF.Log.Avalonia` | `LogView` 和日志通知 | `net10.0` |
 
 运行 `pack.bat` 可将三个包输出到 `artifacts/packages`。
 
@@ -29,8 +29,10 @@ builder.Logging.AddCodeWF();
 
 - MEL 自身负责全局级别、Category 级别和多 Provider 编排。
 - CodeWF 默认写入 `AppContext.BaseDirectory/logs`。
-- 普通 `ILogger` 日志默认是诊断日志，只进入文件等诊断 sink。
-- 用户可见日志通过 `LogUserInformation/LogUserWarning/LogUserError/LogUserCritical` 表达，并进入 `UserLogFeed`、`LogView` 和通知。
+- 普通 `ILogger` 与 `LogUser*` 都生成完整 `CodeWFLogEvent`，进入启用的 File、Console 和 `LogEventFeed`。
+- `LogUser*` 只额外提供 `UserMessage`；模板中的 `{UserMessage}` 为空白时回退 `{Message}`。
+- File 使用独立 `OutputTemplate`；Console、LogView 和通知严格共享 `LineTemplate`。
+- 两类模板都可通过各自的 Controller 显式、原子地运行时更新；其他 Pipeline 配置仍需重启生效。
 
 常用配置使用结构化 Options；日志格式由 `OutputTemplate` 决定，不提供 `IncludeEventId`、`IncludeScopes` 这类开关。模板里写了对应占位符就输出，没有写就忽略：
 
@@ -42,16 +44,17 @@ builder.Logging.AddCodeWF(options =>
     options.File.OutputTemplate =
         "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] ({Category}) {Message} {Properties}{NewLine}{Exception}";
 
-    // Web API 默认已有 Microsoft Console Provider；只有想让 CodeWF 接管控制台格式时才启用。
+    options.LineTemplate =
+        "{Timestamp:HH:mm:ss} [{Level:u3}] ({Category}) {UserMessage}{NewLine}";
+
     options.Console.Enabled = false;
-    options.UserLog.Mode = UserLogMode.ExplicitOnly;
     options.Capture.Scopes = true;
     options.Capture.Activity = true;
     options.Queue.Capacity = 10_000;
 });
 ```
 
-常用模板占位符：`Timestamp`、`Level`、`Category`、`EventId`、`EventName`、`Message`、`MessageTemplate`、`UserMessage`、`Properties`、`UserProperties`、`Scopes`、`Activity`、`TraceId`、`SpanId`、`Exception`、`NewLine`。
+常用模板占位符：`Timestamp`、`Level`、`Category`、`EventId`、`EventName`、`Message`、`MessageTemplate`、`UserMessage`、`Properties`、`Scopes`、`Activity`、`TraceId`、`SpanId`、`Exception`、`NewLine`。
 
 对应的 `appsettings.json`：
 
@@ -75,23 +78,25 @@ builder.Logging.AddCodeWF(options =>
       "Console": {
         "Enabled": false
       },
-      "UserLog": {
-        "Mode": "ExplicitOnly"
+      "LineTemplate": "{Timestamp:HH:mm:ss} [{Level:u3}] ({Category}) {UserMessage}{NewLine}",
+      "EventFeed": {
+        "Enabled": true,
+        "RecentCapacity": 2000
       }
     }
   }
 }
 ```
 
-如果希望 Web API 控制台也使用 CodeWF 的 `OutputTemplate`，需要让 CodeWF 接管控制台输出：
+如果希望控制台统一使用 CodeWF 的 `LineTemplate`，应避免同时注册其他 Console Provider：
 
 ```csharp
 builder.Logging.ClearProviders();
 builder.Logging.AddCodeWF(options =>
 {
     options.Console.Enabled = true;
-    options.Console.OutputTemplate =
-        "{Timestamp:HH:mm:ss} [{Level:u3}] ({Category}) {Message}{NewLine}{Exception}";
+    options.LineTemplate =
+        "{Timestamp:HH:mm:ss} [{Level:u3}] ({Category}) {UserMessage}{NewLine}";
 });
 ```
 
@@ -123,9 +128,9 @@ Logger.Initialize(new LoggerOptions
 
 静态 API 约定：
 
-- `Logger.Info/Warn/Error/Fatal(...)` 写入诊断日志，并发布用户安全日志。
-- `Logger.Error(message, exception, userMessage)` 文件记录技术消息和异常，UI 显示 `userMessage`。
-- `Logger.*ToFile(...)` 只写诊断日志，不进入 UI、通知或控制台用户输出。
+- `Logger.Info/Warn/Error/Fatal(...)` 写入完整事件；`userMessage` 是同一事件上的可选字段。
+- `Logger.Error(message, exception, userMessage)` 分别保存诊断消息、异常快照和用户消息。
+- `Logger.*ToFile(...)` 只写文件，不进入 Console、LogView 或通知。
 - `Logger.MinimumLevel`、`LoggerOptions.MinimumLevel` 使用 MEL 标准 `LogLevel`。
 
 退出前调用：
@@ -133,6 +138,8 @@ Logger.Initialize(new LoggerOptions
 ```csharp
 await Logger.ShutdownAsync();
 ```
+
+运行时切换格式时，DI 场景注入 `ILineTemplateController` 或 `IFileOutputTemplateController`；静态 API 场景使用 `Logger.Events.LineTemplate` 和 `Logger.FileOutputTemplate`。模板校验失败时当前有效格式保持不变。
 
 ## Avalonia
 
@@ -149,7 +156,13 @@ XAML 命名空间保持不变：
 </Window>
 ```
 
-`LogView.MinimumLevel` 和 `LogView.MaximumLevel` 都是 `Microsoft.Extensions.Logging.LogLevel`，每个视图可以独立按区间显示用户日志。
+`LogView.MinimumLevel` 和 `LogView.MaximumLevel` 都是 `Microsoft.Extensions.Logging.LogLevel`，每个视图可以独立按区间显示完整事件。默认范围为 Information 至 Critical。
+
+右键“查看日志”使用应用级 `LogContext.LogDirectory`，也可由单个 `LogView.LogDirectory` 覆盖。该路径与事件 Source 独立，适合 CodeWF 只负责界面、Serilog 负责文件的多 Provider 场景：
+
+```csharp
+LogContext.SetLogDirectory(this, Path.GetFullPath("Log"));
+```
 
 通知只保留阈值语义：
 
@@ -163,13 +176,14 @@ XAML 命名空间保持不变：
     log:LogNotifications.ApplicationName="CodeWF Log Demo" />
 ```
 
-`LogNotifications` 只接收启用后的新用户日志，不回放历史，也不会接收 `*ToFile` 日志。
+`LogNotifications` 只按 `MinimumLevel` 接收启用后的新事件，不回放历史，也不会接收 `*ToFile` 日志。InApp 默认最多同时显示 3 条；DesktopWindow 复用一个桌面右下角窗口。
 
 ## Demos
 
 | Demo | Purpose |
 | --- | --- |
 | `ConsoleLogDemo` | 验证传统静态 `Logger.*`、`*ToFile`、文件轮转和控制台用户输出。 |
-| `AvaloniaLogDemo` | 验证传统静态 `Logger.*` 接入 Avalonia `LogView` 和通知。 |
-| `MicrosoftLoggingAvaloniaDemo` | 验证 `ILogger<T>`、DI、`AddCodeWF()`、`LogUser*`、Avalonia `LogView` 和通知。 |
+| `AvaloniaLogDemo` | 验证传统静态 `Logger.*`、LineTemplate/OutputTemplate 切换、Avalonia `LogView` 和通知。 |
+| `MicrosoftLoggingAvaloniaDemo` | 验证 `ILogger<T>`、DI、`AddCodeWF()`、两类模板切换、Avalonia `LogView` 和通知。 |
 | `MicrosoftLoggingWebApiDemo` | 验证 .NET Web API 中的 `builder.Logging.AddCodeWF()`、普通诊断日志、用户日志、Scope 和 Activity。 |
+| `MultiProviderAvaloniaDemo` | 验证 Serilog 负责文件/控制台、CodeWF 负责 LogView/通知和 LineTemplate 切换，以及私有 `UserMessage` 元数据隔离。 |

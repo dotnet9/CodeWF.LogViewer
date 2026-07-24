@@ -4,15 +4,8 @@ using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Logging.AddCodeWF(options =>
-{
-    options.File.DirectoryPath = Path.Combine(builder.Environment.ContentRootPath, "Log");
-    options.File.BatchSize = 50;
-    options.File.FlushInterval = TimeSpan.FromMilliseconds(300);
-    options.File.OutputTemplate =
-        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] ({Category}) {Message} {Properties}{NewLine}{Exception}";
-    options.Console.Enabled = false;
-});
+// 本 Demo 故意只通过 appsettings.json 配置 CodeWF；AddCodeWF(options => ...) 同样受支持。
+builder.Logging.AddCodeWF();
 
 var app = builder.Build();
 
@@ -24,7 +17,7 @@ app.MapGet("/", () => Results.Ok(new
         "GET /diagnostic/{taskId}",
         "GET /user-error/{taskId}",
         "GET /scope/{deviceId}",
-        "GET /recent-user-logs"
+        "GET /recent-logs"
     }
 }));
 
@@ -42,7 +35,7 @@ app.MapGet("/diagnostic/{taskId}", (string taskId, ILogger<Program> logger) =>
     return Results.Ok(new
     {
         TaskId = taskId,
-        Message = "普通 LogError 已写入诊断日志，默认不会进入 UserLogFeed。"
+        Message = "普通 LogError 已进入 CodeWF 文件与统一事件流。"
     });
 });
 
@@ -63,7 +56,7 @@ app.MapGet("/user-error/{taskId}", (string taskId, ILogger<Program> logger) =>
 
     return Results.Problem(
         title: "Task load failed",
-        detail: "该接口演示 LogUserError：文件记录技术细节，UserLogFeed 只记录用户消息。",
+        detail: "该接口演示 LogUserError：同一个事件同时携带诊断 Message、Exception 和 UserMessage。",
         statusCode: StatusCodes.Status422UnprocessableEntity);
 });
 
@@ -92,12 +85,13 @@ app.MapGet("/scope/{deviceId}", (string deviceId, ILoggerFactory loggerFactory) 
     });
 });
 
-app.MapGet("/recent-user-logs", () => Results.Ok(Logger.UserLogs.GetRecentEntries().Select(entry => new
+app.MapGet("/recent-logs", (LogEventFeed events) => Results.Ok(events.GetRecentEvents().Select(entry => new
 {
     entry.Sequence,
     Time = entry.Timestamp,
     Level = entry.Level.ToString(),
     entry.Message,
+    entry.UserMessage,
     entry.CategoryName,
     EventId = entry.EventId.Id,
     entry.TraceId

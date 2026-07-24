@@ -5,8 +5,16 @@ using System.Text;
 
 namespace CodeWF.Log.Core;
 
-internal static class LogOutputTemplateFormatter
+public static class LogTemplateFormatter
 {
+    private static readonly HashSet<string> SupportedTokens =
+    [
+        "Timestamp", "Level", "Category", "CategoryName", "EventId", "EventName",
+        "Message", "MessageTemplate", "UserMessage", "Properties", "Scopes", "Activity",
+        "TraceId", "SpanId", "ParentId", "TraceState", "TraceFlags", "ActivityTags",
+        "ActivityBaggage", "Exception", "NewLine"
+    ];
+
     public static string Format(CodeWFLogEvent logEvent, string outputTemplate, string fallbackTimestampFormat)
     {
         var builder = new StringBuilder(outputTemplate.Length + logEvent.Message.Length + 32);
@@ -42,6 +50,65 @@ internal static class LogOutputTemplateFormatter
         }
 
         return builder.ToString();
+    }
+
+    public static bool TryValidate(string? template, out string? error)
+    {
+        if (string.IsNullOrWhiteSpace(template))
+        {
+            error = "日志模板不能为空。";
+            return false;
+        }
+
+        for (var index = 0; index < template.Length; index++)
+        {
+            if (template[index] == '{')
+            {
+                if (index + 1 < template.Length && template[index + 1] == '{')
+                {
+                    index++;
+                    continue;
+                }
+
+                var end = template.IndexOf('}', index + 1);
+                if (end < 0)
+                {
+                    error = $"模板位置 {index} 缺少右花括号。";
+                    return false;
+                }
+
+                var rawToken = template[(index + 1)..end];
+                if (rawToken.Contains('{'))
+                {
+                    error = $"模板位置 {index} 包含未转义的左花括号。";
+                    return false;
+                }
+
+                var (name, format) = SplitToken(rawToken);
+                if (!SupportedTokens.Contains(name))
+                {
+                    error = $"不支持模板占位符 {{{name}}}。";
+                    return false;
+                }
+
+                if (!TryValidateFormat(name, format, out error)) return false;
+                index = end;
+                continue;
+            }
+
+            if (template[index] != '}') continue;
+            if (index + 1 < template.Length && template[index + 1] == '}')
+            {
+                index++;
+                continue;
+            }
+
+            error = $"模板位置 {index} 包含未转义的右花括号。";
+            return false;
+        }
+
+        error = null;
+        return true;
     }
 
     public static string FormatProperties(IReadOnlyList<LogProperty> properties)
@@ -90,15 +157,19 @@ internal static class LogOutputTemplateFormatter
             "EventName" => logEvent.EventId.Name,
             "Message" => logEvent.Message,
             "MessageTemplate" => logEvent.MessageTemplate,
-            "UserMessage" => logEvent.UserLog?.Message,
+            "UserMessage" => string.IsNullOrWhiteSpace(logEvent.UserMessage)
+                ? logEvent.Message
+                : logEvent.UserMessage,
             "Properties" => FormatProperties(logEvent.Properties),
-            "UserProperties" => FormatProperties(logEvent.UserLog?.Properties ?? []),
             "Scopes" => FormatScopes(logEvent.Scopes),
             "Activity" => FormatActivity(logEvent),
             "TraceId" => logEvent.TraceId,
             "SpanId" => logEvent.SpanId,
             "ParentId" => logEvent.ParentId,
             "TraceState" => logEvent.TraceState,
+            "TraceFlags" => logEvent.TraceFlags,
+            "ActivityTags" => FormatProperties(logEvent.ActivityTags),
+            "ActivityBaggage" => FormatProperties(logEvent.ActivityBaggage),
             "Exception" => logEvent.Exception?.ToString(),
             "NewLine" => Environment.NewLine,
             _ => "{" + token + "}"
@@ -111,6 +182,36 @@ internal static class LogOutputTemplateFormatter
         return separator < 0
             ? (token.Trim(), null)
             : (token[..separator].Trim(), token[(separator + 1)..]);
+    }
+
+    private static bool TryValidateFormat(string name, string? format, out string? error)
+    {
+        if (string.IsNullOrWhiteSpace(format))
+        {
+            error = null;
+            return true;
+        }
+
+        if (name == "Timestamp")
+        {
+            try { _ = DateTimeOffset.Now.ToString(format, CultureInfo.InvariantCulture); }
+            catch (FormatException)
+            {
+                error = $"Timestamp 格式 '{format}' 无效。";
+                return false;
+            }
+            error = null;
+            return true;
+        }
+
+        if (name == "Level" && format is "zh" or "u3" or "u4")
+        {
+            error = null;
+            return true;
+        }
+
+        error = $"占位符 {{{name}}} 不支持格式 '{format}'。";
+        return false;
     }
 
     private static string FormatTimestamp(DateTimeOffset timestamp, string? format, string fallbackTimestampFormat)

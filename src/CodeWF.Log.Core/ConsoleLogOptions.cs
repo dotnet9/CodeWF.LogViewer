@@ -1,15 +1,17 @@
 namespace CodeWF.Log.Core;
 
+using Microsoft.Extensions.Logging;
+
 public sealed record ConsoleLogOptions
 {
+    public LogLevel MinimumLevel { get; set; } = LogLevel.Trace;
+
     public string TimestampFormat { get; set; } = "yyyy-MM-dd HH:mm:ss.fff";
-
-    public string? OutputTemplate { get; set; }
-
-    internal bool UserLogOnly { get; init; } = true;
 
     internal void Validate()
     {
+        if (!Enum.IsDefined(MinimumLevel))
+            throw new ArgumentOutOfRangeException(nameof(MinimumLevel), "控制台最低日志级别无效。");
         if (string.IsNullOrWhiteSpace(TimestampFormat))
             throw new ArgumentException("控制台日志时间格式不能为空。", nameof(TimestampFormat));
 

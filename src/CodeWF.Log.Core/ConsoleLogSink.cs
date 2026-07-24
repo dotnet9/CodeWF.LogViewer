@@ -5,26 +5,30 @@ namespace CodeWF.Log.Core;
 
 internal sealed class ConsoleLogSink : ILogSink
 {
+    private static readonly object ConsoleSync = new();
     private readonly ConsoleLogOptions _options;
+    private readonly ILineTemplateController _lineTemplate;
 
-    public ConsoleLogSink(ConsoleLogOptions options)
+    public ConsoleLogSink(ConsoleLogOptions options, ILineTemplateController lineTemplate)
     {
         _options = options;
+        _lineTemplate = lineTemplate;
     }
 
     public ValueTask WriteAsync(CodeWFLogEvent logEvent, CancellationToken cancellationToken)
     {
-        if (_options.UserLogOnly && logEvent.UserLog is null) return ValueTask.CompletedTask;
-
-        var previousColor = Console.ForegroundColor;
-        try
+        lock (ConsoleSync)
         {
-            Console.ForegroundColor = GetColor(logEvent.Level);
-            Console.Write(Format(logEvent));
-        }
-        finally
-        {
-            Console.ForegroundColor = previousColor;
+            var previousColor = Console.ForegroundColor;
+            try
+            {
+                Console.ForegroundColor = GetColor(logEvent.Level);
+                Console.Write(Format(logEvent));
+            }
+            finally
+            {
+                Console.ForegroundColor = previousColor;
+            }
         }
 
         return ValueTask.CompletedTask;
@@ -36,22 +40,10 @@ internal sealed class ConsoleLogSink : ILogSink
 
     private string Format(CodeWFLogEvent logEvent)
     {
-        if (!string.IsNullOrWhiteSpace(_options.OutputTemplate))
-        {
-            var text = LogOutputTemplateFormatter.Format(
-                logEvent,
-                _options.OutputTemplate,
-                _options.TimestampFormat);
-            return text.EndsWith(Environment.NewLine, StringComparison.Ordinal)
-                ? text
-                : text + Environment.NewLine;
-        }
-
-        var message = _options.UserLogOnly
-            ? logEvent.UserLog?.Message ?? logEvent.Message
-            : logEvent.Message;
-
-        return $"{logEvent.Timestamp.ToString(_options.TimestampFormat)} [{logEvent.Level.Description()}] {message}{Environment.NewLine}";
+        var text = LogTemplateFormatter.Format(logEvent, _lineTemplate.Current, _options.TimestampFormat);
+        return text.EndsWith(Environment.NewLine, StringComparison.Ordinal)
+            ? text
+            : text + Environment.NewLine;
     }
 
     private static ConsoleColor GetColor(LogLevel level)

@@ -9,12 +9,12 @@ namespace CodeWF.Log.Avalonia;
 /// </summary>
 public sealed class LogNotificationContent
 {
-    internal LogNotificationContent(string applicationName, UserLogEntry logEntry)
+    internal LogNotificationContent(string applicationName, CodeWFLogEvent logEntry, string content)
     {
         ApplicationName = applicationName;
         Level = logEntry.Level;
         RecordTime = logEntry.Timestamp.LocalDateTime;
-        Content = logEntry.Message;
+        Content = content;
     }
 
     public string ApplicationName { get; }

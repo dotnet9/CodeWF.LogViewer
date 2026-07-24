@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Threading;
@@ -207,16 +208,16 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
             RestartCountdown(resetSessionDeadline: true);
     }
 
-    public void AddLogs(IReadOnlyList<UserLogEntry> logEntries)
+    public void AddLogs(IReadOnlyList<(CodeWFLogEvent Entry, string Content)> logEntries)
     {
         if (logEntries.Count == 0 || _isClosing) return;
 
         var wasEmpty = _logs.Count == 0;
-        var highestLevel = logEntries[0].Level;
+        var highestLevel = logEntries[0].Entry.Level;
         foreach (var logEntry in logEntries)
         {
-            _logs.Add(new LogNotificationContent(ApplicationName, logEntry));
-            if (logEntry.Level > highestLevel) highestLevel = logEntry.Level;
+            _logs.Add(new LogNotificationContent(ApplicationName, logEntry.Entry, logEntry.Content));
+            if (logEntry.Entry.Level > highestLevel) highestLevel = logEntry.Entry.Level;
         }
 
         TrimLogs();
@@ -281,15 +282,18 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
 
     public void OpenLogFolder()
     {
+        var directory = (Application.Current is { } app ? LogContext.GetLogDirectory(app) : null) ??
+                        Logger.LogDirectory;
         try
         {
-            LogFolderLauncher.Open();
-            OpenLogFolderButtonText = "打开日志目录";
+            OpenLogFolderButtonText = LogFolderLauncher.Open(directory)
+                ? "打开日志目录"
+                : "未配置日志目录";
         }
         catch (Exception ex)
         {
             OpenLogFolderButtonText = "打开失败，请重试";
-            System.Diagnostics.Trace.TraceError($"打开日志目录失败：{ex}");
+            System.Diagnostics.Trace.TraceError($"打开日志目录失败（{directory}）：{ex}");
         }
     }
 

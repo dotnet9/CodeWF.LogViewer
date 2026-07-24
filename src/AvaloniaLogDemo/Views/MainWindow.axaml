@@ -5,10 +5,10 @@
         xmlns:log="https://codewf.com"
         x:Class="AvaloniaLogDemo.Views.MainWindow"
         mc:Ignorable="d"
-        d:DesignWidth="1100"
-        d:DesignHeight="720"
-        Width="1100"
-        Height="720"
+        d:DesignWidth="1240"
+        d:DesignHeight="820"
+        Width="1240"
+        Height="820"
         MinWidth="820"
         MinHeight="560"
         Icon="/Assets/logo.ico"
@@ -26,16 +26,60 @@
         </Style>
     </Window.Styles>
 
-    <Grid Margin="12" RowDefinitions="Auto,*">
-        <StackPanel Orientation="Horizontal" Spacing="8">
+    <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,*">
+        <WrapPanel Orientation="Horizontal">
+            <Button Margin="0 0 8 8" Content="Trace" Tag="Trace" Click="WriteLevel_OnClick" />
+            <Button Margin="0 0 8 8" Content="Debug" Tag="Debug" Click="WriteLevel_OnClick" />
+            <Button Margin="0 0 8 8" Content="Information" Tag="Information" Click="WriteLevel_OnClick" />
+            <Button Margin="0 0 8 8" Content="Warning" Tag="Warning" Click="WriteLevel_OnClick" />
+            <Button Margin="0 0 8 8" Content="Error" Tag="Error" Click="WriteLevel_OnClick" />
+            <Button Margin="0 0 8 8" Content="Critical" Tag="Critical" Click="WriteLevel_OnClick" />
             <Button Content="输出全部级别" Click="WriteAllLevels_OnClick" />
-            <Button Content="输出友好异常" Click="WriteFriendlyException_OnClick" />
-            <Button Content="仅写文件" Click="WriteFileOnly_OnClick" />
-            <Button Content="并发写入 500 条" Click="WriteBurst_OnClick" />
-            <Button Content="切换自定义通知样式" Click="ToggleNotificationTheme_OnClick" />
+            <Button Margin="8 0 0 8" Content="输出友好异常" Click="WriteFriendlyException_OnClick" />
+            <Button Margin="8 0 0 8" Content="仅写文件" Click="WriteFileOnly_OnClick" />
+            <Button Margin="8 0 0 8" Content="并发写入 500 条" Click="WriteBurst_OnClick" />
+            <Button Margin="8 0 0 8" Content="切换自定义通知样式" Click="ToggleNotificationTheme_OnClick" />
+        </WrapPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0 2 0 8">
+            <TextBlock VerticalAlignment="Center" Text="通知模式" />
+            <ComboBox x:Name="NotificationModeBox" Width="190" SelectionChanged="NotificationModeBox_OnSelectionChanged">
+                <ComboBoxItem Content="不显示通知" />
+                <ComboBoxItem Content="应用内弹窗" />
+                <ComboBoxItem Content="桌面右下角窗口" />
+            </ComboBox>
+            <TextBlock VerticalAlignment="Center" Foreground="#667085" Text="静态 Logger 同样产生完整 CodeWFLogEvent，内容均为动态示例数据。" />
         </StackPanel>
 
-        <Grid Grid.Row="1" Margin="0 10" ColumnDefinitions="2*,*">
+        <Border Grid.Row="2" Classes="log-panel" Margin="0 0 0 10">
+            <Grid ColumnDefinitions="150,190,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                <TextBlock FontWeight="SemiBold" VerticalAlignment="Center" Text="共享 LineTemplate" />
+                <ComboBox x:Name="LineTemplatePresetBox" Grid.Column="1" Margin="8 0"
+                          SelectionChanged="LineTemplatePresetBox_OnSelectionChanged">
+                    <ComboBoxItem Content="简洁格式" />
+                    <ComboBoxItem Content="上下文格式" />
+                    <ComboBoxItem Content="自定义" />
+                </ComboBox>
+                <TextBox x:Name="LineTemplateEditor" Grid.Column="2" FontFamily="Consolas"
+                         TextChanged="LineTemplateEditor_OnTextChanged" />
+                <TextBlock x:Name="LineTemplateStatus" Grid.Row="1" Grid.Column="2"
+                           Margin="0 4 0 8" TextWrapping="Wrap" />
+
+                <TextBlock Grid.Row="2" FontWeight="SemiBold" VerticalAlignment="Center" Text="文件 OutputTemplate" />
+                <ComboBox x:Name="OutputTemplatePresetBox" Grid.Row="2" Grid.Column="1" Margin="8 0"
+                          SelectionChanged="OutputTemplatePresetBox_OnSelectionChanged">
+                    <ComboBoxItem Content="诊断格式" />
+                    <ComboBoxItem Content="完整上下文" />
+                    <ComboBoxItem Content="自定义" />
+                </ComboBox>
+                <TextBox x:Name="OutputTemplateEditor" Grid.Row="2" Grid.Column="2" FontFamily="Consolas"
+                         TextChanged="OutputTemplateEditor_OnTextChanged" />
+                <TextBlock x:Name="OutputTemplateStatus" Grid.Row="3" Grid.Column="2"
+                           Margin="0 4 0 0" TextWrapping="Wrap" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="3" Margin="0 2 0 0" ColumnDefinitions="2*,*">
             <Border Classes="log-panel" Margin="0 0 5 0">
                 <Grid RowDefinitions="Auto,*">
                     <TextBlock Classes="log-title" Text="全部日志" />
