@@ -30,10 +30,14 @@ public sealed class NotificationWindowViewModelTests
         Assert.True(viewModel.IsNavigationVisible);
         Assert.Equal(320, viewModel.MinimumCardHeight);
         Assert.Equal("3 / 3", viewModel.CountText);
+        Assert.False(viewModel.IsPreviousDisabled);
+        Assert.True(viewModel.IsNextDisabled);
 
         viewModel.SelectPrevious();
         Assert.Equal("2 / 3", viewModel.CountText);
         Assert.Equal("2条新日志", viewModel.NewLogText);
+        Assert.False(viewModel.IsPreviousDisabled);
+        Assert.False(viewModel.IsNextDisabled);
 
         viewModel.OnClosed();
         Assert.False(viewModel.IsNewLogVisible);

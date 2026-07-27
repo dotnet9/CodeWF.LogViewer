@@ -58,16 +58,6 @@
         <Style Selector="Button.navigation:pointerover">
             <Setter Property="Background" Value="{DynamicResource CodeWFLogDesktopNotificationNavigationPointerOverBackground}" />
         </Style>
-        <Style Selector="Button.navigation:disabled">
-            <Setter Property="Opacity" Value="1" />
-        </Style>
-        <Style Selector="Button.navigation:disabled Image.navigationEnabled">
-            <Setter Property="IsVisible" Value="False" />
-        </Style>
-        <Style Selector="Button.navigation:disabled Image.navigationDisabled">
-            <Setter Property="IsVisible" Value="True" />
-        </Style>
-
         <Style Selector="Button.footerButton">
             <Setter Property="Height" Value="32" />
             <Setter Property="MinWidth" Value="0" />
@@ -301,14 +291,15 @@
                                   IsVisible="{Binding IsNavigationVisible}">
                                 <Button Classes="navigation previous"
                                         Command="{Binding PreviousCommand}"
-                                        IsEnabled="{Binding CanPrevious}">
+                                        IsHitTestVisible="{Binding CanPrevious}">
                                     <Grid>
                                         <Image Classes="navigationEnabled"
                                                Width="28" Height="28"
+                                               IsVisible="{Binding CanPrevious}"
                                                Source="avares://CodeWF.Log.Avalonia/Assets/Notifications/navigation-enabled-left.png" />
                                         <Image Classes="navigationDisabled"
                                                Width="28" Height="28"
-                                               IsVisible="False"
+                                               IsVisible="{Binding IsPreviousDisabled}"
                                                Source="avares://CodeWF.Log.Avalonia/Assets/Notifications/navigation-disabled.png" />
                                     </Grid>
                                 </Button>
@@ -324,14 +315,15 @@
                                 <Button Grid.Column="4"
                                         Classes="navigation next"
                                         Command="{Binding NextCommand}"
-                                        IsEnabled="{Binding CanNext}">
+                                        IsHitTestVisible="{Binding CanNext}">
                                     <Grid>
                                         <Image Classes="navigationEnabled"
                                                Width="28" Height="28"
+                                               IsVisible="{Binding CanNext}"
                                                Source="avares://CodeWF.Log.Avalonia/Assets/Notifications/navigation-enabled.png" />
                                         <Image Classes="navigationDisabled"
                                                Width="28" Height="28"
-                                               IsVisible="False"
+                                               IsVisible="{Binding IsNextDisabled}"
                                                Source="avares://CodeWF.Log.Avalonia/Assets/Notifications/navigation-disabled-right.png" />
                                     </Grid>
                                 </Button>

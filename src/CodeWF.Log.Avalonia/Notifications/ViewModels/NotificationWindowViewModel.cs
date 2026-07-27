@@ -145,14 +145,26 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
     public bool CanPrevious
     {
         get => _canPrevious;
-        private set => SetField(ref _canPrevious, value);
+        private set
+        {
+            if (!SetField(ref _canPrevious, value)) return;
+            OnPropertyChanged(nameof(IsPreviousDisabled));
+        }
     }
+
+    public bool IsPreviousDisabled => !CanPrevious;
 
     public bool CanNext
     {
         get => _canNext;
-        private set => SetField(ref _canNext, value);
+        private set
+        {
+            if (!SetField(ref _canNext, value)) return;
+            OnPropertyChanged(nameof(IsNextDisabled));
+        }
     }
+
+    public bool IsNextDisabled => !CanNext;
 
     public bool IsNavigationVisible
     {
