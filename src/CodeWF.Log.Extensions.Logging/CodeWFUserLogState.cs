@@ -5,6 +5,7 @@ namespace CodeWF.Log.Extensions.Logging;
 internal interface ICodeWFUserLogState
 {
     string UserMessage { get; }
+    bool RequestNotification { get; }
 }
 
 internal sealed class CodeWFUserLogState : IReadOnlyList<KeyValuePair<string, object?>>, ICodeWFUserLogState
@@ -13,9 +14,11 @@ internal sealed class CodeWFUserLogState : IReadOnlyList<KeyValuePair<string, ob
     private readonly object?[] _args;
     private readonly KeyValuePair<string, object?>[] _properties;
 
-    public CodeWFUserLogState(string userMessage, string messageTemplate, object?[] args)
+    public CodeWFUserLogState(string userMessage, string messageTemplate, object?[] args,
+        bool requestNotification = false)
     {
         UserMessage = userMessage;
+        RequestNotification = requestNotification;
         _messageTemplate = messageTemplate;
         _args = args;
         var names = MessageTemplateParser.GetPropertyNames(messageTemplate);
@@ -30,6 +33,7 @@ internal sealed class CodeWFUserLogState : IReadOnlyList<KeyValuePair<string, ob
     }
 
     public string UserMessage { get; }
+    public bool RequestNotification { get; }
     public int Count => _properties.Length;
     public KeyValuePair<string, object?> this[int index] => _properties[index];
     public IEnumerator<KeyValuePair<string, object?>> GetEnumerator() =>

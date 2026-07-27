@@ -128,8 +128,9 @@ Logger.Initialize(new LoggerOptions
 
 静态 API 约定：
 
-- `Logger.Info/Warn/Error/Fatal(...)` 写入完整事件；`userMessage` 是同一事件上的可选字段。
+- `Logger.Info/Warn/Error/Fatal(...)` 写入完整事件；`userMessage` 是同一事件上的可选字段，`requestNotification` 默认 `false`。
 - `Logger.Error(message, exception, userMessage)` 分别保存诊断消息、异常快照和用户消息。
+- 只有显式传入 `requestNotification: true` 且日志级别达到 `LogNotifications.MinimumLevel` 时，日志才有资格触发通知。
 - `Logger.*ToFile(...)` 只写文件，不进入 Console、LogView 或通知。
 - `Logger.MinimumLevel`、`LoggerOptions.MinimumLevel` 使用 MEL 标准 `LogLevel`。
 
@@ -166,7 +167,7 @@ XAML 命名空间保持不变：
 LogContext.SetLogDirectory(this, Path.GetFullPath("Log"));
 ```
 
-通知只保留阈值语义：
+通知同时使用显式请求和级别阈值：
 
 ```xml
 <Application
@@ -178,7 +179,20 @@ LogContext.SetLogDirectory(this, Path.GetFullPath("Log"));
     log:LogNotifications.ApplicationName="CodeWF Log Demo" />
 ```
 
-`LogNotifications` 只按 `MinimumLevel` 接收启用后的新事件，不回放历史，也不会接收 `*ToFile` 日志。InApp 默认最多同时显示 3 条；DesktopWindow 复用一个桌面右下角窗口。
+`LogNotifications` 只接收 `RequestNotification=true` 且达到 `MinimumLevel` 的新事件，不回放历史，也不会接收 `*ToFile` 日志。静态 Logger 通过 `requestNotification: true` 显式请求；`ILogger<T>` 通过 `LogUserNotification(...)` 请求。InApp 默认最多同时显示 3 条；DesktopWindow 复用一个桌面右下角窗口。
+
+```csharp
+Logger.Error(
+    "设备服务心跳超时。",
+    userMessage: "设备服务连接已中断，请检查服务状态。",
+    requestNotification: true);
+
+logger.LogUserNotification(
+    LogLevel.Error,
+    "设备服务连接已中断，请检查服务状态。",
+    "Device service heartbeat timed out for {TaskName}",
+    taskName);
+```
 
 ## Demos
 

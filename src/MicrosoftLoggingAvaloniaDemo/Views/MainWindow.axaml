@@ -105,6 +105,8 @@
           <Button Classes="action" Margin="0 0 8 8" Content="全部级别" Click="WriteAllLevels_OnClick" />
           <Button Classes="action" Margin="0 0 8 8" Content="普通 / UserMessage" Click="WriteMessageComparison_OnClick" />
           <Button Classes="action" Margin="0 0 8 8" Content="异常 + 友好提示" Click="WriteFriendlyException_OnClick" />
+          <Button Classes="action" Margin="0 0 8 8" Content="Error（仅日志）" Tag="False" Click="WriteNotificationError_OnClick" />
+          <Button Classes="action" Margin="0 0 8 8" Content="Error（请求通知）" Tag="True" Click="WriteNotificationError_OnClick" />
           <Button Classes="action" Margin="0 0 8 8" Content="EventId / Scope / Activity" Click="WriteContext_OnClick" />
           <Button Classes="action" Margin="0 0 8 8" Content="LoggerMessage" Click="WriteLoggerMessage_OnClick" />
           <Button Classes="action" Margin="0 0 8 8" Content="并发突发 300 条" Click="WriteBurst_OnClick" />

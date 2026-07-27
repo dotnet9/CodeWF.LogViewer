@@ -23,13 +23,48 @@ public static class CodeWFLoggerExtensions
         string messageTemplate,
         params object?[] args)
     {
+        WriteUserLog(logger, level, eventId, exception, userMessage, messageTemplate, false, args);
+    }
+
+    public static void LogUserNotification(
+        this ILogger logger,
+        LogLevel level,
+        string userMessage,
+        string messageTemplate,
+        params object?[] args)
+    {
+        WriteUserLog(logger, level, default, null, userMessage, messageTemplate, true, args);
+    }
+
+    public static void LogUserNotification(
+        this ILogger logger,
+        LogLevel level,
+        EventId eventId,
+        Exception? exception,
+        string userMessage,
+        string messageTemplate,
+        params object?[] args)
+    {
+        WriteUserLog(logger, level, eventId, exception, userMessage, messageTemplate, true, args);
+    }
+
+    private static void WriteUserLog(
+        ILogger logger,
+        LogLevel level,
+        EventId eventId,
+        Exception? exception,
+        string userMessage,
+        string messageTemplate,
+        bool requestNotification,
+        object?[] args)
+    {
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentException.ThrowIfNullOrWhiteSpace(userMessage);
         ArgumentException.ThrowIfNullOrWhiteSpace(messageTemplate);
 
         if (!logger.IsEnabled(level)) return;
 
-        var state = new CodeWFUserLogState(userMessage, messageTemplate, args);
+        var state = new CodeWFUserLogState(userMessage, messageTemplate, args, requestNotification);
         logger.Log(
             level,
             eventId,

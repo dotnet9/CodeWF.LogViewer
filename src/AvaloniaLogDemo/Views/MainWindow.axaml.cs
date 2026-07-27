@@ -92,6 +92,19 @@ public partial class MainWindow : Window
         }
     }
 
+    private void WriteNotificationError_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string text } || !bool.TryParse(text, out var requestNotification)) return;
+
+        var operation = Interlocked.Increment(ref _operation);
+        Logger.Error(
+            $"通知对比操作 {operation}：RequestNotification={requestNotification}。",
+            userMessage: requestNotification
+                ? "这条 Error 明确请求通知，应显示提示窗口。"
+                : "这条 Error 仅写入日志，不应显示提示窗口。",
+            requestNotification: requestNotification);
+    }
+
     private void WriteFileOnly_OnClick(object? sender, RoutedEventArgs e)
     {
         Logger.InfoToFile($"文件专用信息：TCP 监听地址=127.0.0.1:{Random.Shared.Next(2000, 9000)}，时间={DateTimeOffset.Now:O}。");

@@ -8,6 +8,31 @@ namespace CodeWF.Log.Core.Tests;
 public sealed class LoggingCoreTests
 {
     [Fact]
+    public void StaticLogger_UsesSimpleNamesAndOptionalNotificationOptIn()
+    {
+        var methods = typeof(Logger).GetMethods().Where(method => method.IsPublic && method.IsStatic).ToArray();
+        var removedNames = new[]
+        {
+            "Information", "Warning", "Critical",
+            "InformationToFile", "WarningToFile", "CriticalToFile"
+        };
+
+        Assert.DoesNotContain(methods, method => removedNames.Contains(method.Name));
+        foreach (var methodName in new[] { "Log", "Trace", "Debug", "Info", "Warn", "Error", "Fatal" })
+        {
+            var overloads = methods.Where(method => method.Name == methodName).ToArray();
+            Assert.NotEmpty(overloads);
+            Assert.All(overloads, method =>
+            {
+                var parameter = Assert.Single(method.GetParameters(), item => item.Name == "requestNotification");
+                Assert.Equal(typeof(bool), parameter.ParameterType);
+                Assert.True(parameter.HasDefaultValue);
+                Assert.Equal(false, parameter.DefaultValue);
+            });
+        }
+    }
+
+    [Fact]
     public void Formatter_UsesUserMessageAndFallsBackToMessage()
     {
         var logEvent = CreateEvent() with { Message = "diagnostic", UserMessage = "friendly" };

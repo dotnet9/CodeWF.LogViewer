@@ -36,6 +36,8 @@
             <Button Margin="0 0 8 8" Content="Critical" Tag="Critical" Click="WriteLevel_OnClick" />
             <Button Content="输出全部级别" Click="WriteAllLevels_OnClick" />
             <Button Margin="8 0 0 8" Content="输出友好异常" Click="WriteFriendlyException_OnClick" />
+            <Button Margin="8 0 0 8" Content="Error（仅日志）" Tag="False" Click="WriteNotificationError_OnClick" />
+            <Button Margin="8 0 0 8" Content="Error（请求通知）" Tag="True" Click="WriteNotificationError_OnClick" />
             <Button Margin="8 0 0 8" Content="仅写文件" Click="WriteFileOnly_OnClick" />
             <Button Margin="8 0 0 8" Content="并发写入 500 条" Click="WriteBurst_OnClick" />
             <Button Margin="8 0 0 8" Content="切换自定义通知样式" Click="ToggleNotificationTheme_OnClick" />

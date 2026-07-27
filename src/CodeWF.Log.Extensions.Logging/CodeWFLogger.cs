@@ -37,6 +37,7 @@ internal sealed class CodeWFLogger(string categoryName, CodeWFLoggerProvider pro
             MessageTemplate = stateSnapshot.MessageTemplate,
             Message = message,
             UserMessage = stateSnapshot.UserMessage,
+            RequestNotification = stateSnapshot.RequestNotification,
             Exception = LogExceptionInfo.Capture(exception),
             Properties = stateSnapshot.Properties,
             Scopes = provider.CaptureScopes ? CaptureScopes() : [],
@@ -73,7 +74,8 @@ internal sealed class CodeWFLogger(string categoryName, CodeWFLoggerProvider pro
         catch (Exception ex)
         {
             LoggerSelfDiagnostics.Report("捕获 Microsoft.Extensions.Logging State 失败。", ex);
-            return new LogStateSnapshot(null, [], (state as ICodeWFUserLogState)?.UserMessage);
+            var userState = state as ICodeWFUserLogState;
+            return new LogStateSnapshot(null, [], userState?.UserMessage, userState?.RequestNotification == true);
         }
     }
 

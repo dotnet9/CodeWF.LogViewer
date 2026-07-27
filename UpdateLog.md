@@ -1,5 +1,12 @@
 # 更新日志（Known）
 
+## 11.3.14.3 (2026-07-27)
+
+- 💥[重构]-日志通知改为显式申请：`Logger` 新增默认关闭的 `requestNotification` 可选参数，只有请求通知且达到 `MinimumLevel` 的事件才显示通知。
+- 😄[新增]-`CodeWFLogEvent` 增加 `RequestNotification`，MEL 增加 `LogUserNotification(...)`，静态 Logger 与 `ILogger<T>` 共用同一通知语义。
+- 🔨[优化]-静态 Logger 删除 `Information/Warning/Critical` 及对应 `*ToFile` 长名称别名，只保留 `Info/Warn/Fatal` 简洁入口。
+- ✅[验证]-Core/MEL 测试覆盖默认不通知与显式通知，并在两个 Avalonia Demo 增加 Error 仅日志/请求通知对比按钮。
+
 ## 11.3.14.2 (2026-07-24)
 
 - 🔨[优化]-同步 12.1.0.18 日志管线、MEL Provider、Avalonia Demo 和自动化验证能力，并保持 Avalonia `[11.3.14, 12.0.0)` 兼容范围。

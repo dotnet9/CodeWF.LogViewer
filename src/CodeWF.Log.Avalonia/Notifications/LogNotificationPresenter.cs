@@ -109,7 +109,7 @@ internal sealed class LogNotificationPresenter : IDisposable
 
     private void OnLogReceived(CodeWFLogEvent entry)
     {
-        if (Volatile.Read(ref _disposed) != 0 || !Accepts(entry.Level)) return;
+        if (Volatile.Read(ref _disposed) != 0 || !Accepts(entry)) return;
         if (Interlocked.Increment(ref _pendingCount) > Volatile.Read(ref _queueCapacity))
         {
             Interlocked.Decrement(ref _pendingCount);
@@ -122,8 +122,10 @@ internal sealed class LogNotificationPresenter : IDisposable
         ScheduleDispatch();
     }
 
-    private bool Accepts(LogLevel level) =>
-        level != LogLevel.None && (int)level >= Volatile.Read(ref _minimumLevel);
+    private bool Accepts(CodeWFLogEvent entry) =>
+        entry.RequestNotification &&
+        entry.Level != LogLevel.None &&
+        (int)entry.Level >= Volatile.Read(ref _minimumLevel);
 
     private void ScheduleDispatch()
     {
@@ -146,7 +148,7 @@ internal sealed class LogNotificationPresenter : IDisposable
             while (_pendingNotifications.TryDequeue(out var pending))
             {
                 Interlocked.Decrement(ref _pendingCount);
-                if (pending.Generation != generation || !Accepts(pending.Entry.Level)) continue;
+                if (pending.Generation != generation || !Accepts(pending.Entry)) continue;
                 var template = _source?.LineTemplate.Current ?? LineTemplateController.DefaultTemplate;
                 var content = LogTemplateFormatter.Format(pending.Entry, template, "yyyy-MM-dd HH:mm:ss.fff");
                 entries.Add((pending.Entry, TrimContent(content)));
