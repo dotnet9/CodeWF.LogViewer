@@ -7,6 +7,8 @@
 
 CodeWF.Log 是面向 .NET 和 Avalonia 的轻量日志组件，提供文件/控制台输出、显式申请的重要日志通知，以及可选的 `LogView`。新版本以 `Microsoft.Extensions.Logging` 为主入口，同时保留 `Logger.Info/Warn/Error/Fatal`、`Logger.*ToFile` 等静态 API；不需要界面日志的应用无需放置 `LogView`。
 
+完整设计约束见 [CodeWF.Log 设计](doc/CodeWF.Log设计.md)。
+
 ## Packages
 
 | Package | Purpose | Targets |
@@ -204,7 +206,7 @@ logger.LogUserNotification(
 
 最终通知条件是：`Mode != None && Level >= MinimumLevel && RequestNotification`。普通 `LogError(...)`、`LogUserError(...)` 和 `Logger.Error(...)` 默认都不弹窗；静态 API 只有显式传入 `requestNotification: true` 才申请通知。`Logger.*ToFile(...)` 不进入事件 Feed，因此永远不会触发通知。
 
-完整可运行示例见 `FileNotificationAvaloniaDemo`，其中没有任何 `LogView`，并提供“Error 仅写日志 / Error 请求通知 / Warning 请求通知但低于阈值”三个对比按钮。
+完整可运行示例见 `FileNotifyDemo`，其中没有任何 `LogView`，并提供“Error 仅写日志 / Error 请求通知 / Warning 请求通知但低于阈值”三个对比按钮。
 
 ### 可选的 LogView
 
@@ -262,9 +264,8 @@ logger.LogUserNotification(
 
 | Demo | Purpose |
 | --- | --- |
-| `ConsoleLogDemo` | 验证传统静态 `Logger.*`、`*ToFile`、文件轮转和控制台用户输出。 |
-| `AvaloniaLogDemo` | 验证传统静态 `Logger.*`、LineTemplate/OutputTemplate 切换、Avalonia `LogView` 和通知。 |
-| `FileNotificationAvaloniaDemo` | 验证无 `LogView` 场景下的 MEL 文件输出、显式重要日志桌面通知和级别门槛。 |
-| `MicrosoftLoggingAvaloniaDemo` | 验证 `ILogger<T>`、DI、`AddCodeWF()`、两类模板切换、Avalonia `LogView` 和通知。 |
-| `MicrosoftLoggingWebApiDemo` | 验证 .NET Web API 中的 `builder.Logging.AddCodeWF()`、普通诊断日志、用户日志、Scope 和 Activity。 |
-| `MultiProviderAvaloniaDemo` | 验证 Serilog 负责文件/控制台、CodeWF 负责 LogView/通知和 LineTemplate 切换，以及私有 `UserMessage` 元数据隔离。 |
+| `ConsoleDemo` | 静态 `Logger.*`、`*ToFile`、文件轮转和控制台输出。 |
+| `FileNotifyDemo` | Avalonia 无 LogView：文件输出、文件模板切换、显式重要通知和级别门槛。 |
+| `LogViewDemo` | Avalonia 多 LogView：MEL/DI、分级视图、两类模板、结构化上下文、异常和通知。 |
+| `SerilogDemo` | Avalonia 联合 Provider：Serilog 负责文件/控制台，CodeWF 负责 LogView 和通知。 |
+| `WebApiDemo` | ASP.NET Core：`AddCodeWF()`、配置绑定、Scope、Activity、LoggerMessage 和最近事件接口。 |

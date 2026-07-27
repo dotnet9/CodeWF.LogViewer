@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 
-set "project_paths=src\ConsoleLogDemo src\AvaloniaLogDemo"
+set "project_paths=src\ConsoleDemo src\LogViewDemo"
 set "platforms=win-x64 win-x86 linux-x64 linux-arm64"
 set "target_frameworks=net11.0 default"
 

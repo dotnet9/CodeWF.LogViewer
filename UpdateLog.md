@@ -5,9 +5,11 @@
 - 💥[重构]-日志通知改为显式申请：`Logger` 新增默认关闭的 `requestNotification` 可选参数，只有请求通知且达到 `MinimumLevel` 的事件才显示通知。
 - 😄[新增]-`CodeWFLogEvent` 增加 `RequestNotification`，MEL 增加 `LogUserNotification(...)`，静态 Logger 与 `ILogger<T>` 共用同一通知语义。
 - 🔨[优化]-静态 Logger 删除 `Information/Warning/Critical` 及对应 `*ToFile` 长名称别名，只保留 `Info/Warn/Fatal` 简洁入口。
-- ✅[验证]-Core/MEL 测试覆盖默认不通知与显式通知，并在两个 Avalonia Demo 增加 Error 仅日志/请求通知对比按钮。
+- ✅[验证]-Core/MEL 测试覆盖默认不通知与显式通知，三个 Avalonia Demo 均提供 Error 仅日志/请求通知对比按钮。
 - 📚[文档]-README 与设计文档补齐无 `LogView` 的“文件日志 + 重要通知”接入说明，明确 EventFeed 和三项通知条件。
-- 😄[新增]-增加 `FileNotificationAvaloniaDemo`，用三个对比按钮验证仅写日志、显式通知和低于通知阈值；通知队列溢出提示不再假定存在 LogView。
+- 😄[新增]-增加 `FileNotifyDemo`，用三个对比按钮验证仅写日志、显式通知和低于通知阈值；通知队列溢出提示不再假定存在 LogView。
+- 🔨[优化]-Demo 统一精简为 `ConsoleDemo`、`FileNotifyDemo`、`LogViewDemo`、`SerilogDemo`、`WebApiDemo`；Avalonia 示例只保留三种明确职责并改用低负担的模板下拉框与组合按钮。
+- 📚[文档]-根目录核心设计与 MEL 适配设计合并为 `doc/CodeWF.Log设计.md`，删除重复、冲突的设计入口。
 
 ## 11.3.14.2 (2026-07-24)
 
