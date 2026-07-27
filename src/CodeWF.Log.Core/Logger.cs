@@ -71,30 +71,38 @@ public static class Logger
     }
 
     public static void Write(CodeWFLogEvent logEvent) => GetHost().Write(logEvent);
-    public static void Log(LogLevel level, string message, string? userMessage = null) => Write(level, message, null, userMessage);
-    public static void Trace(string message, string? userMessage = null) => Write(LogLevel.Trace, message, null, userMessage);
-    public static void Debug(string message, string? userMessage = null) => Write(LogLevel.Debug, message, null, userMessage);
-    public static void Information(string message, string? userMessage = null) => Write(LogLevel.Information, message, null, userMessage);
-    public static void Info(string message, string? userMessage = null) => Information(message, userMessage);
-    public static void Warning(string message) => Write(LogLevel.Warning, message, null, null);
-    public static void Warning(string message, string userMessage) => Write(LogLevel.Warning, message, null, userMessage);
-    public static void Warning(string message, Exception? exception, string? userMessage = null) => Write(LogLevel.Warning, message, exception, userMessage);
-    public static void Warn(string message) => Warning(message);
-    public static void Warn(string message, string userMessage) => Warning(message, userMessage);
-    public static void Warn(string message, Exception? exception, string? userMessage = null) => Warning(message, exception, userMessage);
-    public static void Error(string message, Exception? exception = null, string? userMessage = null) => Write(LogLevel.Error, message, exception, userMessage);
-    public static void Critical(string message, Exception? exception = null, string? userMessage = null) => Write(LogLevel.Critical, message, exception, userMessage);
-    public static void Fatal(string message, Exception? exception = null, string? userMessage = null) => Critical(message, exception, userMessage);
+    public static void Log(LogLevel level, string message, string? userMessage = null,
+        bool requestNotification = false) =>
+        Write(level, message, null, userMessage, requestNotification);
+    public static void Trace(string message, string? userMessage = null, bool requestNotification = false) =>
+        Write(LogLevel.Trace, message, null, userMessage, requestNotification);
+    public static void Debug(string message, string? userMessage = null, bool requestNotification = false) =>
+        Write(LogLevel.Debug, message, null, userMessage, requestNotification);
+    public static void Info(string message, string? userMessage = null, bool requestNotification = false) =>
+        Write(LogLevel.Information, message, null, userMessage, requestNotification);
+    public static void Warn(string message, bool requestNotification = false) =>
+        Write(LogLevel.Warning, message, null, null, requestNotification);
+    public static void Warn(string message, string userMessage, bool requestNotification = false) =>
+        Write(LogLevel.Warning, message, null, userMessage, requestNotification);
+    public static void Warn(string message, Exception? exception, string? userMessage = null,
+        bool requestNotification = false) =>
+        Write(LogLevel.Warning, message, exception, userMessage, requestNotification);
+    public static void Error(string message, Exception? exception = null, string? userMessage = null,
+        bool requestNotification = false) =>
+        Write(LogLevel.Error, message, exception, userMessage, requestNotification);
+    public static void Fatal(string message, Exception? exception = null, string? userMessage = null,
+        bool requestNotification = false) =>
+        Write(LogLevel.Critical, message, exception, userMessage, requestNotification);
 
-    public static void TraceToFile(string message) => Write(LogLevel.Trace, message, null, null, true);
-    public static void DebugToFile(string message) => Write(LogLevel.Debug, message, null, null, true);
-    public static void InformationToFile(string message) => Write(LogLevel.Information, message, null, null, true);
-    public static void InfoToFile(string message) => InformationToFile(message);
-    public static void WarningToFile(string message, Exception? exception = null) => Write(LogLevel.Warning, message, exception, null, true);
-    public static void WarnToFile(string message, Exception? exception = null) => WarningToFile(message, exception);
-    public static void ErrorToFile(string message, Exception? exception = null) => Write(LogLevel.Error, message, exception, null, true);
-    public static void CriticalToFile(string message, Exception? exception = null) => Write(LogLevel.Critical, message, exception, null, true);
-    public static void FatalToFile(string message, Exception? exception = null) => CriticalToFile(message, exception);
+    public static void TraceToFile(string message) => Write(LogLevel.Trace, message, null, null, fileOnly: true);
+    public static void DebugToFile(string message) => Write(LogLevel.Debug, message, null, null, fileOnly: true);
+    public static void InfoToFile(string message) => Write(LogLevel.Information, message, null, null, fileOnly: true);
+    public static void WarnToFile(string message, Exception? exception = null) =>
+        Write(LogLevel.Warning, message, exception, null, fileOnly: true);
+    public static void ErrorToFile(string message, Exception? exception = null) =>
+        Write(LogLevel.Error, message, exception, null, fileOnly: true);
+    public static void FatalToFile(string message, Exception? exception = null) =>
+        Write(LogLevel.Critical, message, exception, null, fileOnly: true);
 
     public static Task FlushAsync() => GetHost().FlushAsync();
 
@@ -166,7 +174,8 @@ public static class Logger
         }
     }
 
-    private static void Write(LogLevel level, string message, Exception? exception, string? userMessage, bool fileOnly = false)
+    private static void Write(LogLevel level, string message, Exception? exception, string? userMessage,
+        bool requestNotification = false, bool fileOnly = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
         GetHost().Write(new CodeWFLogEvent
@@ -177,6 +186,7 @@ public static class Logger
             CategoryName = "CodeWF.Log.Logger",
             Message = message,
             UserMessage = userMessage,
+            RequestNotification = requestNotification,
             Exception = LogExceptionInfo.Capture(exception)
         }, fileOnly);
     }

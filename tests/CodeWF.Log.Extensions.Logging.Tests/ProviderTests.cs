@@ -23,13 +23,22 @@ public sealed class ProviderTests
             "设备 PLC-02 连接失败。",
             "Device {DeviceId} connection failed",
             "PLC-02");
+        logger.LogUserNotification(
+            LogLevel.Error,
+            "设备 PLC-03 连接失败，需要用户处理。",
+            "Device {DeviceId} connection failed and requires attention",
+            "PLC-03");
 
-        var events = await WaitForEventsAsync(feed, 2);
+        var events = await WaitForEventsAsync(feed, 3);
         Assert.Null(events[0].UserMessage);
+        Assert.False(events[0].RequestNotification);
         Assert.Equal("Device PLC-01 is slow", events[0].Message);
         Assert.Equal("设备 PLC-02 连接失败。", events[1].UserMessage);
         Assert.Equal("Device PLC-02 connection failed", events[1].Message);
         Assert.NotNull(events[1].Exception);
+        Assert.False(events[1].RequestNotification);
+        Assert.Equal("设备 PLC-03 连接失败，需要用户处理。", events[2].UserMessage);
+        Assert.True(events[2].RequestNotification);
     }
 
     [Fact]
@@ -100,10 +109,18 @@ public sealed class ProviderTests
     {
         var services = BuildServices(options => options.BridgeStaticLogger = true);
         var feed = services.GetRequiredService<LogEventFeed>();
-        Logger.Information("static bridge message");
-        Assert.Equal("static bridge message", (await WaitForEventsAsync(feed, 1))[0].Message);
+        Logger.Info("static bridge message");
+        Logger.Error(
+            "static bridge notification",
+            userMessage: "静态日志请求通知。",
+            requestNotification: true);
+        var events = await WaitForEventsAsync(feed, 2);
+        Assert.Equal("static bridge message", events[0].Message);
+        Assert.False(events[0].RequestNotification);
+        Assert.Equal("static bridge notification", events[1].Message);
+        Assert.True(events[1].RequestNotification);
         services.Dispose();
-        Assert.Throws<InvalidOperationException>(() => Logger.Information("after dispose"));
+        Assert.Throws<InvalidOperationException>(() => Logger.Info("after dispose"));
     }
 
     [Fact]

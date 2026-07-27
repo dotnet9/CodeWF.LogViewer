@@ -5,14 +5,19 @@ namespace CodeWF.Log.Extensions.Logging;
 internal sealed record LogStateSnapshot(
     string? MessageTemplate,
     IReadOnlyList<LogProperty> Properties,
-    string? UserMessage)
+    string? UserMessage,
+    bool RequestNotification)
 {
     public static LogStateSnapshot Capture<TState>(TState state)
     {
-        var userMessage = (state as ICodeWFUserLogState)?.UserMessage;
+        var userState = state as ICodeWFUserLogState;
         if (state is IEnumerable<KeyValuePair<string, object?>> properties)
-            return CaptureProperties(properties) with { UserMessage = userMessage };
-        return new LogStateSnapshot(null, [], userMessage);
+            return CaptureProperties(properties) with
+            {
+                UserMessage = userState?.UserMessage,
+                RequestNotification = userState?.RequestNotification == true
+            };
+        return new LogStateSnapshot(null, [], userState?.UserMessage, userState?.RequestNotification == true);
     }
 
     public static LogScope CaptureScope(object? scope)
@@ -35,7 +40,7 @@ internal sealed record LogStateSnapshot(
             }
             captured.Add(new LogProperty(property.Key, LogValueFormatter.Capture(property.Value)));
         }
-        return new LogStateSnapshot(messageTemplate, captured, null);
+        return new LogStateSnapshot(messageTemplate, captured, null, false);
     }
 
     private static string? SafeToString(object? value)

@@ -13,6 +13,7 @@ public sealed record CodeWFLogEvent
     public string? MessageTemplate { get; init; }
     public required string Message { get; init; }
     public string? UserMessage { get; init; }
+    public bool RequestNotification { get; init; }
     public LogExceptionInfo? Exception { get; init; }
     public IReadOnlyList<LogProperty> Properties { get; init; } = [];
     public IReadOnlyList<LogScope> Scopes { get; init; } = [];

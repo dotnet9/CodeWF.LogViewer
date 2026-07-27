@@ -74,6 +74,34 @@ public sealed class DeviceLogService
         }
     }
 
+    public void WriteNotificationError(bool requestNotification)
+    {
+        var operation = NextOperation();
+        var userMessage = requestNotification
+            ? "这条 ILogger Error 明确请求通知，应显示提示窗口。"
+            : "这条 ILogger Error 仅写入日志，不应显示提示窗口。";
+        const string messageTemplate =
+            "Notification comparison operation {Operation} requested notification: {RequestNotification}";
+
+        if (requestNotification)
+        {
+            _logger.LogUserNotification(
+                LogLevel.Error,
+                userMessage,
+                messageTemplate,
+                operation,
+                true);
+            return;
+        }
+
+        _logger.LogUserError(
+            null,
+            userMessage,
+            messageTemplate,
+            operation,
+            false);
+    }
+
     public void WriteContext()
     {
         var operation = NextOperation();

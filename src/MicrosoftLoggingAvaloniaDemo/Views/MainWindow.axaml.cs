@@ -196,6 +196,11 @@ public partial class MainWindow : Window
     private void WriteAllLevels_OnClick(object? sender, RoutedEventArgs e) => _deviceLogService.WriteAllLevels();
     private void WriteMessageComparison_OnClick(object? sender, RoutedEventArgs e) => _deviceLogService.WriteMessageComparison();
     private void WriteFriendlyException_OnClick(object? sender, RoutedEventArgs e) => _deviceLogService.WriteFriendlyException();
+    private void WriteNotificationError_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string text } && bool.TryParse(text, out var requestNotification))
+            _deviceLogService.WriteNotificationError(requestNotification);
+    }
     private void WriteContext_OnClick(object? sender, RoutedEventArgs e) => _deviceLogService.WriteContext();
     private void WriteLoggerMessage_OnClick(object? sender, RoutedEventArgs e) => _deviceLogService.WriteLoggerMessage();
     private async void WriteBurst_OnClick(object? sender, RoutedEventArgs e) => await _deviceLogService.WriteBurstAsync();
