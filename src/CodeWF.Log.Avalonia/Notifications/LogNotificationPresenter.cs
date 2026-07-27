@@ -158,7 +158,7 @@ internal sealed class LogNotificationPresenter : IDisposable
             if (overflow > 0 && entries.Count > 0)
             {
                 var last = entries[^1];
-                entries[^1] = (last.Entry, $"{last.Content}{Environment.NewLine}另有 {overflow} 条日志，请在 LogView 中查看。");
+                entries[^1] = (last.Entry, $"{last.Content}{Environment.NewLine}另有 {overflow} 条日志，请查看日志文件。");
             }
 
             if (entries.Count == 0) return;

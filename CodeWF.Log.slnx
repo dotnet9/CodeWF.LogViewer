@@ -2,6 +2,7 @@
   <Folder Name="/Demo/">
     <Project Path="src/AvaloniaLogDemo/AvaloniaLogDemo.csproj" />
     <Project Path="src/ConsoleLogDemo/ConsoleLogDemo.csproj" />
+    <Project Path="src/FileNotificationAvaloniaDemo/FileNotificationAvaloniaDemo.csproj" />
     <Project Path="src/MicrosoftLoggingAvaloniaDemo/MicrosoftLoggingAvaloniaDemo.csproj" />
     <Project Path="src/MicrosoftLoggingWebApiDemo/MicrosoftLoggingWebApiDemo.csproj" />
     <Project Path="src/MultiProviderAvaloniaDemo/MultiProviderAvaloniaDemo.csproj" />

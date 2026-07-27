@@ -273,7 +273,7 @@ logger.LogError(ex, "Failed to parse task file {TaskPath}", taskPath);
 - FileSink：按 `File.OutputTemplate` 输出。
 - ConsoleSink：启用且达到 Console 最低级别时，按共享 `LineTemplate` 输出。
 - LogEventFeed：发布完整事件，LogView 按自身级别区间展示。
-- LogNotifications：达到 `MinimumLevel` 时通知，不要求存在显式 `UserMessage`。
+- LogNotifications：普通 MEL 日志的 `RequestNotification=false`，即使达到 `MinimumLevel` 也不通知。
 
 需要单独提供用户友好消息时，使用 CodeWF 的 `ILogger` 扩展方法：
 
@@ -290,7 +290,7 @@ logger.LogUserError(
 - 四个通道仍处理同一个完整事件。
 - `{Message}` 输出诊断消息；`{UserMessage}` 输出显式用户消息。
 - `UserMessage` 为 `null`、空字符串或纯空白时，`{UserMessage}` 回退到 `Message`。
-- `LogUser*` 不改变事件是否进入 Console、LogView 或通知，只补充 `UserMessage`。
+- `LogUser*` 不改变事件是否进入 File、Console 或 LogView，只补充 `UserMessage`，且默认不申请通知；只有 `LogUserNotification(...)` 同时设置 `RequestNotification=true`。
 
 统一事件模型不再提供结构上的用户安全隔离。默认 `LineTemplate` 不展示 Exception、Properties、Scopes 等详细字段；调用方把这些占位符加入 `LineTemplate` 时，代表明确允许它们出现在 Console、LogView 和系统通知中。日志消息和属性仍可能包含路径、账号、Token 等敏感信息，组件不是自动脱敏器。
 
@@ -298,6 +298,7 @@ logger.LogUserError(
 
 - `Logger.Info/Warn/Error/Fatal(...)`：生成统一 `CodeWFLogEvent`，进入 legacy pipeline 的 File、Console 和事件 Feed。
 - `Logger.Error(message, exception, userMessage)`：同一事件的 `Message`、`Exception` 和 `UserMessage` 分别保存对应值。
+- `Logger.Info/Warn/Error/Fatal(...)` 的 `requestNotification` 可选参数默认 `false`；只有显式传 `true` 才申请通知。
 - `Logger.*ToFile(...)`：通过 legacy pipeline 的内部路由信息只进入 FileSink；不为此创建另一种公开事件类型。
 - `Logger.MinimumLevel` 不再使用 `LogType`，迁移为 MEL `LogLevel`。
 
@@ -392,7 +393,9 @@ EventFeedSink：
 
 ## 12. Avalonia
 
-`LogView` 消费 `LogEventFeed`：
+`LogView` 和 `LogNotifications` 都消费 `LogEventFeed`，但两者互不依赖。只需要文件日志和桌面通知的应用可以完全不创建 `LogView`；MEL/DI 场景仍需在 Application 上设置实例级 Source，且不能关闭 EventFeed。
+
+可选的 `LogView` 用法：
 
 ```xml
 <log:LogView Source="{Binding LogEvents}"
@@ -421,7 +424,7 @@ var logEvents = services.GetRequiredService<LogEventFeed>();
 LogContext.SetSource(this, logEvents);
 ```
 
-`LogNotifications` 是阈值语义，只保留 `MinimumLevel`：
+`LogNotifications` 使用“调用方显式申请 + 级别阈值”语义，只保留 `MinimumLevel`，不提供 `MaximumLevel`：
 
 ```xml
 log:LogNotifications.MinimumLevel="Error"
@@ -432,7 +435,9 @@ log:LogNotifications.QueueCapacity="100"
 判断规则：
 
 ```csharp
-entry.Level >= minimumLevel
+mode != LogNotificationMode.None
+    && entry.RequestNotification
+    && entry.Level >= minimumLevel
 ```
 
 关闭通知使用：
@@ -443,15 +448,15 @@ log:LogNotifications.Mode="None"
 
 不提供 `MaximumLevel`，不使用特殊日志级别表达“关闭通知”。
 
-LogNotifications 只按 `MinimumLevel` 判断，不检查是否存在显式 `UserMessage`。通知读取 Source 携带的全局 `LineTemplate`；标题、图标、颜色和按钮仍由通知样式决定，`LineTemplate` 只负责可变日志正文。
+LogNotifications 同时检查 `RequestNotification` 和 `MinimumLevel`，不把 `UserMessage`、Category 或 Exception 作为隐式条件。通知读取 Source 携带的全局 `LineTemplate`；标题、图标、颜色和按钮仍由通知样式决定，`LineTemplate` 只负责可变日志正文。
 
 通知突发处理：
 
-- `MinimumLevel` 是启用通知时唯一的事件资格条件；不再增加 `UserMessage`、Category、Exception 等隐式过滤。
-- 达到级别的事件按 `Sequence` 顺序提交到有界通知展示队列；队列只影响呈现节奏，不影响事件进入 `LogEventFeed` 和 LogView。
+- `RequestNotification=true` 和达到 `MinimumLevel` 是启用通知时的两个事件资格条件；不再增加 `UserMessage`、Category、Exception 等隐式过滤。
+- 符合两个条件的事件按 `Sequence` 顺序提交到有界通知展示队列；队列只影响呈现节奏，不影响事件进入 `LogEventFeed` 和可选的 LogView。
 - `InApp` 默认最多同时显示 3 条通知，其余事件排队；最大可见数量允许显式配置。
 - `DesktopWindow` 每个 Avalonia Application 只复用一个桌面工作区右下角窗口，在同一窗口内按顺序滚动展示，不为每个事件创建独立窗口。
-- 通知展示队列默认容量为 100。容量耗尽时不阻塞 pipeline，不继续创建窗口；累计溢出数量并在现有通知区域显示“另有 N 条日志”。通知队列溢出不删除 `LogEventFeed` 中的事件，Feed 仍按自身 recent buffer 容量独立保留。
+- 通知展示队列默认容量为 100。容量耗尽时不阻塞 pipeline，不继续创建窗口；累计溢出数量并在现有通知区域提示“另有 N 条日志，请查看日志文件”。通知文案不假定存在 LogView；溢出也不删除 `LogEventFeed` 中的事件，Feed 仍按自身 recent buffer 容量独立保留。
 - `Mode=None` 时不建立展示积压；重新启用通知后只处理新事件，不补弹关闭期间的历史事件。
 
 ## 13. 配置
@@ -729,8 +734,8 @@ public static class CodeWFLoggerExtensions
 - 编辑区同时展示支持的占位符和恢复预设按钮，避免用户必须查文档才能试用模板。
 - 展示 Trace、Debug、Information、Warning、Error、Critical。
 - 展示 EventId、结构化属性、Scope、Activity。
-- 展示普通 `LogError(...)` 同时进入 File、启用的 Console、LogView，并在达到通知 `MinimumLevel` 时通知；默认 `{UserMessage}` 回退显示诊断 `Message`。
-- 展示 `LogUserError(...)` 在同一事件上同时具有 `Message`、`UserMessage` 和 Exception，切换模板即可对照字段。
+- 展示普通 `LogError(...)` 同时进入 File、启用的 Console、LogView，但即使达到通知 `MinimumLevel` 也不通知；默认 `{UserMessage}` 回退显示诊断 `Message`。
+- 展示 `LogUserError(...)` 在同一事件上同时具有 `Message`、`UserMessage` 和 Exception但不通知，并用 `LogUserNotification(...)` 对照显式通知。
 - 验证退出时自动 Flush 和 Shutdown。
 
 ### 16.2 MicrosoftLoggingWebApiDemo
@@ -749,7 +754,7 @@ public static class CodeWFLoggerExtensions
 
 - 同时注册 Serilog Provider 与 CodeWF Provider，业务代码仍然只依赖 `ILogger<T>`。
 - Serilog 负责诊断文件和控制台；CodeWF 的 File/Console 禁用，只启用 `LogEventFeed`、LogView 和 LogNotifications。
-- 普通 `logger.LogError(...)` 同时进入 Serilog 和 CodeWF `LogEventFeed`；CodeWF LogView 展示完整事件，达到通知 `MinimumLevel` 时通知。
+- 普通 `logger.LogError(...)` 同时进入 Serilog 和 CodeWF `LogEventFeed`；CodeWF LogView 展示完整事件，但没有显式申请时不通知。
 - `logger.LogUserError(...)` 在 CodeWF 事件中额外设置 `UserMessage`；Serilog 仍接收标准诊断 `Message`、结构化属性和 Exception。
 - 验证 Serilog 不会收到 CodeWF 私有 UserMessage 元数据，只收到标准 MEL State 和 `{OriginalFormat}`。
 - 页面提供通知模式选择：`None`、`InApp`、`DesktopWindow`，运行时切换并立即验证。
@@ -758,6 +763,14 @@ public static class CodeWFLoggerExtensions
 - 并发突发场景验证 InApp 最多同时显示 3 条、DesktopWindow 复用单窗口、队列溢出计数可见，且通知溢出不额外删除 LogView 的 Feed 事件。
 - 提供各日志级别、动态用户消息、普通诊断与用户日志对照、异常、Scope/Activity/EventId、源生成 `LoggerMessage` 和并发突发按钮。
 - Serilog 和 CodeWF 的配置优先写入 `appsettings.json`，代码配置示例保留在文档或独立注释中。
+
+### 16.4 FileNotificationAvaloniaDemo
+
+- 使用 `AddCodeWF()`，只开启文件输出和通知所需的 EventFeed，关闭 Console。
+- Avalonia 窗口中不放置任何 `LogView`，验证 LogNotifications 与 LogView 没有控件依赖。
+- 提供 Error 仅写日志、Error 显式申请通知、Warning 申请通知但低于 Error 阈值三个对比按钮。
+- 使用 DesktopWindow 模式，验证重要通知不依赖业务窗口中的通知宿主。
+- 提供打开日志目录按钮，便于核对三种事件都写入文件且只有一种弹窗。
 
 ## 17. 当前实现状态
 
@@ -780,7 +793,8 @@ public static class CodeWFLoggerExtensions
 | 实例级 `IFileOutputTemplateController` 与原子模板更新 | 已实现 | 无效模板不覆盖当前值，更新只影响后续文件日志 |
 | `LogContext.LogDirectory`、`LogView.LogDirectory` | 已实现 | 打开目录不依赖静态 Logger 初始化，支持全局目录与控件级覆盖 |
 | MultiProviderAvaloniaDemo | 已实现 | Serilog 文件/控制台，CodeWF LogView/通知，均由 appsettings 配置 |
-| 自动化测试、trim、Native AOT smoke | 已实现 | 19 项 Core/MEL 测试、稳定 .NET 10 AOT 和 Avalonia trim publish 已通过 |
+| FileNotificationAvaloniaDemo | 已实现 | 无 LogView 的文件输出、显式通知和通知阈值对比 |
+| 自动化测试、trim、Native AOT smoke | 已实现 | 20 项 Core/MEL 测试、稳定 .NET 10 AOT 和 Avalonia trim publish 已通过 |
 
 ## 18. 当前版本发布门槛
 
@@ -797,7 +811,7 @@ public static class CodeWFLoggerExtensions
 - `LogUser*` 与标准 MEL 日志的诊断消息和结构化属性语义一致，且不向其他 Provider 暴露 CodeWF 私有用户消息元数据。
 - `{Message}` 始终输出诊断消息；`{UserMessage}` 优先输出用户消息并在其为空白时回退到 `Message`。
 - Avalonia Application 可配置全局 `LogEventFeed`，LogView 支持局部 Source 覆盖；同一 pipeline/Source 的 Console、所有 LogView 和 LogNotifications 严格共享一个实例级 `ILineTemplateController`。
-- LogView 默认 MinimumLevel=Information、MaximumLevel=Critical；LogNotifications 默认 Mode=None、MinimumLevel=Error、Duration=10 秒，启用后只按 MinimumLevel 判断。
+- LogView 默认 MinimumLevel=Information、MaximumLevel=Critical；LogNotifications 默认 Mode=None、MinimumLevel=Error、Duration=10 秒，启用后同时要求 `RequestNotification=true` 和达到 MinimumLevel。
 - LogView 的 recent buffer 重放与实时订阅具有原子边界，不遗漏、不重复且保持 Sequence 顺序；LogNotifications 不重放历史事件。
 - `CodeWFLogEvent` 只保存有界不可变 `LogExceptionInfo`，不把原始 Exception 对象引用交给后台队列或 recent buffer；Exception.Data 默认不捕获。
 - InApp 通知具有最大可见数量，DesktopWindow 复用单窗口，通知展示队列有界且溢出数量可见；通知突发不能阻塞 pipeline。
@@ -811,6 +825,7 @@ public static class CodeWFLoggerExtensions
 - MicrosoftLoggingWebApiDemo 只通过 `appsettings.json` 配置 CodeWF。
 - AvaloniaLogDemo 和 MicrosoftLoggingAvaloniaDemo 可切换 LineTemplate 与 OutputTemplate；MultiProviderAvaloniaDemo 只切换 CodeWF LineTemplate。
 - MultiProviderAvaloniaDemo 验证 Serilog 负责诊断输出、CodeWF 只负责 LogView 和 InApp/DesktopWindow 通知，并覆盖动态日志按钮场景。
+- FileNotificationAvaloniaDemo 验证不创建 LogView 时，文件输出和 DesktopWindow 重要通知仍可独立工作。
 - `CodeWF.Log.Core`、`CodeWF.Log.Extensions.Logging`、`CodeWF.Log.Avalonia` 通过 trim/Native AOT smoke test。
 
 ## 19. 后续增强项
@@ -862,7 +877,7 @@ public static class CodeWFLoggerExtensions
 
 - `LogContext.Source` 和 `LogView.Source` 统一使用 `LogEventFeed`；全局、局部和 legacy Source 回退顺序按第 12 节实现。
 - LogView 默认 Information 至 Critical，使用原子订阅重放，并在 `LineTemplate` 更新后重新渲染当前 recent buffer。
-- LogNotifications 只按 MinimumLevel 判断，不重放历史事件；实现 None、InApp、DesktopWindow 三种模式。
+- LogNotifications 同时要求 `RequestNotification=true` 和达到 MinimumLevel，不重放历史事件；实现 None、InApp、DesktopWindow 三种模式。
 - InApp 默认最多同时显示 3 条；DesktopWindow 复用一个右下角窗口；展示队列默认容量 100，溢出计数可见且不阻塞 pipeline。
 - Console、同一 Source 下的所有 LogView 和 Notification 读取同一个实例级模板 Controller，不提供控件级模板覆盖。
 
@@ -875,6 +890,7 @@ public static class CodeWFLoggerExtensions
 - AvaloniaLogDemo 和 MicrosoftLoggingAvaloniaDemo 增加 LineTemplate/OutputTemplate 的预设、自定义、校验与自动应用交互；MultiProviderAvaloniaDemo 只增加 CodeWF LineTemplate 交互。
 - MicrosoftLoggingWebApiDemo 的 CodeWF 配置只保留在 `appsettings.json`，接口改为 `/recent-logs`。
 - 新增 MultiProviderAvaloniaDemo：Serilog 负责文件/控制台，CodeWF 只启用 EventFeed、LogView 和通知；覆盖 InApp/DesktopWindow 及并发突发。
+- 新增 FileNotificationAvaloniaDemo：CodeWF 负责文件和 DesktopWindow 通知，窗口不包含 LogView，并提供通知条件对比按钮。
 
 验收：所有 Demo 的六级别、普通/用户消息对照、Exception、EventId、Scope、Activity、LoggerMessage 和并发场景均可重复验证。
 

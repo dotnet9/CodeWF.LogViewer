@@ -1,0 +1,13 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:log="https://codewf.com"
+             x:Class="FileNotificationAvaloniaDemo.App"
+             RequestedThemeVariant="Default"
+             log:LogNotifications.Mode="DesktopWindow"
+             log:LogNotifications.MinimumLevel="Error"
+             log:LogNotifications.ApplicationName="文件日志与重要通知 Demo"
+             log:LogNotifications.Duration="0:0:10">
+  <Application.Styles>
+    <FluentTheme />
+  </Application.Styles>
+</Application>
