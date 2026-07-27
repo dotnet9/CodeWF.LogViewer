@@ -1,8 +1,8 @@
 <Solution>
   <Folder Name="/Demo/">
     <Project Path="src/ConsoleDemo/ConsoleDemo.csproj" />
-    <Project Path="src/FileNotifyDemo/FileNotifyDemo.csproj" />
     <Project Path="src/LogViewDemo/LogViewDemo.csproj" />
+    <Project Path="src/FileNotifyDemo/FileNotifyDemo.csproj" />
     <Project Path="src/SerilogDemo/SerilogDemo.csproj" />
     <Project Path="src/WebApiDemo/WebApiDemo.csproj" />
   </Folder>
