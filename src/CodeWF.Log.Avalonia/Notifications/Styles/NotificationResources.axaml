@@ -7,8 +7,8 @@
     <x:Double x:Key="CodeWFLogDesktopNotificationWindowMaxHeight">436</x:Double>
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationWindowBackground">#FFFFFF</SolidColorBrush>
     <Thickness x:Key="CodeWFLogDesktopNotificationWindowMargin">8</Thickness>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationWindowBorderBrush">Transparent</SolidColorBrush>
-    <Thickness x:Key="CodeWFLogDesktopNotificationWindowBorderThickness">0</Thickness>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationWindowBorderBrush">#D9D9D9</SolidColorBrush>
+    <Thickness x:Key="CodeWFLogDesktopNotificationWindowBorderThickness">1</Thickness>
     <CornerRadius x:Key="CodeWFLogDesktopNotificationWindowCornerRadius">8</CornerRadius>
     <BoxShadows x:Key="CodeWFLogDesktopNotificationWindowBoxShadow">0 4 40 0 #40000000</BoxShadows>
 
@@ -23,6 +23,7 @@
 
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNewLogBackground">#722ED1</SolidColorBrush>
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNewLogLabelBackground">#F9F0FF</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNewLogLabelBorderBrush">#EFDBFF</SolidColorBrush>
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNewLogForeground">#595959</SolidColorBrush>
 
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNavigationBackground">Transparent</SolidColorBrush>
