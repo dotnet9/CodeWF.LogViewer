@@ -6,6 +6,8 @@
 - 😄[新增]-`CodeWFLogEvent` 增加 `RequestNotification`，MEL 增加 `LogUserNotification(...)`，静态 Logger 与 `ILogger<T>` 共用同一通知语义。
 - 🔨[优化]-静态 Logger 删除 `Information/Warning/Critical` 及对应 `*ToFile` 长名称别名，只保留 `Info/Warn/Fatal` 简洁入口。
 - ✅[验证]-Core/MEL 测试覆盖默认不通知与显式通知，并在两个 Avalonia Demo 增加 Error 仅日志/请求通知对比按钮。
+- 📚[文档]-README 与设计文档补齐无 `LogView` 的“文件日志 + 重要通知”接入说明，明确 EventFeed 和三项通知条件。
+- 😄[新增]-增加 `FileNotificationAvaloniaDemo`，用三个对比按钮验证仅写日志、显式通知和低于通知阈值；通知队列溢出提示不再假定存在 LogView。
 
 ## 12.1.0.18 (2026-07-24)
 
