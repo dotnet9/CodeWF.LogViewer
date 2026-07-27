@@ -177,9 +177,9 @@
                     Padding="20 0">
                 <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                     <TextBlock VerticalAlignment="Center"
-                               FontSize="16"
-                               FontWeight="Bold"
-                               LineHeight="16"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               LineHeight="20"
                                Foreground="{DynamicResource CodeWFLogDesktopNotificationTitleForeground}"
                                Text="{Binding ApplicationName}"
                                TextTrimming="CharacterEllipsis" />
@@ -204,13 +204,11 @@
                                 BorderBrush="{DynamicResource CodeWFLogDesktopNotificationNewLogLabelBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="0 2 2 0">
-                            <TextBlock Width="55"
-                                       Height="12"
-                                       HorizontalAlignment="Center"
+                            <TextBlock HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
                                        TextAlignment="Center"
                                        FontSize="12"
-                                       LineHeight="12"
+                                       LineHeight="14"
                                        Foreground="{DynamicResource CodeWFLogDesktopNotificationNewLogForeground}"
                                        Text="{Binding NewLogText}" />
                         </Border>
