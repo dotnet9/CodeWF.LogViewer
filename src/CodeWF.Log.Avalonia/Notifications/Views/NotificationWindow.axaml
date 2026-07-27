@@ -188,7 +188,7 @@
                           Margin="8 0 0 0"
                           Height="16"
                           VerticalAlignment="Center"
-                          ColumnDefinitions="24,Auto"
+                          ColumnDefinitions="24,73"
                           IsVisible="{Binding IsNewLogVisible}">
                         <Border Background="{DynamicResource CodeWFLogDesktopNotificationNewLogBackground}"
                                 CornerRadius="2 0 0 2">
@@ -198,11 +198,17 @@
                                    Source="avares://CodeWF.Log.Avalonia/Assets/Notifications/new-message.png" />
                         </Border>
                         <Border Grid.Column="1"
+                                Width="73"
                                 Height="16"
-                                Padding="4 0"
                                 Background="{DynamicResource CodeWFLogDesktopNotificationNewLogLabelBackground}"
+                                BorderBrush="{DynamicResource CodeWFLogDesktopNotificationNewLogLabelBorderBrush}"
+                                BorderThickness="1"
                                 CornerRadius="0 2 2 0">
-                            <TextBlock VerticalAlignment="Center"
+                            <TextBlock Width="55"
+                                       Height="12"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       TextAlignment="Center"
                                        FontSize="12"
                                        LineHeight="12"
                                        Foreground="{DynamicResource CodeWFLogDesktopNotificationNewLogForeground}"

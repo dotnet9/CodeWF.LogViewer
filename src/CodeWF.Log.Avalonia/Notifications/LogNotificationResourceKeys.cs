@@ -26,6 +26,7 @@ public static class LogNotificationResourceKeys
     public const string MutedForeground = Prefix + "MutedForeground";
     public const string NewLogBackground = Prefix + "NewLogBackground";
     public const string NewLogLabelBackground = Prefix + "NewLogLabelBackground";
+    public const string NewLogLabelBorderBrush = Prefix + "NewLogLabelBorderBrush";
     public const string NewLogForeground = Prefix + "NewLogForeground";
     public const string NavigationBackground = Prefix + "NavigationBackground";
     public const string NavigationPointerOverBackground = Prefix + "NavigationPointerOverBackground";
