@@ -1,33 +1,53 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     x:Class="CodeWF.Log.Avalonia.Notifications.Styles.NotificationResources">
-    <x:Double x:Key="CodeWFLogDesktopNotificationWindowWidth">390</x:Double>
-    <x:Double x:Key="CodeWFLogDesktopNotificationWindowMinHeight">280</x:Double>
-    <x:Double x:Key="CodeWFLogDesktopNotificationWindowMaxHeight">580</x:Double>
+    <!-- 可见卡片为 360px；窗口四周各保留 8px 透明区域承载阴影。 -->
+    <x:Double x:Key="CodeWFLogDesktopNotificationWindowWidth">376</x:Double>
+    <x:Double x:Key="CodeWFLogDesktopNotificationWindowMinHeight">300</x:Double>
+    <x:Double x:Key="CodeWFLogDesktopNotificationWindowMaxHeight">436</x:Double>
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationWindowBackground">#FFFFFF</SolidColorBrush>
     <Thickness x:Key="CodeWFLogDesktopNotificationWindowMargin">8</Thickness>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationWindowBorderBrush">#D7DEE8</SolidColorBrush>
-    <Thickness x:Key="CodeWFLogDesktopNotificationWindowBorderThickness">1</Thickness>
-    <CornerRadius x:Key="CodeWFLogDesktopNotificationWindowCornerRadius">10</CornerRadius>
-    <BoxShadows x:Key="CodeWFLogDesktopNotificationWindowBoxShadow">0 8 28 0 #40000000</BoxShadows>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationTitleBarBackground">#F8FAFC</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationTitleBarBorderBrush">#E4E7EC</SolidColorBrush>
-    <Thickness x:Key="CodeWFLogDesktopNotificationTitleBarBorderThickness">0 0 0 1</Thickness>
-    <CornerRadius x:Key="CodeWFLogDesktopNotificationTitleBarCornerRadius">10 10 0 0</CornerRadius>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationTitleForeground">#101828</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationContentForeground">#1D2939</SolidColorBrush>
-    <x:Double x:Key="CodeWFLogDesktopNotificationContentMaxHeight">200</x:Double>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationMutedForeground">#667085</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNavigationBackground">#F1F5F9</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNavigationPointerOverBackground">#E8EEF7</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNavigationBorderBrush">#D8E0EA</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNavigationForeground">#344054</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmBackground">#2563EB</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmPointerOverBackground">#1D4ED8</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmPressedBackground">#1E40AF</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmForeground">#FFFFFF</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationClosePointerOverBackground">#FEE2E2</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationClosePointerOverForeground">#DC2626</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationWindowBorderBrush">Transparent</SolidColorBrush>
+    <Thickness x:Key="CodeWFLogDesktopNotificationWindowBorderThickness">0</Thickness>
+    <CornerRadius x:Key="CodeWFLogDesktopNotificationWindowCornerRadius">8</CornerRadius>
+    <BoxShadows x:Key="CodeWFLogDesktopNotificationWindowBoxShadow">0 4 40 0 #40000000</BoxShadows>
+
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationTitleBarBackground">#FAFAFA</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationTitleBarBorderBrush">Transparent</SolidColorBrush>
+    <Thickness x:Key="CodeWFLogDesktopNotificationTitleBarBorderThickness">0</Thickness>
+    <CornerRadius x:Key="CodeWFLogDesktopNotificationTitleBarCornerRadius">8 8 0 0</CornerRadius>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationTitleForeground">#262626</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationContentForeground">#262626</SolidColorBrush>
+    <x:Double x:Key="CodeWFLogDesktopNotificationContentMaxHeight">190</x:Double>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationMutedForeground">#8C8C8C</SolidColorBrush>
+
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNewLogBackground">#722ED1</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNewLogLabelBackground">#F9F0FF</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNewLogForeground">#595959</SolidColorBrush>
+
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNavigationBackground">Transparent</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNavigationPointerOverBackground">Transparent</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNavigationBorderBrush">Transparent</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationNavigationForeground">#262626</SolidColorBrush>
+
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationOpenLogFolderBackground">#FFFFFF</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationOpenLogFolderPointerOverBackground">#FAFAFA</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationOpenLogFolderPressedBackground">#F0F0F0</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationOpenLogFolderBorderBrush">#D9D9D9</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationOpenLogFolderPointerOverBorderBrush">#1890FF</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationOpenLogFolderForeground">#262626</SolidColorBrush>
+
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmBackground">#FFFFFF</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmBorderBrush">#1890FF</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmPointerOverBackground">#E6F7FF</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmPressedBackground">#BAE7FF</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationConfirmForeground">#1890FF</SolidColorBrush>
+
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationCloseForeground">#595959</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationClosePointerOverBackground">#0F000000</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationClosePointerOverForeground">#262626</SolidColorBrush>
+
+    <!-- Error 与 Critical 是默认重要通知视觉；其他级别保留原扩展资源。 -->
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationDebugBackground">#E0F2FE</SolidColorBrush>
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationDebugForeground">#0369A1</SolidColorBrush>
     <StreamGeometry x:Key="CodeWFLogDesktopNotificationDebugIconData">M9,3V5H7V7H5V9H3V11H5V13H3V15H5V17H7V19H9V21H11V19H13V21H15V19H17V17H19V15H21V13H19V11H21V9H19V7H17V5H15V3H13V5H11V3H9M8,8H16V16H8V8Z</StreamGeometry>
@@ -37,10 +57,18 @@
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationWarnBackground">#FEF3C7</SolidColorBrush>
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationWarnForeground">#B45309</SolidColorBrush>
     <StreamGeometry x:Key="CodeWFLogDesktopNotificationWarnIconData">M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z</StreamGeometry>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationErrorBackground">#FEE2E2</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationErrorForeground">#DC2626</SolidColorBrush>
-    <StreamGeometry x:Key="CodeWFLogDesktopNotificationErrorIconData">M12,2A10,10 0 1 0 12,22A10,10 0 0 0 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z</StreamGeometry>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationFatalBackground">#FCE7F3</SolidColorBrush>
-    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationFatalForeground">#BE123C</SolidColorBrush>
-    <StreamGeometry x:Key="CodeWFLogDesktopNotificationFatalIconData">M15.73,3L21,8.27V15.73L15.73,21H8.27L3,15.73V8.27L8.27,3H15.73M11,7V13H13V7H11M11,15V17H13V15H11Z</StreamGeometry>
+    <LinearGradientBrush x:Key="CodeWFLogDesktopNotificationErrorBackground"
+                         StartPoint="50%, 0%" EndPoint="50%, 100%">
+        <GradientStop Color="#FFF1F0" Offset="0" />
+        <GradientStop Color="#00FFF1F0" Offset="1" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationErrorForeground">#FF4D4F</SolidColorBrush>
+    <StreamGeometry x:Key="CodeWFLogDesktopNotificationErrorIconData">M12,2A10,10 0 1 0 12,22A10,10 0 0 0 12,2M11,6H13V14H11V6M11,16H13V18H11V16Z</StreamGeometry>
+    <LinearGradientBrush x:Key="CodeWFLogDesktopNotificationFatalBackground"
+                         StartPoint="50%, 0%" EndPoint="50%, 100%">
+        <GradientStop Color="#FFCCC7" Offset="0" />
+        <GradientStop Color="#00FFF1F0" Offset="1" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="CodeWFLogDesktopNotificationFatalForeground">#FF4D4F</SolidColorBrush>
+    <StreamGeometry x:Key="CodeWFLogDesktopNotificationFatalIconData">M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z</StreamGeometry>
 </ResourceDictionary>

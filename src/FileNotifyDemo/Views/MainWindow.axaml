@@ -7,7 +7,7 @@
         d:DesignWidth="780"
         d:DesignHeight="520"
         Width="780"
-        Height="520"
+        Height="620"
         MinWidth="680"
         MinHeight="460"
         Icon="/Assets/logo.ico"
@@ -53,14 +53,19 @@
 
       <Border Classes="card">
         <StackPanel Spacing="10">
-          <TextBlock FontSize="16" FontWeight="SemiBold" Text="通知条件对比" />
+          <TextBlock FontSize="16" FontWeight="SemiBold" Text="通知条件与新版弹窗对比" />
           <TextBlock Foreground="#475467" TextWrapping="Wrap"
                      Text="三次操作都会写入日志文件；只有第二个按钮同时满足“显式请求通知”和“达到 Error 级别”。" />
           <WrapPanel>
             <Button Classes="action" Content="Error（仅写日志）" Click="WriteErrorOnly_OnClick" />
-            <Button Classes="action" Content="Error（写日志 + 请求通知）" Click="WriteImportantError_OnClick" />
+            <Button Classes="action" Content="Error 弹窗" Click="WriteImportantError_OnClick" />
+            <Button Classes="action" Content="Critical 弹窗" Click="WriteCriticalNotification_OnClick" />
+            <Button Classes="action" Content="长内容滚动" Click="WriteLongNotification_OnClick" />
+            <Button Classes="action" Content="连续追加 4 条" Click="WriteBurstNotifications_OnClick" />
             <Button Classes="action" Content="Warning（请求通知但低于阈值）" Click="WriteWarningNotification_OnClick" />
           </WrapPanel>
+          <TextBlock Foreground="#667085" TextWrapping="Wrap"
+                     Text="Error 与 Critical 用于比较图标和渐变；长内容验证 360×420 与滚动；连续追加验证新日志标记及翻页状态。" />
           <Button Classes="action" HorizontalAlignment="Left" Content="打开日志目录" Click="OpenLogDirectory_OnClick" />
         </StackPanel>
       </Border>

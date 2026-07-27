@@ -7,11 +7,11 @@
 CodeWF 使用一个完整、不可变的 `CodeWFLogEvent` 驱动所有输出：
 
 - File 使用独立 `OutputTemplate`，适合保留诊断消息、结构化属性、Scope、Activity 和异常。
-- Console、可选的 Avalonia `LogView` 和通知共享同一个 `LineTemplate`；通知不依赖 `LogView` 存在。
+- Console、可选的 Avalonia `LogView` 和通知管线共享同一个 `LineTemplate`；默认组合式 DesktopWindow 为避免重复，仅呈现结构化级别、时间和 `UserMessage/Message`，完整模板结果保留给 InApp 和自定义桌面模板。
 - `Message` 是诊断消息；`UserMessage` 是可选的用户友好消息。模板 `{UserMessage}` 为空白时回退到 `{Message}`。
 - `RequestNotification` 是调用方显式设置的通知请求，默认 `false`；它与日志级别分别表达“是否打扰用户”和“严重程度”。
 - 通知资格固定为 `Mode != None && RequestNotification && Level >= MinimumLevel`。
-- 组件不做隐式敏感字段裁剪；调用方把详细字段加入 `LineTemplate` 即表示允许其出现在界面和通知中。
+- 组件不裁剪事件模型；调用方把详细字段加入 `LineTemplate` 即表示允许其出现在 Console、LogView、InApp 或自定义通知模板中。默认 DesktopWindow 只显示用户正文。
 
 ```text
 ILogger<T> / Logger.*
@@ -26,7 +26,7 @@ LoggerHost 单消费者（分配 Sequence）
         ├─ ConsoleLogSink：共享 LineTemplate
         └─ LogEventFeed：同一完整 CodeWFLogEvent
                ├─ LogView（可选）：共享 LineTemplate + 独立级别范围
-               └─ LogNotifications（可独立使用）：共享 LineTemplate + 显式通知资格
+               └─ LogNotifications（可独立使用）：共享模板结果 + 显式通知资格 + 组合式桌面呈现
 ```
 
 `Logger.*ToFile` 使用同一队列但只路由到 File。Sequence 对应单消费者实际处理顺序。慢 Feed 订阅者在独立调度中串行接收，不阻塞日志 Pipeline。
@@ -57,7 +57,7 @@ LoggerHost 单消费者（分配 Sequence）
 10. 配置遵循 .NET Options、`appsettings.json`、Provider Alias、DI 生命周期和 Host 生命周期约定，不引入自定义配置 DSL。
 11. `CodeWF.Log.Core` 保留旧式 `Logger.*` 静态门面作为迁移兼容层；`CodeWF.Log.Avalonia` 保留原 `<log:LogView />` 默认用法。
 12. MEL Provider 使用 DI 容器内的实例级 pipeline 和 `LogEventFeed`，不借用进程级静态 `LoggerHost`；旧式静态 `Logger.*` 使用独立的 legacy pipeline。
-13. File 使用独立 `OutputTemplate`；Console、LogView 和 LogNotifications 严格共享同一个 `LineTemplate`，并对同一种 `CodeWFLogEvent` 使用相同占位符语义。所有字段显示均由模板决定，不提供 `ShowCategoryName`、`ShowEventId`、`ShowTraceId` 等字段布尔开关。
+13. File 使用独立 `OutputTemplate`；Console、LogView 和 LogNotifications 共享同一个 `LineTemplate` Controller，并对同一种 `CodeWFLogEvent` 使用相同占位符语义。默认组合式 DesktopWindow 例外地只呈现结构化级别、时间和用户正文，避免重复字段；完整模板结果继续提供给自定义模板。
 14. 删除 `UserLogEntry` 和公开的 `UserLogPayload`，不保留废弃类型或兼容别名；本次升级按 breaking change 处理。
 
 ## 3. 包职责
@@ -125,7 +125,7 @@ builder.Logging.AddCodeWF();
 | 文件目录 | Host 场景为 `IHostEnvironment.ContentRootPath/logs`；非 Host 场景为 `AppContext.BaseDirectory/logs` |
 | 文件保留 | 单文件默认 1000 MB，滚动保留最近 30 天日志文件 |
 | 控制台输出 | 默认关闭，避免和 `AddConsole()` 重复 |
-| 行输出模板 | Console、LogView 和 LogNotifications 严格共享 `LineTemplate` |
+| 行输出模板 | Console、LogView 和通知管线共享 `LineTemplate`；默认 DesktopWindow 使用组合式字段呈现 |
 | LogEventFeed | 启用；发布全部通过采集过滤的 `CodeWFLogEvent`，RecentCapacity 默认 2000 |
 | LogView | `MinimumLevel=Information`，`MaximumLevel=Critical` |
 | LogNotifications | `Mode=None`，`MinimumLevel=Error`，Duration 默认 10 秒 |
@@ -139,9 +139,9 @@ builder.Logging.AddCodeWF();
 
 控制台日志遵循 .NET 习惯：应用需要控制台输出时，可以继续使用 Microsoft Console Provider；只有希望 CodeWF 接管控制台格式时，才显式启用 CodeWF ConsoleSink。
 
-文件日志只通过 `File.OutputTemplate` 配置。Console、LogView 和 LogNotifications 使用同一个 `LineTemplate`，保证终端、界面和通知格式一致。CodeWF 不提供 `IncludeEventId`、`IncludeScopes`、`IncludeProperties`、`ShowCategoryName`、`ShowEventId`、`ShowTraceId` 等字段开关；模板中出现哪个占位符就输出哪个字段，未出现的字段不输出。
+文件日志只通过 `File.OutputTemplate` 配置。Console、LogView 和通知管线使用同一个 `LineTemplate` Controller。CodeWF 不提供 `IncludeEventId`、`IncludeScopes`、`IncludeProperties`、`ShowCategoryName`、`ShowEventId`、`ShowTraceId` 等字段开关；模板中出现哪个占位符就进入格式化结果，未出现的字段不输出。
 
-`LineTemplate` 默认只显示 Timestamp、Level 和 UserMessage；需要 Category、EventId、TraceId、Properties 或 Exception 时由调用方加入相应占位符。`UserMessage` 为空白时回退到 `Message`。为保证三种行输出严格一致，不提供 LogView 或 LogNotifications 的局部模板覆盖。
+`LineTemplate` 默认只显示 Timestamp、Level 和 UserMessage；需要 Category、EventId、TraceId、Properties 或 Exception 时由调用方加入相应占位符。`UserMessage` 为空白时回退到 `Message`。不提供 LogView 或 LogNotifications 的局部模板覆盖。默认 DesktopWindow 已单独显示 Level 和 Timestamp，因此正文直接使用 `UserMessage/Message`；`DesktopContentTemplate` 仍可读取完整格式化 `Content`。
 
 ## 5. 级别模型
 
@@ -412,7 +412,7 @@ ConsoleSink：
 
 - 默认关闭。
 - 直接消费全部通过 MEL 采集过滤和 Console Sink 级过滤的 `CodeWFLogEvent`。
-- 与 LogView、LogNotifications 严格使用同一个全局 `LineTemplate` 和同一套占位符语义。
+- 与 LogView、LogNotifications 使用同一个全局 `LineTemplate` Controller 和同一套占位符语义。
 - 不单独提供 `Console.OutputTemplate`；模板包含 `{Exception}`、`{Properties}`、`{Scopes}` 等字段时，Console 与 Avalonia 输出都能读取同一事件中的对应值。
 - 希望 CodeWF 完全接管控制台时，由应用显式 `ClearProviders()` 后只注册 CodeWF；Provider 不擅自移除 Microsoft Console、Serilog 等其他 Provider。
 
@@ -445,8 +445,8 @@ EventFeedSink：
 - LogView 默认 `MinimumLevel=Information`、`MaximumLevel=Critical`；保留 `MaximumLevel`，支持多个 LogView 按区间展示。
 - 每行字段完全由 `LineTemplate` 决定，不提供 `ShowCategoryName`、`ShowEventId`、`ShowTraceId` 等字段开关。
 - `LineTemplate` 支持完整 `CodeWFLogEvent` 的字段，包括 `Timestamp`、`Level`、`Message`、`UserMessage`、`MessageTemplate`、`Category`、`EventId`、`EventName`、`Properties`、`Scopes`、`Exception`、Activity/Trace 字段和 `NewLine`。
-- “严格共享”以 pipeline/Source 为边界：Console 使用所属 pipeline 的 Controller；LogView 使用其最终解析 Source 关联的 Controller；Application 级 LogNotifications 只使用全局 Source 的 Controller，不跟随某个局部 LogView.Source。
-- 同一 Source 下的 Console、所有 LogView 和 LogNotifications 严格读取同一个模板状态，不提供控件级或通知级模板覆盖；Source 未提供模板时使用 `{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:zh}] {UserMessage}{NewLine}`。
+- 模板共享以 pipeline/Source 为边界：Console 使用所属 pipeline 的 Controller；LogView 使用其最终解析 Source 关联的 Controller；Application 级 LogNotifications 只使用全局 Source 的 Controller，不跟随某个局部 LogView.Source。
+- 同一 Source 下的 Console、所有 LogView 和 LogNotifications 读取同一个模板状态，不提供控件级或通知级模板覆盖；Source 未提供模板时使用 `{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:zh}] {UserMessage}{NewLine}`。默认 DesktopWindow 的组合式正文不重复呈现其中的 Timestamp 和 Level。
 
 MEL/DI Avalonia 应用的全局 Source 示例：
 
@@ -479,7 +479,9 @@ log:LogNotifications.Mode="None"
 
 不提供 `MaximumLevel`，不使用特殊日志级别表达“关闭通知”。
 
-LogNotifications 同时检查 `RequestNotification` 和 `MinimumLevel`，不把 `UserMessage`、Category 或 Exception 作为隐式条件。通知读取 Source 携带的全局 `LineTemplate`；标题、图标、颜色和按钮仍由通知样式决定，`LineTemplate` 只负责可变日志正文。
+LogNotifications 同时检查 `RequestNotification` 和 `MinimumLevel`，不把 `UserMessage`、Category 或 Exception 作为隐式条件。通知管线读取 Source 携带的全局 `LineTemplate`；InApp 和自定义桌面模板可使用完整结果。默认 DesktopWindow 由标题、图标、级别、用户正文、时间、翻页和按钮组成，正文直接使用 `UserMessage`，为空时回退 `Message`。
+
+默认 DesktopWindow 的可见宽度为 360px，圆角 8px，单条、多条和长内容可见高度分别为 284/320/420px。Error 使用圆形感叹号与 `#FFF1F0` 渐变，Critical 使用三角感叹号与 `#FFCCC7` 渐变；窗口打开期间追加的日志显示新日志计数。默认图标作为 AvaloniaResource 内嵌，颜色、尺寸、按钮、渐变可通过公开动态资源覆盖，完整内容结构可通过 `DesktopContentTemplate` 替换。
 
 通知突发处理：
 
@@ -598,7 +600,7 @@ builder.Logging.AddCodeWF(options =>
 | `Exception` | 异常详情 |
 | `NewLine` | 当前平台换行 |
 
-模板中未出现的字段不会输出，因此不再设计字段布尔配置。`File.OutputTemplate` 和共享 `LineTemplate` 都可以使用完整 `CodeWFLogEvent` 的全部占位符；两者的区别只是应用到 File 还是 Console、LogView、LogNotifications。
+模板中未出现的字段不会输出，因此不再设计字段布尔配置。`File.OutputTemplate` 和共享 `LineTemplate` 都可以使用完整 `CodeWFLogEvent` 的全部占位符；两者的区别只是应用到 File 还是 Console、LogView、通知格式化结果。默认组合式 DesktopWindow 直接呈现结构化级别、时间和用户正文。
 
 与 Serilog/NLog/log4net 并行时，如果第三方 Provider 已负责文件和控制台，CodeWF 只保留 `LogEventFeed`、LogView 和 LogNotifications：
 
@@ -792,7 +794,7 @@ Demo 的原则是职责单一、界面低负担：不提供手工模板编辑器
 | Trace 至 Critical、EventId、结构化 State、Scope、Activity、Exception 捕获 | 已实现 | Exception 在调用线程转换为有界不可变 `LogExceptionInfo` |
 | 统一 `CodeWFLogEvent` 与完整 `LogEventFeed` | 已实现 | 普通日志与 `LogUser*` 使用同一种完整事件 |
 | File `OutputTemplate` | 已实现 | 包含 Sink 阈值、滚动、30 天保留、显式容量保护和运行时原子更新 |
-| Console/LogView/LogNotifications 共享 `LineTemplate` | 已实现 | 三者读取同一个实例级 Controller |
+| Console/LogView/LogNotifications 共享 `LineTemplate` Controller | 已实现 | 默认 DesktopWindow 组合字段呈现；完整结果供 InApp/自定义模板使用 |
 | 实例级 DI pipeline 与 legacy 静态 pipeline 分离 | 已实现 | Provider 拥有生命周期，可选桥接静态 facade |
 | 多 Host、重复启动和并行 `LoggerFactory` 隔离 | 已实现 | 自动化测试覆盖独立 Feed 与释放 |
 | Queue FullMode、超时、丢弃计数、顺序保证 | 已实现 | `CodeWFLogHealth` 提供总数与各级别统计 |
@@ -821,11 +823,11 @@ Demo 的原则是职责单一、界面低负担：不提供手工模板编辑器
 - 普通 `logger.LogError(...)` 与 `logger.LogUserError(...)` 都生成统一 `CodeWFLogEvent` 并进入 `LogEventFeed`；后者只额外设置 `UserMessage`。
 - `LogUser*` 与标准 MEL 日志的诊断消息和结构化属性语义一致，且不向其他 Provider 暴露 CodeWF 私有用户消息元数据。
 - `{Message}` 始终输出诊断消息；`{UserMessage}` 优先输出用户消息并在其为空白时回退到 `Message`。
-- Avalonia Application 可配置全局 `LogEventFeed`，LogView 支持局部 Source 覆盖；同一 pipeline/Source 的 Console、所有 LogView 和 LogNotifications 严格共享一个实例级 `ILineTemplateController`。
+- Avalonia Application 可配置全局 `LogEventFeed`，LogView 支持局部 Source 覆盖；同一 pipeline/Source 的 Console、所有 LogView 和 LogNotifications 共享一个实例级 `ILineTemplateController`。
 - LogView 默认 MinimumLevel=Information、MaximumLevel=Critical；LogNotifications 默认 Mode=None、MinimumLevel=Error、Duration=10 秒，启用后同时要求 `RequestNotification=true` 和达到 MinimumLevel。
 - LogView 的 recent buffer 重放与实时订阅具有原子边界，不遗漏、不重复且保持 Sequence 顺序；LogNotifications 不重放历史事件。
 - `CodeWFLogEvent` 只保存有界不可变 `LogExceptionInfo`，不把原始 Exception 对象引用交给后台队列或 recent buffer；Exception.Data 默认不捕获。
-- InApp 通知具有最大可见数量，DesktopWindow 复用单窗口，通知展示队列有界且溢出数量可见；通知突发不能阻塞 pipeline。
+- InApp 通知具有最大可见数量；DesktopWindow 复用单窗口，显示会话新增数量并支持前后翻页；通知展示队列有界且溢出数量可见，通知突发不能阻塞 pipeline。
 - Provider 与 Serilog/NLog/log4net 至少一种并行时，业务代码无需修改，CodeWF 可只启用 LogEventFeed、LogView 和通知。
 - Sequence 与实际单消费者处理顺序一致；LogEventFeed 的最终一致性和完整事件暴露风险在 API 与 Demo 中有明确说明。
 - Queue FullMode 和 EnqueueTimeout 生效，丢弃数量通过独立健康状态可观测，慢订阅者不能阻塞 pipeline。
@@ -890,7 +892,7 @@ Demo 的原则是职责单一、界面低负担：不提供手工模板编辑器
 - LogView 默认 Information 至 Critical，使用原子订阅重放，并在 `LineTemplate` 更新后重新渲染当前 recent buffer。
 - LogNotifications 同时要求 `RequestNotification=true` 和达到 MinimumLevel，不重放历史事件；实现 None、InApp、DesktopWindow 三种模式。
 - InApp 默认最多同时显示 3 条；DesktopWindow 复用一个右下角窗口；展示队列默认容量 100，溢出计数可见且不阻塞 pipeline。
-- Console、同一 Source 下的所有 LogView 和 Notification 读取同一个实例级模板 Controller，不提供控件级模板覆盖。
+- Console、同一 Source 下的所有 LogView 和 Notification 读取同一个实例级模板 Controller，不提供控件级模板覆盖；默认 DesktopWindow 使用组合式字段呈现，完整模板内容提供给自定义模板。
 
 验收：Source 切换、模板热切换、UI 线程调度、窗口重建、通知模式切换、突发队列和资源释放通过自动化或可重复 smoke test。
 
@@ -901,7 +903,7 @@ Demo 的原则是职责单一、界面低负担：不提供手工模板编辑器
 - LogViewDemo 提供 LineTemplate/OutputTemplate 两档切换；SerilogDemo 只切换 CodeWF LineTemplate。
 - WebApiDemo 的 CodeWF 配置只保留在 `appsettings.json`，接口为 `/recent-logs`。
 - SerilogDemo：Serilog 负责文件/控制台，CodeWF 只启用 EventFeed、LogView 和通知。
-- FileNotifyDemo：CodeWF 负责文件和 DesktopWindow 通知，窗口不包含 LogView，并提供通知条件对比按钮。
+- FileNotifyDemo：CodeWF 负责文件和 DesktopWindow 通知，窗口不包含 LogView，并提供 Error、Critical、长内容、连续追加和通知条件对比按钮。
 
 验收：所有 Demo 的六级别、普通/用户消息对照、Exception、EventId、Scope、Activity、LoggerMessage 和并发场景均可重复验证。
 

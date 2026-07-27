@@ -30,6 +30,7 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
     private string _recordTimeText = string.Empty;
     private string _logContent = string.Empty;
     private string _countText = string.Empty;
+    private string _newLogText = string.Empty;
     private string _openLogFolderButtonText = "打开日志目录";
     private LogLevel _level = LogLevel.Error;
     private LogNotificationContent? _selectedLog;
@@ -40,11 +41,13 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
     private DateTimeOffset _deadline;
     private DateTimeOffset _sessionDeadline;
     private int _selectedIndex = -1;
+    private int _newLogCount;
     private int _countdownSeconds = -1;
     private double _windowOpacity = 1;
     private bool _canPrevious;
     private bool _canNext;
     private bool _isNavigationVisible;
+    private bool _isLongContent;
     private bool _isPointerInside;
     private bool _hasUserNavigated;
     private bool _isOpened;
@@ -125,6 +128,20 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
         private set => SetField(ref _countText, value);
     }
 
+    public string NewLogText
+    {
+        get => _newLogText;
+        private set
+        {
+            if (!SetField(ref _newLogText, value)) return;
+            OnPropertyChanged(nameof(IsNewLogVisible));
+        }
+    }
+
+    public bool IsNewLogVisible => !string.IsNullOrEmpty(NewLogText);
+
+    public double MinimumCardHeight => _isLongContent ? 420 : IsNavigationVisible ? 320 : 284;
+
     public bool CanPrevious
     {
         get => _canPrevious;
@@ -140,7 +157,11 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
     public bool IsNavigationVisible
     {
         get => _isNavigationVisible;
-        private set => SetField(ref _isNavigationVisible, value);
+        private set
+        {
+            if (!SetField(ref _isNavigationVisible, value)) return;
+            OnPropertyChanged(nameof(MinimumCardHeight));
+        }
     }
 
     public IDataTemplate? ContentTemplate
@@ -213,6 +234,11 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
         if (logEntries.Count == 0 || _isClosing) return;
 
         var wasEmpty = _logs.Count == 0;
+        if (_isOpened && !wasEmpty)
+        {
+            _newLogCount += logEntries.Count;
+            NewLogText = $"{_newLogCount}条新日志";
+        }
         var highestLevel = logEntries[0].Entry.Level;
         foreach (var logEntry in logEntries)
         {
@@ -251,6 +277,8 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
         _countdownTimer.Stop();
         _isOpened = false;
         _logs.Clear();
+        _newLogCount = 0;
+        NewLogText = string.Empty;
     }
 
     public void SetPointerInside(bool isInside)
@@ -417,17 +445,20 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
         Level = selectedLog.Level;
         LevelText = selectedLog.Level.Description();
         RecordTimeText = selectedLog.RecordTime.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        LogContent = selectedLog.Content.Length <= MaxContentLength
-            ? selectedLog.Content
-            : selectedLog.Content[..MaxContentLength] + "...";
+        LogContent = selectedLog.DefaultContent.Length <= MaxContentLength
+            ? selectedLog.DefaultContent
+            : selectedLog.DefaultContent[..MaxContentLength] + "...";
+        var isLongContent = RequiresExpandedLayout(LogContent);
+        if (_isLongContent != isLongContent)
+        {
+            _isLongContent = isLongContent;
+            OnPropertyChanged(nameof(MinimumCardHeight));
+        }
 
         CanPrevious = _selectedIndex > 0;
         CanNext = _selectedIndex < _logs.Count - 1;
         IsNavigationVisible = _logs.Count > 1;
-        var newCount = Math.Max(0, _logs.Count - _selectedIndex - 1);
-        CountText = newCount > 0
-            ? $"{_selectedIndex + 1} / {_logs.Count} · {newCount} 条新日志"
-            : $"{_selectedIndex + 1} / {_logs.Count}";
+        CountText = $"{_selectedIndex + 1} / {_logs.Count}";
         UpdateCountdown(GetRemainingTime(), _isPointerInside);
     }
 
@@ -459,6 +490,19 @@ internal sealed class NotificationWindowViewModel : INotifyPropertyChanged
         WindowOpacity = 1;
         UpdateSelectedLog();
         if (!_isPointerInside) RestartCountdown(resetSessionDeadline: true);
+    }
+
+    private static bool RequiresExpandedLayout(string content)
+    {
+        if (content.Length > 160) return true;
+
+        var lineCount = 1;
+        foreach (var character in content)
+        {
+            if (character == '\n') lineCount++;
+        }
+
+        return lineCount >= 5;
     }
 
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)

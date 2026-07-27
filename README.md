@@ -45,7 +45,7 @@ builder.Logging.AddCodeWF();
 - CodeWF 默认写入 `AppContext.BaseDirectory/logs`。
 - 普通 `ILogger` 与 `LogUser*` 都生成完整 `CodeWFLogEvent`，进入启用的 File、Console 和 `LogEventFeed`。
 - `LogUser*` 只额外提供 `UserMessage`；模板中的 `{UserMessage}` 为空白时回退 `{Message}`。
-- File 使用独立 `OutputTemplate`；Console、可选的 LogView 和通知严格共享 `LineTemplate`。
+- File 使用独立 `OutputTemplate`；Console、可选的 LogView 和通知管线共享 `LineTemplate`，默认组合式 DesktopWindow 避免重复显示级别和时间。
 - 两类模板都可通过各自的 Controller 显式、原子地运行时更新；其他 Pipeline 配置仍需重启生效。
 
 常用配置使用结构化 Options；日志格式由 `OutputTemplate` 决定，不提供 `IncludeEventId`、`IncludeScopes` 这类开关。模板里写了对应占位符就输出，没有写就忽略：
@@ -218,7 +218,11 @@ logger.LogUserNotification(
 
 最终通知条件是：`Mode != None && Level >= MinimumLevel && RequestNotification`。普通 `LogError(...)`、`LogUserError(...)` 和 `Logger.Error(...)` 默认都不弹窗；静态 API 只有显式传入 `requestNotification: true` 才申请通知。`Logger.*ToFile(...)` 不进入事件 Feed，因此永远不会触发通知。
 
-完整可运行示例见 `FileNotifyDemo`，其中没有任何 `LogView`，并提供“Error 仅写日志 / Error 请求通知 / Warning 请求通知但低于阈值”三个对比按钮。
+`DesktopWindow` 默认使用 360px 宽的组合式重要日志窗口：Error 与 Critical 分别使用圆形/三角形图标和不同红色渐变；单条、多条、长内容对应 284/320/420px 可见高度。窗口复用期间追加的日志在标题栏显示“`N条新日志`”，多条日志可前后翻页，长内容在正文区域滚动。默认正文显示 `UserMessage`，为空时回退 `Message`，避免与窗口已经独立显示的级别和时间重复；完整 `LineTemplate` 格式化结果仍通过 `LogNotificationContent.Content` 提供给 `DesktopContentTemplate`，InApp 通知也继续使用该结果。
+
+颜色、尺寸、按钮和渐变可以通过 `LogNotificationResourceKeys` 对应的动态资源覆盖；需要完全不同的内容布局时使用 `LogNotifications.DesktopContentTemplate`。组件内嵌默认图标，调用方不需要复制图片文件。
+
+完整可运行示例见 `FileNotifyDemo`，其中没有任何 `LogView`，并提供 Error、Critical、长内容、连续追加、仅写日志和低于阈值等对比按钮。
 
 ### 可选的 LogView
 
@@ -257,7 +261,7 @@ LogContext.SetLogDirectory(this, Path.GetFullPath("Log"));
     log:LogNotifications.ApplicationName="CodeWF Log Demo" />
 ```
 
-`LogNotifications` 只接收 `RequestNotification=true` 且达到 `MinimumLevel` 的新事件，不回放历史，也不会接收 `*ToFile` 日志。静态 Logger 通过 `requestNotification: true` 显式请求；`ILogger<T>` 通过 `LogUserNotification(...)` 请求。InApp 默认最多同时显示 3 条；DesktopWindow 复用一个桌面右下角窗口。通知展示队列溢出时提示查看日志文件，不假定应用存在 `LogView`。
+`LogNotifications` 只接收 `RequestNotification=true` 且达到 `MinimumLevel` 的新事件，不回放历史，也不会接收 `*ToFile` 日志。静态 Logger 通过 `requestNotification: true` 显式请求；`ILogger<T>` 通过 `LogUserNotification(...)` 请求。InApp 默认最多同时显示 3 条；DesktopWindow 复用一个桌面右下角窗口，并在同一窗口显示新日志计数和翻页状态。通知展示队列溢出时提示查看日志文件，不假定应用存在 `LogView`。
 
 ```csharp
 Logger.Error(
@@ -278,6 +282,6 @@ logger.LogUserNotification(
 | --- | --- |
 | `ConsoleDemo` | 仅 `CodeWF.Log.Core`：关闭 EventFeed，只演示静态 Logger、控制台、文件、`*ToFile` 和文件轮转；没有视图或弹窗。 |
 | `LogViewDemo` | Avalonia 多 LogView：MEL/DI、分级视图、两类模板、结构化上下文、异常和通知。 |
-| `FileNotifyDemo` | Avalonia 无 LogView：文件输出、文件模板切换、显式重要通知和级别门槛。 |
+| `FileNotifyDemo` | Avalonia 无 LogView：文件输出、文件模板切换，以及 Error/Critical、长内容、连续追加和通知门槛对比。 |
 | `SerilogDemo` | Avalonia 联合 Provider：Serilog 负责文件/控制台，CodeWF 负责 LogView 和通知。 |
 | `WebApiDemo` | ASP.NET Core：`AddCodeWF()`、配置绑定、Scope、Activity、LoggerMessage 和最近事件接口。 |
