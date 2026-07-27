@@ -747,8 +747,10 @@ Demo 的原则是职责单一、界面低负担：不提供手工模板编辑器
 
 ### 16.1 ConsoleDemo
 
-- 使用静态 `Logger.Initialize(...)`，演示非 Host 场景。
-- 覆盖 `Logger.Info/Warn/Error/Fatal`、`*ToFile`、控制台、文件滚动、Flush 和 Shutdown。
+- 只引用 `CodeWF.Log.Core`，不引用 Avalonia、CodeWF.Log.Avalonia 或 MEL Provider。
+- 使用静态 `Logger.Initialize(...)`，同时启用 Console 和 File，并明确设置 `EnableEventFeed=false`。
+- 不创建 LogView，不配置 LogNotifications，也不存在系统弹窗通道。
+- 覆盖 `Logger.Info/Warn/Error/Fatal`、`*ToFile`、独立 LineTemplate/OutputTemplate、文件滚动、Flush 和 Shutdown。
 
 ### 16.2 FileNotifyDemo
 

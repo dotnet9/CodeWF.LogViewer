@@ -6,6 +6,7 @@ Logger.Initialize(new LoggerOptions
 {
     MinimumLevel = LogLevel.Debug,
     EnableConsole = true,
+    EnableEventFeed = false,
     LineTemplate = "{Timestamp:HH:mm:ss.fff} [{Level:zh}] {UserMessage}{NewLine}",
     QueueCapacity = 2_000,
     File = new FileLogOptions
@@ -17,9 +18,10 @@ Logger.Initialize(new LoggerOptions
     }
 });
 
-Console.WriteLine("CodeWF.Log.Core 控制台验证程序");
+Console.WriteLine("CodeWF.Log.Core：控制台 + 文件 Demo");
 Console.WriteLine($"日志目录：{logDirectory}");
-Console.WriteLine("验证重点：控制台使用共享 LineTemplate；文件使用独立详细格式；*ToFile 只写文件。");
+Console.WriteLine("只引用 CodeWF.Log.Core；不使用 Avalonia、LogView、系统通知或 MEL Provider。");
+Console.WriteLine("EventFeed 已关闭；控制台使用 LineTemplate，文件使用独立 OutputTemplate，*ToFile 只写文件。");
 Console.WriteLine();
 
 Logger.Debug("调试日志：初始化内部状态。", "程序正在准备运行环境。");
