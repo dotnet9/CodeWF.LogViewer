@@ -10,6 +10,7 @@
 - 😄[新增]-增加 `FileNotifyDemo`，用三个对比按钮验证仅写日志、显式通知和低于通知阈值；通知队列溢出提示不再假定存在 LogView。
 - 🔨[优化]-Demo 统一精简为 `ConsoleDemo`、`FileNotifyDemo`、`LogViewDemo`、`SerilogDemo`、`WebApiDemo`；Avalonia 示例只保留三种明确职责并改用低负担的模板下拉框与组合按钮。
 - 📚[文档]-根目录核心设计与 MEL 适配设计合并为 `doc/CodeWF.Log设计.md`，删除重复、冲突的设计入口。
+- 📚[文档]-明确 `ConsoleDemo` 是仅引用 Core 的 Console/File 最小场景，关闭 EventFeed，不包含 Avalonia、LogView 或通知能力。
 
 ## 12.1.0.18 (2026-07-24)
 
