@@ -752,20 +752,20 @@ Demo 的原则是职责单一、界面低负担：不提供手工模板编辑器
 - 不创建 LogView，不配置 LogNotifications，也不存在系统弹窗通道。
 - 覆盖 `Logger.Info/Warn/Error/Fatal`、`*ToFile`、独立 LineTemplate/OutputTemplate、文件滚动、Flush 和 Shutdown。
 
-### 16.2 FileNotifyDemo
-
-- Avalonia 窗口不包含 `LogView`，只使用文件输出和 DesktopWindow 通知。
-- 保持 EventFeed 开启并在 Application 设置实例级 `LogContext.Source`，证明通知不依赖 LogView。
-- 提供文件模板“简洁/完整上下文”切换。
-- 提供 Error 仅日志、Error 显式通知、Warning 请求通知但低于阈值三个按钮，直接验证三项通知条件。
-
-### 16.3 LogViewDemo
+### 16.2 LogViewDemo
 
 - 使用 `AddCodeWF()`、DI 和 `ILogger<T>`，承载主 Avalonia 集成示例。
 - 同一个 `LogEventFeed` 驱动三个 LogView：全部级别、仅 Information、Warning 至 Critical。
 - 提供 LineTemplate 和 OutputTemplate 两档切换，不要求用户编辑模板文本。
 - 组合按钮覆盖六个级别、Message/UserMessage、EventId、结构化属性、Scope、Activity、Exception、显式通知和并发写入。
 - LineTemplate 切换立即重绘三个视图；OutputTemplate 只影响后续文件日志。
+
+### 16.3 FileNotifyDemo
+
+- Avalonia 窗口不包含 `LogView`，只使用文件输出和 DesktopWindow 通知。
+- 保持 EventFeed 开启并在 Application 设置实例级 `LogContext.Source`，证明通知不依赖 LogView。
+- 提供文件模板“简洁/完整上下文”切换。
+- 提供 Error 仅日志、Error 显式通知、Warning 请求通知但低于阈值三个按钮，直接验证三项通知条件。
 
 ### 16.4 SerilogDemo
 

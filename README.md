@@ -19,15 +19,15 @@ CodeWF.Log 是面向 .NET 和 Avalonia 的轻量日志组件，提供文件/控�
 
 运行 `pack.bat` 可将三个包输出到 `artifacts/packages`。
 
-### 按能力选择接入方式
+### 五种典型使用示例
 
-| 场景 | 需要的包/能力 | Demo |
-| --- | --- | --- |
-| 仅控制台和文件 | 只引用 `CodeWF.Log.Core`；可关闭 EventFeed，不包含 Avalonia、LogView 或通知 | `ConsoleDemo` |
-| Web/Host 日志 | `CodeWF.Log.Core` + `CodeWF.Log.Extensions.Logging`，通过 `AddCodeWF()` 接入 MEL | `WebApiDemo` |
-| Avalonia 文件和重要通知 | 再引用 `CodeWF.Log.Avalonia`，保持 EventFeed 开启，但不放置 LogView | `FileNotifyDemo` |
-| Avalonia 实时日志视图 | 使用 LogView、通知以及 MEL/DI | `LogViewDemo` |
-| 与第三方 Provider 并行 | Serilog 负责文件/控制台，CodeWF 只启用 EventFeed、LogView 和通知 | `SerilogDemo` |
+| # | 场景 | 需要的包/能力 | Demo |
+| --- | --- | --- | --- |
+| 1 | Console + File | 只引用 `CodeWF.Log.Core`；关闭 EventFeed，不包含 Avalonia、LogView 或通知 | `ConsoleDemo` |
+| 2 | 多 Avalonia LogView + File + 通知 | 三个分级 LogView、文件输出、模板切换和显式通知，使用 MEL/DI | `LogViewDemo` |
+| 3 | 无 Avalonia LogView + File + 通知 | 保持 EventFeed 开启供通知订阅，但窗口中不放置 LogView | `FileNotifyDemo` |
+| 4 | 配合 Serilog 使用 | Serilog 负责文件/控制台，CodeWF 只启用 EventFeed、LogView 和通知 | `SerilogDemo` |
+| 5 | Web API | `CodeWF.Log.Core` + `CodeWF.Log.Extensions.Logging`，通过 `AddCodeWF()` 接入 MEL | `WebApiDemo` |
 
 `ConsoleDemo` 是最小依赖场景：日志组件只做核心 Console/File Pipeline，不会加载 Avalonia，也没有产生系统弹窗的通道。
 
@@ -277,7 +277,7 @@ logger.LogUserNotification(
 | Demo | Purpose |
 | --- | --- |
 | `ConsoleDemo` | 仅 `CodeWF.Log.Core`：关闭 EventFeed，只演示静态 Logger、控制台、文件、`*ToFile` 和文件轮转；没有视图或弹窗。 |
-| `FileNotifyDemo` | Avalonia 无 LogView：文件输出、文件模板切换、显式重要通知和级别门槛。 |
 | `LogViewDemo` | Avalonia 多 LogView：MEL/DI、分级视图、两类模板、结构化上下文、异常和通知。 |
+| `FileNotifyDemo` | Avalonia 无 LogView：文件输出、文件模板切换、显式重要通知和级别门槛。 |
 | `SerilogDemo` | Avalonia 联合 Provider：Serilog 负责文件/控制台，CodeWF 负责 LogView 和通知。 |
 | `WebApiDemo` | ASP.NET Core：`AddCodeWF()`、配置绑定、Scope、Activity、LoggerMessage 和最近事件接口。 |
