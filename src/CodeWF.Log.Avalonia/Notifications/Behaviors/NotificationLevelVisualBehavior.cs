@@ -16,15 +16,18 @@ public sealed class NotificationLevelVisualBehavior : Behavior<Border>
 {
     private static readonly string[] LevelClassNames = ["debug", "info", "warn", "error", "fatal"];
 
-    public static readonly StyledProperty<PathIcon?> IconTargetProperty =
-        AvaloniaProperty.Register<NotificationLevelVisualBehavior, PathIcon?>(nameof(IconTarget));
+    public static readonly StyledProperty<Control?> IconTargetProperty =
+        AvaloniaProperty.Register<NotificationLevelVisualBehavior, Control?>(nameof(IconTarget));
+
+    public static readonly StyledProperty<Control?> BackgroundTargetProperty =
+        AvaloniaProperty.Register<NotificationLevelVisualBehavior, Control?>(nameof(BackgroundTarget));
 
     public static readonly StyledProperty<TextBlock?> TextTargetProperty =
         AvaloniaProperty.Register<NotificationLevelVisualBehavior, TextBlock?>(nameof(TextTarget));
 
     private NotificationWindowViewModel? _viewModel;
 
-    public PathIcon? IconTarget
+    public Control? IconTarget
     {
         get => GetValue(IconTargetProperty);
         set => SetValue(IconTargetProperty, value);
@@ -34,6 +37,12 @@ public sealed class NotificationLevelVisualBehavior : Behavior<Border>
     {
         get => GetValue(TextTargetProperty);
         set => SetValue(TextTargetProperty, value);
+    }
+
+    public Control? BackgroundTarget
+    {
+        get => GetValue(BackgroundTargetProperty);
+        set => SetValue(BackgroundTargetProperty, value);
     }
 
     protected override void OnAttached()
@@ -56,7 +65,9 @@ public sealed class NotificationLevelVisualBehavior : Behavior<Border>
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == IconTargetProperty || change.Property == TextTargetProperty) ApplyLevelClasses();
+        if (change.Property == IconTargetProperty || change.Property == TextTargetProperty ||
+            change.Property == BackgroundTargetProperty)
+            ApplyLevelClasses();
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -97,6 +108,7 @@ public sealed class NotificationLevelVisualBehavior : Behavior<Border>
             AssociatedObject.Classes.Set(name, name == levelClass);
             IconTarget?.Classes.Set(name, name == levelClass);
             TextTarget?.Classes.Set(name, name == levelClass);
+            BackgroundTarget?.Classes.Set(name, name == levelClass);
         }
     }
 }

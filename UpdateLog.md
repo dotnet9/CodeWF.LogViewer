@@ -1,5 +1,14 @@
 # 更新日志（Known）
 
+## 12.1.0.21 (2026-07-27)
+
+- 💥[重构]-DesktopWindow 默认皮肤按通用重要日志窗口重做：可见宽度 360px，单条/多条/长内容高度分别为 284/320/420px，底部按钮严格使用 120×32 与 184×32。
+- 😄[新增]-内嵌 Error、Critical、新消息、翻页和关闭 PNG 资源；Error/Critical 使用独立图标与红色纵向渐变，无需调用方复制资源文件。
+- 😄[新增]-复用窗口期间追加日志时显示会话新日志数量，多条日志使用 28px 图标翻页并保留当前/总数状态。
+- 🔨[优化]-默认组合式 DesktopWindow 正文直接显示 `UserMessage` 并回退 `Message`，避免与独立级别和时间字段重复；完整 `LineTemplate` 内容继续提供给 InApp 与 `DesktopContentTemplate`。
+- ✅[验证]-新增 Avalonia 通知 ViewModel 测试；FileNotifyDemo 增加 Error、Critical、长内容和连续追加对比按钮，并完成真实 Windows 窗口渲染检查。
+- 📚[文档]-README 与设计文档同步默认皮肤、三档尺寸、新日志计数、正文语义和资源覆盖边界。
+
 ## 12.1.0.19 (2026-07-27)
 
 - 💥[重构]-日志通知改为显式申请：`Logger` 新增默认关闭的 `requestNotification` 可选参数，只有请求通知且达到 `MinimumLevel` 的事件才显示通知。

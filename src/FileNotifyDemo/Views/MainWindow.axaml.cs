@@ -63,6 +63,53 @@ public partial class MainWindow : Window
         _statusText.Text = "已写入 Error 日志并显式请求通知；应显示桌面通知。";
     }
 
+    private void WriteCriticalNotification_OnClick(object? sender, RoutedEventArgs e)
+    {
+        _logger.LogUserNotification(
+            LogLevel.Critical,
+            "核心服务发生不可恢复错误，请立即查看日志并停止当前操作。",
+            "Critical service failure example. Operation={Operation}",
+            "CriticalWithNotification");
+        _statusText.Text = "已请求 Critical 通知；可与 Error 对比三角图标和深色渐变。";
+    }
+
+    private void WriteLongNotification_OnClick(object? sender, RoutedEventArgs e)
+    {
+        const string userMessage =
+            "打开本地任务失败：E:\\github\\company\\xskj-component\\bin\\S-Components\\TaskFolder\\tasks\\task.xml\n" +
+            "System.InvalidOperationException: There is an error in XML document (43, 18).\n" +
+            "---> System.InvalidOperationException: Instance validation error: '0' is not a valid value for PointDirection.\n" +
+            "请检查任务文件中的节点方向、设备编号和连接参数，然后重新执行任务。";
+        _logger.LogUserNotification(
+            LogLevel.Error,
+            userMessage,
+            "Long notification content example. Operation={Operation}",
+            "LongNotification");
+        _statusText.Text = "已请求长内容 Error 通知；窗口应限制为 360×420，并允许滚动查看正文。";
+    }
+
+    private async void WriteBurstNotifications_OnClick(object? sender, RoutedEventArgs e)
+    {
+        _logger.LogUserNotification(
+            LogLevel.Error,
+            "批量任务中的首条错误。",
+            "Burst notification {Index}",
+            1);
+        await Task.Delay(600);
+
+        for (var index = 2; index <= 4; index++)
+        {
+            _logger.LogUserNotification(
+                index == 4 ? LogLevel.Critical : LogLevel.Error,
+                $"弹窗打开后追加的第 {index} 条重要日志。",
+                "Burst notification {Index}",
+                index);
+            await Task.Delay(120);
+        }
+
+        _statusText.Text = "已连续追加 4 条通知；标题栏应显示 3 条新日志，并出现翻页控件。";
+    }
+
     private void WriteWarningNotification_OnClick(object? sender, RoutedEventArgs e)
     {
         _logger.LogUserNotification(

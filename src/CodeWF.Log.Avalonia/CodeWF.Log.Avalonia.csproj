@@ -35,4 +35,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CodeWF.Log.Core\CodeWF.Log.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\Notifications\*.png" />
+  </ItemGroup>
 </Project>
