@@ -1,0 +1,71 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:log="https://codewf.com"
+        x:Class="SerilogDemo.Views.MainWindow"
+        mc:Ignorable="d"
+        Width="1080" Height="720" MinWidth="820" MinHeight="580"
+        Icon="/Assets/logo.ico"
+        Title="CodeWF + Serilog Demo">
+  <Window.Styles>
+    <Style Selector="Border.panel">
+      <Setter Property="BorderBrush" Value="#D0D7DE" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Padding" Value="12" />
+    </Style>
+    <Style Selector="Button.action">
+      <Setter Property="Padding" Value="11 7" />
+      <Setter Property="Margin" Value="0 0 8 8" />
+    </Style>
+  </Window.Styles>
+
+  <Grid Margin="14" RowDefinitions="Auto,Auto,*,Auto">
+    <StackPanel Spacing="3">
+      <TextBlock FontSize="21" FontWeight="SemiBold" Text="同一个 ILogger，两个 Provider 各司其职" />
+      <TextBlock Foreground="#667085" Text="Serilog 写文件和控制台；CodeWF 提供 LogView 与显式通知。业务代码无需区分 Provider。" />
+    </StackPanel>
+
+    <Border Grid.Row="1" Classes="panel" Margin="0 12 0 10">
+      <StackPanel Spacing="10">
+        <WrapPanel>
+          <TextBlock Margin="0 0 6 0" VerticalAlignment="Center" Text="CodeWF 界面格式" />
+          <ComboBox x:Name="LineTemplateBox" Width="150" Margin="0 0 18 0"
+                    SelectionChanged="LineTemplateBox_OnSelectionChanged">
+            <ComboBoxItem Content="简洁" />
+            <ComboBoxItem Content="完整上下文" />
+          </ComboBox>
+          <TextBlock Margin="0 0 6 0" VerticalAlignment="Center" Text="通知" />
+          <ComboBox x:Name="NotificationModeBox" Width="150"
+                    SelectionChanged="NotificationModeBox_OnSelectionChanged">
+            <ComboBoxItem Content="关闭" />
+            <ComboBoxItem Content="应用内" />
+            <ComboBoxItem Content="桌面窗口" />
+          </ComboBox>
+        </WrapPanel>
+        <WrapPanel>
+          <Button Classes="action" Content="普通日志组合" Click="WriteLevels_OnClick" />
+          <Button Classes="action" Content="Message / UserMessage" Click="WriteUserComparison_OnClick" />
+          <Button Classes="action" Content="EventId + Scope + Activity" Click="WriteContext_OnClick" />
+          <Button Classes="action" Content="Error（仅日志）" Tag="False" Click="WriteNotificationError_OnClick" />
+          <Button Classes="action" Content="Error（请求通知）" Tag="True" Click="WriteNotificationError_OnClick" />
+          <Button Classes="action" Content="批量 120 条" Click="WriteBurst_OnClick" />
+          <Button Classes="action" Content="打开 Serilog 日志目录" Click="OpenLogDirectory_OnClick" />
+        </WrapPanel>
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Row="2" Classes="panel">
+      <Grid RowDefinitions="Auto,*">
+        <TextBlock FontWeight="SemiBold" Text="CodeWF LogView（Serilog 文件中可核对同一批诊断事件）" />
+        <log:LogView Grid.Row="1" Margin="0 8 0 0" FontFamily="Consolas" FontSize="12"
+                     MinimumLevel="Trace" MaximumLevel="Critical" MaxDisplayCount="1500" />
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="3" Margin="0 10 0 0" Padding="10" Background="#F2F4F7" CornerRadius="6">
+      <TextBlock x:Name="StatusText" Text="切换模板或点击按钮，随后对照 LogView 与 Serilog 文件。" TextWrapping="Wrap" />
+    </Border>
+  </Grid>
+</Window>

@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 if "%~1"=="" (
-    set "project_paths=src\ConsoleLogDemo src\AvaloniaLogDemo"
+    set "project_paths=src\ConsoleDemo src\LogViewDemo"
 ) else (
     set "project_paths=%~1"
 )
@@ -87,7 +87,7 @@ for %%p in (%platforms%) do (
             echo Publish profile not found, falling back to CLI publish options: !publish_profile!
             set "publish_args=-c Release -f !project_tfm! -r !rid! --self-contained true -o ""!publish_output!"""
             set "publish_args=!publish_args! /p:PublishSingleFile=true /p:PublishReadyToRun=true /p:PublishTrimmed=true"
-            if /i "!project_name!"=="AvaloniaLogDemo" (
+            if /i "!project_name!"=="LogViewDemo" (
                 set "publish_args=!publish_args! /p:IsTrimmable=true /p:TrimMode=partial"
                 set "publish_args=!publish_args! /p:TrimIncludeTestAssemblies=false /p:DebugType=none /p:DebugSymbols=false"
                 set "publish_args=!publish_args! /p:PublishReadyToRunShowWarnings=false /p:EnableCompiledBindings=true"

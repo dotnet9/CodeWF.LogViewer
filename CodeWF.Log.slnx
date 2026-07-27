@@ -1,11 +1,10 @@
 <Solution>
   <Folder Name="/Demo/">
-    <Project Path="src/AvaloniaLogDemo/AvaloniaLogDemo.csproj" />
-    <Project Path="src/ConsoleLogDemo/ConsoleLogDemo.csproj" />
-    <Project Path="src/FileNotificationAvaloniaDemo/FileNotificationAvaloniaDemo.csproj" />
-    <Project Path="src/MicrosoftLoggingAvaloniaDemo/MicrosoftLoggingAvaloniaDemo.csproj" />
-    <Project Path="src/MicrosoftLoggingWebApiDemo/MicrosoftLoggingWebApiDemo.csproj" />
-    <Project Path="src/MultiProviderAvaloniaDemo/MultiProviderAvaloniaDemo.csproj" />
+    <Project Path="src/ConsoleDemo/ConsoleDemo.csproj" />
+    <Project Path="src/FileNotifyDemo/FileNotifyDemo.csproj" />
+    <Project Path="src/LogViewDemo/LogViewDemo.csproj" />
+    <Project Path="src/SerilogDemo/SerilogDemo.csproj" />
+    <Project Path="src/WebApiDemo/WebApiDemo.csproj" />
   </Folder>
   <Folder Name="/Solution Files/">
     <File Path=".gitignore" />
@@ -18,6 +17,7 @@
     <File Path="publish_all.bat" />
     <File Path="publish_win-x64.bat" />
     <File Path="README.md" />
+    <File Path="doc/CodeWF.Log设计.md" />
     <File Path="SetPlatformMacro.ps1" />
     <File Path="UpdateAssemblyVersion.ps1" />
   </Folder>

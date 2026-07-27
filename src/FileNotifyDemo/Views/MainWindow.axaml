@@ -1,0 +1,73 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        x:Class="FileNotifyDemo.Views.MainWindow"
+        mc:Ignorable="d"
+        d:DesignWidth="780"
+        d:DesignHeight="520"
+        Width="780"
+        Height="520"
+        MinWidth="680"
+        MinHeight="460"
+        Icon="/Assets/logo.ico"
+        Title="CodeWF 文件日志与重要通知 Demo">
+
+  <Window.Styles>
+    <Style Selector="Border.card">
+      <Setter Property="BorderBrush" Value="#D0D7DE" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="16" />
+    </Style>
+    <Style Selector="Button.action">
+      <Setter Property="Padding" Value="14 9" />
+      <Setter Property="Margin" Value="0 0 10 10" />
+    </Style>
+  </Window.Styles>
+
+  <ScrollViewer>
+    <StackPanel Margin="20" Spacing="14">
+      <TextBlock FontSize="24" FontWeight="SemiBold" Text="不使用 LogView 的日志场景" />
+      <TextBlock Foreground="#475467" TextWrapping="Wrap"
+                 Text="本窗口没有 LogView。CodeWF 只负责写日志文件，并在调用方显式请求且级别达到 Error 时显示桌面通知。" />
+
+      <Border Classes="card">
+        <StackPanel Spacing="8">
+          <TextBlock FontSize="16" FontWeight="SemiBold" Text="当前配置" />
+          <TextBlock Text="文件输出：开启" />
+          <TextBlock Text="控制台输出：关闭" />
+          <TextBlock Text="通知模式：DesktopWindow" />
+          <TextBlock Text="通知最低级别：Error" />
+          <TextBlock x:Name="LogDirectoryText" TextWrapping="Wrap" />
+          <WrapPanel Margin="0 6 0 0">
+            <TextBlock Margin="0 0 8 0" VerticalAlignment="Center" Text="文件格式" />
+            <ComboBox x:Name="FileTemplateBox" Width="150"
+                      SelectionChanged="FileTemplateBox_OnSelectionChanged">
+              <ComboBoxItem Content="简洁" />
+              <ComboBoxItem Content="完整上下文" />
+            </ComboBox>
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock FontSize="16" FontWeight="SemiBold" Text="通知条件对比" />
+          <TextBlock Foreground="#475467" TextWrapping="Wrap"
+                     Text="三次操作都会写入日志文件；只有第二个按钮同时满足“显式请求通知”和“达到 Error 级别”。" />
+          <WrapPanel>
+            <Button Classes="action" Content="Error（仅写日志）" Click="WriteErrorOnly_OnClick" />
+            <Button Classes="action" Content="Error（写日志 + 请求通知）" Click="WriteImportantError_OnClick" />
+            <Button Classes="action" Content="Warning（请求通知但低于阈值）" Click="WriteWarningNotification_OnClick" />
+          </WrapPanel>
+          <Button Classes="action" HorizontalAlignment="Left" Content="打开日志目录" Click="OpenLogDirectory_OnClick" />
+        </StackPanel>
+      </Border>
+
+      <Border Padding="12" Background="#F2F4F7" CornerRadius="6">
+        <TextBlock x:Name="StatusText" Text="等待操作。" TextWrapping="Wrap" />
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</Window>

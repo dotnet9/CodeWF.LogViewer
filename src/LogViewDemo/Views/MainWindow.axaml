@@ -1,0 +1,95 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:log="https://codewf.com"
+        x:Class="LogViewDemo.Views.MainWindow"
+        mc:Ignorable="d"
+        Width="1200" Height="760" MinWidth="900" MinHeight="620"
+        Icon="/Assets/logo.ico"
+        Title="CodeWF 多 LogView Demo">
+  <Window.Styles>
+    <Style Selector="Border.panel">
+      <Setter Property="BorderBrush" Value="#D0D7DE" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Padding" Value="12" />
+    </Style>
+    <Style Selector="Button.action">
+      <Setter Property="Padding" Value="11 7" />
+      <Setter Property="Margin" Value="0 0 8 8" />
+    </Style>
+  </Window.Styles>
+
+  <Grid Margin="14" RowDefinitions="Auto,Auto,*,Auto">
+    <StackPanel Spacing="3">
+      <TextBlock FontSize="21" FontWeight="SemiBold" Text="一个事件源，三个分级 LogView" />
+      <TextBlock Foreground="#667085" Text="选择模板、点击场景按钮，即可对比完整事件在不同视图、文件和通知中的表现。" />
+    </StackPanel>
+
+    <Border Grid.Row="1" Classes="panel" Margin="0 12 0 10">
+      <StackPanel Spacing="10">
+        <WrapPanel VerticalAlignment="Center">
+          <TextBlock Margin="0 0 6 0" VerticalAlignment="Center" Text="界面格式" />
+          <ComboBox x:Name="LineTemplateBox" Width="140" Margin="0 0 18 0"
+                    SelectionChanged="LineTemplateBox_OnSelectionChanged">
+            <ComboBoxItem Content="简洁" />
+            <ComboBoxItem Content="完整上下文" />
+          </ComboBox>
+          <TextBlock Margin="0 0 6 0" VerticalAlignment="Center" Text="文件格式" />
+          <ComboBox x:Name="FileTemplateBox" Width="140" Margin="0 0 18 0"
+                    SelectionChanged="FileTemplateBox_OnSelectionChanged">
+            <ComboBoxItem Content="诊断" />
+            <ComboBoxItem Content="完整上下文" />
+          </ComboBox>
+          <TextBlock Margin="0 0 6 0" VerticalAlignment="Center" Text="通知" />
+          <ComboBox x:Name="NotificationModeBox" Width="160"
+                    SelectionChanged="NotificationModeBox_OnSelectionChanged">
+            <ComboBoxItem Content="关闭" />
+            <ComboBoxItem Content="应用内" />
+            <ComboBoxItem Content="桌面窗口" />
+          </ComboBox>
+        </WrapPanel>
+        <WrapPanel>
+          <Button Classes="action" Content="输出全部级别" Click="WriteAllLevels_OnClick" />
+          <Button Classes="action" Content="Message / UserMessage" Click="WriteMessageComparison_OnClick" />
+          <Button Classes="action" Content="上下文 + 异常" Click="WriteContext_OnClick" />
+          <Button Classes="action" Content="Error（仅日志）" Tag="False" Click="WriteNotificationError_OnClick" />
+          <Button Classes="action" Content="Error（请求通知）" Tag="True" Click="WriteNotificationError_OnClick" />
+          <Button Classes="action" Content="批量 120 条" Click="WriteBurst_OnClick" />
+          <Button Classes="action" Content="打开日志目录" Click="OpenLogDirectory_OnClick" />
+        </WrapPanel>
+      </StackPanel>
+    </Border>
+
+    <Grid Grid.Row="2" ColumnDefinitions="2*,*" ColumnSpacing="10">
+      <Border Classes="panel">
+        <Grid RowDefinitions="Auto,*">
+          <TextBlock FontWeight="SemiBold" Text="全部事件（Trace ～ Critical）" />
+          <log:LogView Grid.Row="1" Margin="0 8 0 0" FontFamily="Consolas" FontSize="12"
+                       MinimumLevel="Trace" MaximumLevel="Critical" MaxDisplayCount="1200" />
+        </Grid>
+      </Border>
+      <Grid Grid.Column="1" RowDefinitions="*,*" RowSpacing="10">
+        <Border Classes="panel">
+          <Grid RowDefinitions="Auto,*">
+            <TextBlock FontWeight="SemiBold" Text="仅 Information" />
+            <log:LogView Grid.Row="1" Margin="0 8 0 0" FontFamily="Consolas" FontSize="12"
+                         MinimumLevel="Information" MaximumLevel="Information" />
+          </Grid>
+        </Border>
+        <Border Grid.Row="1" Classes="panel">
+          <Grid RowDefinitions="Auto,*">
+            <TextBlock FontWeight="SemiBold" Text="Warning ～ Critical" />
+            <log:LogView Grid.Row="1" Margin="0 8 0 0" FontFamily="Consolas" FontSize="12"
+                         MinimumLevel="Warning" MaximumLevel="Critical" />
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+
+    <Border Grid.Row="3" Margin="0 10 0 0" Padding="10" Background="#F2F4F7" CornerRadius="6">
+      <TextBlock x:Name="StatusText" Text="请选择模板或点击场景按钮。" TextWrapping="Wrap" />
+    </Border>
+  </Grid>
+</Window>
