@@ -5,35 +5,56 @@
 [![NuGet](https://img.shields.io/nuget/v/CodeWF.Log.Avalonia.svg)](https://www.nuget.org/packages/CodeWF.Log.Avalonia/)
 [![License](https://img.shields.io/github/license/dotnet9/CodeWF.LogViewer)](LICENSE)
 
-CodeWF.Log 是面向 .NET 和 Avalonia 的轻量日志组件，提供文件/控制台输出、显式申请的重要日志通知，以及可选的 `LogView`。新版本以 `Microsoft.Extensions.Logging` 为主入口，同时保留 `Logger.Info/Warn/Error/Fatal`、`Logger.*ToFile` 等静态 API；不需要界面日志的应用无需放置 `LogView`。
+CodeWF.Log 是面向 .NET 和 Avalonia 的轻量日志组件，按“核心日志、标准日志适配、Avalonia UI”拆分为三个包。纯控制台或单体程序只安装核心包；需要 `Microsoft.Extensions.Logging` 或联合 Serilog 等第三方日志组件时安装适配包；只有需要 Avalonia 日志视图或重要日志弹窗时才安装 UI 包。
 
 完整设计约束见 [CodeWF.Log 设计](doc/CodeWF.Log设计.md)。
 
-## Packages
+## 如何选择 NuGet 包
 
-| Package | Purpose | Targets |
+先按项目类型选择，不需要一次安装全部三个包：
+
+| 项目类型 | 安装包 | 主要能力 |
 | --- | --- | --- |
-| `CodeWF.Log.Core` | 文件/控制台日志、完整事件 Feed、静态 `Logger` API | `net10.0` |
-| `CodeWF.Log.Extensions.Logging` | `Microsoft.Extensions.Logging` Provider 和 `AddCodeWF()` | `net10.0` |
-| `CodeWF.Log.Avalonia` | 可独立使用的日志通知，以及可选的 `LogView` | `net10.0` |
+| 控制台、工具或不使用 Host/DI 的无 HMI 单体程序 | `CodeWF.Log.Core` | 静态 `Logger`、控制台输出、文件记录和文件轮转；不包含 Avalonia、`LogView` 或桌面弹窗 |
+| ASP.NET Core、Generic Host、依赖注入项目 | `CodeWF.Log.Extensions.Logging` | `Microsoft.Extensions.Logging` Provider、`AddCodeWF()`、结构化日志、Scope 和 Activity；自动依赖 Core |
+| 已使用 Serilog 等第三方日志组件 | `CodeWF.Log.Extensions.Logging` | 通过 MEL 统一编排多个 Provider；Serilog 等第三方组件仍需安装各自的适配包 |
+| Avalonia 项目，只使用静态 `Logger`，需要 `LogView` 或重要日志弹窗 | `CodeWF.Log.Avalonia` | Avalonia 日志视图和桌面通知；自动依赖 Core，不强制使用 MEL |
+| Avalonia 项目，使用 `ILogger<T>`、DI 或联合 Serilog | `CodeWF.Log.Avalonia` + `CodeWF.Log.Extensions.Logging` | 同时获得 Avalonia UI、桌面通知和标准日志生态集成 |
+
+安装示例：
+
+```shell
+# 纯控制台/文件日志
+dotnet add package CodeWF.Log.Core
+
+# Microsoft.Extensions.Logging、Host、Web API 或第三方 Provider 编排
+dotnet add package CodeWF.Log.Extensions.Logging
+
+# Avalonia LogView 或重要日志弹窗
+dotnet add package CodeWF.Log.Avalonia
+```
+
+`CodeWF.Log.Extensions.Logging` 和 `CodeWF.Log.Avalonia` 都依赖 `CodeWF.Log.Core`，但二者相互独立。纯 Avalonia 静态 API 场景可以只安装 `CodeWF.Log.Avalonia`；Avalonia + MEL/Serilog 场景需要同时安装后两个包。
+
+三个包当前均面向 `net10.0`。
 
 运行 `pack.bat` 可将三个包输出到 `artifacts/packages`。
 
-### 五种典型使用示例
+### 按场景选择示例
 
 | # | 场景 | 需要的包/能力 | Demo |
 | --- | --- | --- | --- |
 | 1 | Console + File | 只引用 `CodeWF.Log.Core`；关闭 EventFeed，不包含 Avalonia、LogView 或通知 | `ConsoleDemo` |
-| 2 | 多 Avalonia LogView + File + 通知 | 三个分级 LogView、文件输出、模板切换和显式通知，使用 MEL/DI | `LogViewDemo` |
-| 3 | 无 Avalonia LogView + File + 通知 | 保持 EventFeed 开启供通知订阅，但窗口中不放置 LogView | `FileNotifyDemo` |
-| 4 | 配合 Serilog 使用 | Serilog 负责文件/控制台，CodeWF 只启用 EventFeed、LogView 和通知 | `SerilogDemo` |
-| 5 | Web API | `CodeWF.Log.Core` + `CodeWF.Log.Extensions.Logging`，通过 `AddCodeWF()` 接入 MEL | `WebApiDemo` |
+| 2 | 多 Avalonia LogView + File + 通知 | `CodeWF.Log.Avalonia` + `CodeWF.Log.Extensions.Logging`；三个分级 LogView、模板切换和显式通知 | `LogViewDemo` |
+| 3 | 无 Avalonia LogView + File + 通知 | `CodeWF.Log.Avalonia` + `CodeWF.Log.Extensions.Logging`；保留通知能力但不放置 LogView | `FileNotifyDemo` |
+| 4 | 配合 Serilog 使用 | `CodeWF.Log.Avalonia` + `CodeWF.Log.Extensions.Logging`；Serilog 负责文件/控制台，CodeWF 负责 LogView 和通知 | `SerilogDemo` |
+| 5 | Web API | 只需直接安装 `CodeWF.Log.Extensions.Logging`，通过 `AddCodeWF()` 接入 MEL | `WebApiDemo` |
 
 `ConsoleDemo` 是最小依赖场景：日志组件只做核心 Console/File Pipeline，不会加载 Avalonia，也没有产生系统弹窗的通道。
 
 ## Microsoft.Extensions.Logging
 
-推荐新项目使用标准 .NET 日志入口：
+安装 `CodeWF.Log.Extensions.Logging` 后，通过标准 .NET 日志入口注册：
 
 ```csharp
 builder.Logging.AddCodeWF();
@@ -124,9 +145,9 @@ logger.LogUserError(
     taskPath);
 ```
 
-## Legacy Static API
+## Core 静态 API（无 Host 场景）
 
-非 Host 场景仍可使用 `Logger.Initialize(...)`：
+控制台、工具和其他非 Host 场景可直接使用 `Logger.Initialize(...)`，无需安装 `CodeWF.Log.Extensions.Logging`：
 
 ```csharp
 Logger.Initialize(new LoggerOptions
@@ -158,7 +179,10 @@ await Logger.ShutdownAsync();
 
 ## Avalonia
 
-日志通知和 `LogView` 是两项独立能力。只需要“日志文件 + 重要日志桌面通知”的应用仍需引用 `CodeWF.Log.Extensions.Logging` 和 `CodeWF.Log.Avalonia`，但窗口中不需要 `<log:LogView />`。
+`CodeWF.Log.Avalonia` 提供日志通知和 `LogView`，两项能力相互独立。只需要“日志文件 + 重要日志桌面通知”的应用不必在窗口中放置 `<log:LogView />`。
+
+- 使用静态 `Logger` 时，只安装 `CodeWF.Log.Avalonia` 即可，它会自动依赖 Core。
+- 使用 `ILogger<T>`、依赖注入或联合 Serilog 时，同时安装 `CodeWF.Log.Extensions.Logging` 和 `CodeWF.Log.Avalonia`。
 
 ### 文件日志 + 重要通知（无 LogView）
 
