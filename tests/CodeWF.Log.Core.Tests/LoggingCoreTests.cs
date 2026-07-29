@@ -58,6 +58,37 @@ public sealed class LoggingCoreTests
     }
 
     [Fact]
+    public void Formatter_ReusesCompiledTemplatePlanConcurrently()
+    {
+        var logEvent = CreateEvent() with { Message = "diagnostic", UserMessage = "friendly" };
+        var template = string.Concat("{Timestamp:HH:mm:ss} ", "【{Level:zh}】 {UserMessage}{NewLine}");
+        Assert.True(LogTemplateFormatter.TryValidate(template, out var error), error);
+        var compiled = LogTemplateFormatter.GetCompiledTemplate(template);
+        var expected = LogTemplateFormatter.Format(logEvent, template, "O");
+
+        Parallel.For(0, 1_000, _ =>
+        {
+            Assert.Same(compiled, LogTemplateFormatter.GetCompiledTemplate(template));
+            Assert.Equal(expected, LogTemplateFormatter.Format(logEvent, template, "O"));
+        });
+    }
+
+    [Fact]
+    public void Formatter_CompiledPlanPreservesLenientLiteralBehavior()
+    {
+        var logEvent = CreateEvent() with { Message = "diagnostic" };
+        const string template = "{{literal}}|{Message}|{Unknown}|tail{}";
+
+        var formatted = LogTemplateFormatter.Format(logEvent, template, "O");
+        var segmented = string.Concat(LogTemplateFormatter
+            .FormatSegments(logEvent, template, "O")
+            .Select(segment => segment.Text));
+
+        Assert.Equal("{literal}|diagnostic|{Unknown}|tail{}", formatted);
+        Assert.Equal(formatted, segmented);
+    }
+
+    [Fact]
     public void Formatter_FormatsCompleteEventFields()
     {
         var logEvent = CreateEvent() with

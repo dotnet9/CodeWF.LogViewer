@@ -1,11 +1,9 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Documents;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
-using Avalonia.Media;
 using Avalonia.Threading;
 using CodeWF.Log.Avalonia.Extensions;
 using CodeWF.Log.Avalonia.Platform;
@@ -40,18 +38,8 @@ public partial class LogView : UserControl
     public static readonly StyledProperty<string?> LogDirectoryProperty =
         AvaloniaProperty.Register<LogView, string?>(nameof(LogDirectory));
 
-    private const string LevelOpeningDelimiters = "[【(（<《";
-    private const string LevelClosingDelimiters = "]】)）>》:：";
-
-    private static readonly SolidColorBrush TimestampBrush = new(Color.Parse("#8C8C8C"));
-    private static readonly SolidColorBrush ContentBrush = new(Color.Parse("#262626"));
-    private static readonly SolidColorBrush DebugBrush = new(Color.Parse("#1890FF"));
-    private static readonly SolidColorBrush InfoBrush = new(Color.Parse("#52C41A"));
-    private static readonly SolidColorBrush WarnBrush = new(Color.Parse("#FAAD14"));
-    private static readonly SolidColorBrush ErrorBrush = new(Color.Parse("#FF4D4F"));
-    private static readonly SolidColorBrush DefaultBrush = new(Color.Parse("#262626"));
-
     private readonly List<CodeWFLogEvent> _entries = [];
+    private readonly LogViewInlineRenderer _inlineRenderer = new();
     private IClipboard? _clipboard;
     private ContextMenu _contextMenu = null!;
     private ScrollViewer _scrollViewer = null!;
@@ -129,7 +117,7 @@ public partial class LogView : UserControl
     private void ReceiveEntries(IReadOnlyList<CodeWFLogEvent> entries)
     {
         var changed = false;
-        foreach (var entry in entries.OrderBy(entry => entry.Sequence))
+        foreach (var entry in entries)
         {
             _latestSequence = Math.Max(_latestSequence, entry.Sequence);
             if (entry.Sequence <= _clearSequence || !Accepts(entry)) continue;
@@ -138,8 +126,7 @@ public partial class LogView : UserControl
             changed = true;
         }
         if (!changed) return;
-        TrimEntries();
-        RenderEntries();
+        SynchronizeRenderedEntries(TrimEntries());
     }
 
     private void RebuildFromRecentEntries()
@@ -149,91 +136,46 @@ public partial class LogView : UserControl
         _latestSequence = Math.Max(_latestSequence, recent.LastOrDefault()?.Sequence ?? 0);
         _entries.Clear();
         _entries.AddRange(recent.Where(entry => entry.Sequence > _clearSequence && Accepts(entry)));
-        TrimEntries();
+        _ = TrimEntries();
         RenderEntries();
     }
 
     private bool Accepts(CodeWFLogEvent entry) =>
         MinimumLevel <= MaximumLevel && entry.Level >= MinimumLevel && entry.Level <= MaximumLevel;
 
-    private void TrimEntries()
+    private int TrimEntries()
     {
         var maxCount = Math.Max(1, MaxDisplayCount);
-        if (_entries.Count > maxCount) _entries.RemoveRange(0, _entries.Count - maxCount);
+        var removeCount = Math.Max(0, _entries.Count - maxCount);
+        if (removeCount > 0) _entries.RemoveRange(0, removeCount);
+        return removeCount;
+    }
+
+    private void SynchronizeRenderedEntries(int removedEntryCount)
+    {
+        if (_textView.Inlines is not { } inlines) return;
+        var isAtBottom = _scrollViewer.IsAtVerticalBottom();
+        var template = _resolvedSource?.LineTemplate.Current ?? LineTemplateController.DefaultTemplate;
+        _inlineRenderer.Synchronize(
+            inlines,
+            _entries,
+            removedEntryCount,
+            template,
+            NormalizeTimestampFormat(TimestampFormat));
+        if (isAtBottom) _scrollViewer.ScrollToEnd();
     }
 
     private void RenderEntries()
     {
         if (_textView.Inlines is not { } inlines) return;
         var isAtBottom = _scrollViewer.IsAtVerticalBottom();
-        inlines.Clear();
         var template = _resolvedSource?.LineTemplate.Current ?? LineTemplateController.DefaultTemplate;
-        foreach (var entry in _entries)
-        {
-            var segments = LogTemplateFormatter.FormatSegments(
-                entry,
-                template,
-                NormalizeTimestampFormat(TimestampFormat));
-            for (var index = 0; index < segments.Count; index++)
-            {
-                AddSegmentRuns(inlines, segments, index, entry.Level);
-            }
-        }
+        _inlineRenderer.Rebuild(
+            inlines,
+            _entries,
+            template,
+            NormalizeTimestampFormat(TimestampFormat));
         if (isAtBottom) _scrollViewer.ScrollToEnd();
-    }
-
-    private static void AddSegmentRuns(
-        InlineCollection inlines,
-        IReadOnlyList<LogTemplateSegment> segments,
-        int index,
-        LogLevel level)
-    {
-        var segment = segments[index];
-        if (segment.Text.Length == 0) return;
-
-        if (segment.TokenName == "Timestamp")
-        {
-            AddRun(inlines, segment.Text, TimestampBrush);
-            return;
-        }
-
-        if (segment.TokenName == "Level" || IsLevelDecoration(segments, index))
-        {
-            AddRun(
-                inlines,
-                segment.Text,
-                GetLevelForeground(level),
-                level == LogLevel.Critical ? FontWeight.Bold : FontWeight.Normal);
-            return;
-        }
-
-        AddRun(inlines, segment.Text, ContentBrush);
-    }
-
-    private static bool IsLevelDecoration(IReadOnlyList<LogTemplateSegment> segments, int index)
-    {
-        var text = segments[index].Text.Trim();
-        if (text.Length == 0) return false;
-
-        var followsLevel = index > 0 && segments[index - 1].TokenName == "Level";
-        var precedesLevel = index + 1 < segments.Count && segments[index + 1].TokenName == "Level";
-        return followsLevel && text.All(LevelClosingDelimiters.Contains) ||
-               precedesLevel && text.All(LevelOpeningDelimiters.Contains);
-    }
-
-    private static void AddRun(
-        InlineCollection inlines,
-        string text,
-        IBrush foreground,
-        FontWeight? fontWeight = null)
-    {
-        if (text.Length == 0) return;
-        inlines.Add(new Run(text)
-        {
-            Foreground = foreground,
-            FontWeight = fontWeight ?? FontWeight.Normal,
-            BaselineAlignment = BaselineAlignment.Center
-        });
     }
 
     private void UpdateLogLineHeight()
@@ -245,14 +187,6 @@ public partial class LogView : UserControl
     private static TimeSpan NormalizeRefreshInterval(TimeSpan interval) =>
         interval <= TimeSpan.Zero ? DefaultRefreshInterval : interval > MaximumRefreshInterval ? MaximumRefreshInterval : interval;
     private static string NormalizeTimestampFormat(string? value) => string.IsNullOrWhiteSpace(value) ? "yyyy-MM-dd HH:mm:ss.fff" : value;
-    private static IBrush GetLevelForeground(LogLevel level) => level switch
-    {
-        LogLevel.Trace or LogLevel.Debug => DebugBrush,
-        LogLevel.Information => InfoBrush,
-        LogLevel.Warning => WarnBrush,
-        LogLevel.Error or LogLevel.Critical => ErrorBrush,
-        _ => DefaultBrush
-    };
 
     private async void Copy_OnClick(object? sender, RoutedEventArgs e)
     {
@@ -264,7 +198,7 @@ public partial class LogView : UserControl
     {
         _clearSequence = Math.Max(_clearSequence, _latestSequence);
         _entries.Clear();
-        _textView.Inlines?.Clear();
+        if (_textView.Inlines is { } inlines) _inlineRenderer.Clear(inlines);
     }
 
     private void Location_OnClick(object? sender, RoutedEventArgs e)

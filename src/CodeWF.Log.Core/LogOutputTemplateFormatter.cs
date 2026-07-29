@@ -1,6 +1,7 @@
 using CodeWF.Log.Core.Extensions;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace CodeWF.Log.Core;
@@ -14,39 +15,17 @@ public static class LogTemplateFormatter
         "TraceId", "SpanId", "ParentId", "TraceState", "TraceFlags", "ActivityTags",
         "ActivityBaggage", "Exception", "NewLine"
     ];
+    private static readonly ConditionalWeakTable<string, CompiledLogTemplate> CompiledTemplates = new();
 
     public static string Format(CodeWFLogEvent logEvent, string outputTemplate, string fallbackTimestampFormat)
     {
+        var template = GetCompiledTemplate(outputTemplate);
         var builder = new StringBuilder(outputTemplate.Length + logEvent.Message.Length + 32);
-        for (var index = 0; index < outputTemplate.Length; index++)
+        foreach (var part in template.Parts)
         {
-            var current = outputTemplate[index];
-            if (current == '{')
-            {
-                if (index + 1 < outputTemplate.Length && outputTemplate[index + 1] == '{')
-                {
-                    builder.Append('{');
-                    index++;
-                    continue;
-                }
-
-                var end = outputTemplate.IndexOf('}', index + 1);
-                if (end > index)
-                {
-                    AppendToken(builder, logEvent, outputTemplate[(index + 1)..end], fallbackTimestampFormat);
-                    index = end;
-                    continue;
-                }
-            }
-
-            if (current == '}' && index + 1 < outputTemplate.Length && outputTemplate[index + 1] == '}')
-            {
-                builder.Append('}');
-                index++;
-                continue;
-            }
-
-            builder.Append(current);
+            builder.Append(part.TokenName is null
+                ? part.Text
+                : FormatToken(logEvent, part, fallbackTimestampFormat));
         }
 
         return builder.ToString();
@@ -57,45 +36,17 @@ public static class LogTemplateFormatter
         string outputTemplate,
         string fallbackTimestampFormat)
     {
-        var segments = new List<LogTemplateSegment>();
-        var literal = new StringBuilder();
-        for (var index = 0; index < outputTemplate.Length; index++)
+        var template = GetCompiledTemplate(outputTemplate);
+        var segments = new List<LogTemplateSegment>(template.Parts.Length);
+        foreach (var part in template.Parts)
         {
-            var current = outputTemplate[index];
-            if (current == '{')
-            {
-                if (index + 1 < outputTemplate.Length && outputTemplate[index + 1] == '{')
-                {
-                    literal.Append('{');
-                    index++;
-                    continue;
-                }
-
-                var end = outputTemplate.IndexOf('}', index + 1);
-                if (end > index)
-                {
-                    AddLiteralSegment(segments, literal);
-                    var token = outputTemplate[(index + 1)..end];
-                    var (name, _) = SplitToken(token);
-                    var tokenText = new StringBuilder();
-                    AppendToken(tokenText, logEvent, token, fallbackTimestampFormat);
-                    segments.Add(new LogTemplateSegment(tokenText.ToString(), name));
-                    index = end;
-                    continue;
-                }
-            }
-
-            if (current == '}' && index + 1 < outputTemplate.Length && outputTemplate[index + 1] == '}')
-            {
-                literal.Append('}');
-                index++;
-                continue;
-            }
-
-            literal.Append(current);
+            segments.Add(new LogTemplateSegment(
+                part.TokenName is null
+                    ? part.Text
+                    : FormatToken(logEvent, part, fallbackTimestampFormat),
+                part.TokenName));
         }
 
-        AddLiteralSegment(segments, literal);
         return segments;
     }
 
@@ -154,6 +105,7 @@ public static class LogTemplateFormatter
             return false;
         }
 
+        _ = GetCompiledTemplate(template);
         error = null;
         return true;
     }
@@ -188,17 +140,21 @@ public static class LogTemplateFormatter
         return string.Join(" ", parts);
     }
 
-    private static void AppendToken(
-        StringBuilder builder,
+    internal static CompiledLogTemplate GetCompiledTemplate(string template)
+    {
+        ArgumentNullException.ThrowIfNull(template);
+        return CompiledTemplates.GetValue(template, static value => Compile(value));
+    }
+
+    private static string FormatToken(
         CodeWFLogEvent logEvent,
-        string token,
+        TemplatePart token,
         string fallbackTimestampFormat)
     {
-        var (name, format) = SplitToken(token);
-        builder.Append(name switch
+        return token.TokenName switch
         {
-            "Timestamp" => FormatTimestamp(logEvent.Timestamp, format, fallbackTimestampFormat),
-            "Level" => FormatLevel(logEvent.Level, format),
+            "Timestamp" => FormatTimestamp(logEvent.Timestamp, token.Format, fallbackTimestampFormat),
+            "Level" => FormatLevel(logEvent.Level, token.Format),
             "Category" or "CategoryName" => logEvent.CategoryName,
             "EventId" => FormatEventId(logEvent.EventId),
             "EventName" => logEvent.EventId.Name,
@@ -214,21 +170,70 @@ public static class LogTemplateFormatter
             "SpanId" => logEvent.SpanId,
             "ParentId" => logEvent.ParentId,
             "TraceState" => logEvent.TraceState,
-            "TraceFlags" => logEvent.TraceFlags,
+            "TraceFlags" => logEvent.TraceFlags.ToString(),
             "ActivityTags" => FormatProperties(logEvent.ActivityTags),
             "ActivityBaggage" => FormatProperties(logEvent.ActivityBaggage),
             "Exception" => logEvent.Exception?.ToString(),
             "NewLine" => Environment.NewLine,
-            _ => "{" + token + "}"
-        });
+            _ => "{" + token.Text + "}"
+        } ?? string.Empty;
     }
 
-    private static void AddLiteralSegment(List<LogTemplateSegment> segments, StringBuilder literal)
+    private static CompiledLogTemplate Compile(string template)
+    {
+        var parts = new List<TemplatePart>();
+        var literal = new StringBuilder();
+        for (var index = 0; index < template.Length; index++)
+        {
+            var current = template[index];
+            if (current == '{')
+            {
+                if (index + 1 < template.Length && template[index + 1] == '{')
+                {
+                    literal.Append('{');
+                    index++;
+                    continue;
+                }
+
+                var end = template.IndexOf('}', index + 1);
+                if (end > index)
+                {
+                    AddLiteralPart(parts, literal);
+                    var rawToken = template[(index + 1)..end];
+                    var (name, format) = SplitToken(rawToken);
+                    parts.Add(new TemplatePart(rawToken, name, format));
+                    index = end;
+                    continue;
+                }
+            }
+
+            if (current == '}' && index + 1 < template.Length && template[index + 1] == '}')
+            {
+                literal.Append('}');
+                index++;
+                continue;
+            }
+
+            literal.Append(current);
+        }
+
+        AddLiteralPart(parts, literal);
+        return new CompiledLogTemplate(parts.ToArray());
+    }
+
+    private static void AddLiteralPart(List<TemplatePart> parts, StringBuilder literal)
     {
         if (literal.Length == 0) return;
-        segments.Add(new LogTemplateSegment(literal.ToString(), null));
+        parts.Add(new TemplatePart(literal.ToString(), null, null));
         literal.Clear();
     }
+
+    internal sealed class CompiledLogTemplate(TemplatePart[] parts)
+    {
+        internal TemplatePart[] Parts { get; } = parts;
+    }
+
+    internal readonly record struct TemplatePart(string Text, string? TokenName, string? Format);
 
     private static (string Name, string? Format) SplitToken(string token)
     {
