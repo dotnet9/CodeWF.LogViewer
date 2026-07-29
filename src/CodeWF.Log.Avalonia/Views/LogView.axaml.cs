@@ -40,6 +40,11 @@ public partial class LogView : UserControl
     public static readonly StyledProperty<string?> LogDirectoryProperty =
         AvaloniaProperty.Register<LogView, string?>(nameof(LogDirectory));
 
+    private const string LevelOpeningDelimiters = "[【(（<《";
+    private const string LevelClosingDelimiters = "]】)）>》:：";
+
+    private static readonly SolidColorBrush TimestampBrush = new(Color.Parse("#8C8C8C"));
+    private static readonly SolidColorBrush ContentBrush = new(Color.Parse("#262626"));
     private static readonly SolidColorBrush DebugBrush = new(Color.Parse("#1890FF"));
     private static readonly SolidColorBrush InfoBrush = new(Color.Parse("#52C41A"));
     private static readonly SolidColorBrush WarnBrush = new(Color.Parse("#FAAD14"));
@@ -165,14 +170,70 @@ public partial class LogView : UserControl
         var template = _resolvedSource?.LineTemplate.Current ?? LineTemplateController.DefaultTemplate;
         foreach (var entry in _entries)
         {
-            inlines.Add(new Run(LogTemplateFormatter.Format(entry, template, NormalizeTimestampFormat(TimestampFormat)))
+            var segments = LogTemplateFormatter.FormatSegments(
+                entry,
+                template,
+                NormalizeTimestampFormat(TimestampFormat));
+            for (var index = 0; index < segments.Count; index++)
             {
-                Foreground = GetLevelForeground(entry.Level),
-                FontWeight = entry.Level == LogLevel.Critical ? FontWeight.Bold : FontWeight.Normal,
-                BaselineAlignment = BaselineAlignment.Center
-            });
+                AddSegmentRuns(inlines, segments, index, entry.Level);
+            }
         }
         if (isAtBottom) _scrollViewer.ScrollToEnd();
+    }
+
+    private static void AddSegmentRuns(
+        InlineCollection inlines,
+        IReadOnlyList<LogTemplateSegment> segments,
+        int index,
+        LogLevel level)
+    {
+        var segment = segments[index];
+        if (segment.Text.Length == 0) return;
+
+        if (segment.TokenName == "Timestamp")
+        {
+            AddRun(inlines, segment.Text, TimestampBrush);
+            return;
+        }
+
+        if (segment.TokenName == "Level" || IsLevelDecoration(segments, index))
+        {
+            AddRun(
+                inlines,
+                segment.Text,
+                GetLevelForeground(level),
+                level == LogLevel.Critical ? FontWeight.Bold : FontWeight.Normal);
+            return;
+        }
+
+        AddRun(inlines, segment.Text, ContentBrush);
+    }
+
+    private static bool IsLevelDecoration(IReadOnlyList<LogTemplateSegment> segments, int index)
+    {
+        var text = segments[index].Text.Trim();
+        if (text.Length == 0) return false;
+
+        var followsLevel = index > 0 && segments[index - 1].TokenName == "Level";
+        var precedesLevel = index + 1 < segments.Count && segments[index + 1].TokenName == "Level";
+        return followsLevel && text.All(LevelClosingDelimiters.Contains) ||
+               precedesLevel && text.All(LevelOpeningDelimiters.Contains);
+    }
+
+    private static void AddRun(
+        InlineCollection inlines,
+        string text,
+        IBrush foreground,
+        FontWeight? fontWeight = null)
+    {
+        if (text.Length == 0) return;
+        inlines.Add(new Run(text)
+        {
+            Foreground = foreground,
+            FontWeight = fontWeight ?? FontWeight.Normal,
+            BaselineAlignment = BaselineAlignment.Center
+        });
     }
 
     private void UpdateLogLineHeight()
