@@ -18,6 +18,7 @@
     <CornerRadius x:Key="CodeWFLogDesktopNotificationTitleBarCornerRadius">8 8 0 0</CornerRadius>
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationTitleForeground">#262626</SolidColorBrush>
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationContentForeground">#262626</SolidColorBrush>
+    <x:Double x:Key="CodeWFLogDesktopNotificationLevelSectionHeight">80</x:Double>
     <x:Double x:Key="CodeWFLogDesktopNotificationContentMaxHeight">190</x:Double>
     <SolidColorBrush x:Key="CodeWFLogDesktopNotificationMutedForeground">#8C8C8C</SolidColorBrush>
 
