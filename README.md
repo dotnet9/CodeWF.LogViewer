@@ -80,7 +80,7 @@ builder.Logging.AddCodeWF(options =>
         "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] ({Category}) {Message} {Properties}{NewLine}{Exception}";
 
     options.LineTemplate =
-        "{Timestamp:HH:mm:ss} [{Level:u3}] ({Category}) {UserMessage}{NewLine}";
+        "{Timestamp:HH:mm:ss} 【{Level:u3}】 ({Category}) {UserMessage}{NewLine}";
 
     options.Console.Enabled = false;
     options.Capture.Scopes = true;
@@ -113,7 +113,7 @@ builder.Logging.AddCodeWF(options =>
       "Console": {
         "Enabled": false
       },
-      "LineTemplate": "{Timestamp:HH:mm:ss} [{Level:u3}] ({Category}) {UserMessage}{NewLine}",
+      "LineTemplate": "{Timestamp:HH:mm:ss} 【{Level:u3}】 ({Category}) {UserMessage}{NewLine}",
       "EventFeed": {
         "Enabled": true,
         "RecentCapacity": 2000
@@ -131,7 +131,7 @@ builder.Logging.AddCodeWF(options =>
 {
     options.Console.Enabled = true;
     options.LineTemplate =
-        "{Timestamp:HH:mm:ss} [{Level:u3}] ({Category}) {UserMessage}{NewLine}";
+        "{Timestamp:HH:mm:ss} 【{Level:u3}】 ({Category}) {UserMessage}{NewLine}";
 });
 ```
 

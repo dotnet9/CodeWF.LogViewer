@@ -44,7 +44,7 @@ public sealed class LoggingCoreTests
     public void Formatter_SegmentsPreserveTemplateOutputAndTokenIdentity()
     {
         var logEvent = CreateEvent() with { Message = "diagnostic", UserMessage = "friendly" };
-        const string template = "{{prefix}} {Timestamp:HH:mm:ss} [{Level:zh}] {UserMessage}{NewLine}";
+        const string template = "{{prefix}} {Timestamp:HH:mm:ss} 【{Level:zh}】 {UserMessage}{NewLine}";
 
         var segments = LogTemplateFormatter.FormatSegments(logEvent, template, "O");
 
@@ -54,7 +54,7 @@ public sealed class LoggingCoreTests
         Assert.Equal("Timestamp", Assert.Single(segments, segment => segment.TokenName == "Timestamp").TokenName);
         Assert.Equal("Level", Assert.Single(segments, segment => segment.TokenName == "Level").TokenName);
         Assert.Equal("UserMessage", Assert.Single(segments, segment => segment.TokenName == "UserMessage").TokenName);
-        Assert.Contains(segments, segment => segment.TokenName is null && segment.Text.Contains("["));
+        Assert.Contains(segments, segment => segment.TokenName is null && segment.Text.Contains("【"));
     }
 
     [Fact]
@@ -81,6 +81,14 @@ public sealed class LoggingCoreTests
         Assert.Contains("scope", text);
         Assert.Contains("trace|span", text);
         Assert.Contains("InvalidOperationException", text);
+    }
+
+    [Fact]
+    public void LineTemplateController_DefaultUsesFullWidthLevelBrackets()
+    {
+        Assert.Equal(
+            "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} 【{Level:zh}】 {UserMessage}{NewLine}",
+            LineTemplateController.DefaultTemplate);
     }
 
     [Fact]

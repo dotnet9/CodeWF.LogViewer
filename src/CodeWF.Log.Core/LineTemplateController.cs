@@ -10,7 +10,7 @@ public interface ILineTemplateController
 public sealed class LineTemplateController : ILineTemplateController
 {
     public const string DefaultTemplate =
-        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:zh}] {UserMessage}{NewLine}";
+        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} 【{Level:zh}】 {UserMessage}{NewLine}";
 
     private string _current;
 
