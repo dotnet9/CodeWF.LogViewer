@@ -41,6 +41,23 @@ public sealed class LoggingCoreTests
     }
 
     [Fact]
+    public void Formatter_SegmentsPreserveTemplateOutputAndTokenIdentity()
+    {
+        var logEvent = CreateEvent() with { Message = "diagnostic", UserMessage = "friendly" };
+        const string template = "{{prefix}} {Timestamp:HH:mm:ss} [{Level:zh}] {UserMessage}{NewLine}";
+
+        var segments = LogTemplateFormatter.FormatSegments(logEvent, template, "O");
+
+        Assert.Equal(
+            LogTemplateFormatter.Format(logEvent, template, "O"),
+            string.Concat(segments.Select(segment => segment.Text)));
+        Assert.Equal("Timestamp", Assert.Single(segments, segment => segment.TokenName == "Timestamp").TokenName);
+        Assert.Equal("Level", Assert.Single(segments, segment => segment.TokenName == "Level").TokenName);
+        Assert.Equal("UserMessage", Assert.Single(segments, segment => segment.TokenName == "UserMessage").TokenName);
+        Assert.Contains(segments, segment => segment.TokenName is null && segment.Text.Contains("["));
+    }
+
+    [Fact]
     public void Formatter_FormatsCompleteEventFields()
     {
         var logEvent = CreateEvent() with

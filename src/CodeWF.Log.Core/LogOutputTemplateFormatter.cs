@@ -52,6 +52,53 @@ public static class LogTemplateFormatter
         return builder.ToString();
     }
 
+    public static IReadOnlyList<LogTemplateSegment> FormatSegments(
+        CodeWFLogEvent logEvent,
+        string outputTemplate,
+        string fallbackTimestampFormat)
+    {
+        var segments = new List<LogTemplateSegment>();
+        var literal = new StringBuilder();
+        for (var index = 0; index < outputTemplate.Length; index++)
+        {
+            var current = outputTemplate[index];
+            if (current == '{')
+            {
+                if (index + 1 < outputTemplate.Length && outputTemplate[index + 1] == '{')
+                {
+                    literal.Append('{');
+                    index++;
+                    continue;
+                }
+
+                var end = outputTemplate.IndexOf('}', index + 1);
+                if (end > index)
+                {
+                    AddLiteralSegment(segments, literal);
+                    var token = outputTemplate[(index + 1)..end];
+                    var (name, _) = SplitToken(token);
+                    var tokenText = new StringBuilder();
+                    AppendToken(tokenText, logEvent, token, fallbackTimestampFormat);
+                    segments.Add(new LogTemplateSegment(tokenText.ToString(), name));
+                    index = end;
+                    continue;
+                }
+            }
+
+            if (current == '}' && index + 1 < outputTemplate.Length && outputTemplate[index + 1] == '}')
+            {
+                literal.Append('}');
+                index++;
+                continue;
+            }
+
+            literal.Append(current);
+        }
+
+        AddLiteralSegment(segments, literal);
+        return segments;
+    }
+
     public static bool TryValidate(string? template, out string? error)
     {
         if (string.IsNullOrWhiteSpace(template))
@@ -174,6 +221,13 @@ public static class LogTemplateFormatter
             "NewLine" => Environment.NewLine,
             _ => "{" + token + "}"
         });
+    }
+
+    private static void AddLiteralSegment(List<LogTemplateSegment> segments, StringBuilder literal)
+    {
+        if (literal.Length == 0) return;
+        segments.Add(new LogTemplateSegment(literal.ToString(), null));
+        literal.Clear();
     }
 
     private static (string Name, string? Format) SplitToken(string token)
