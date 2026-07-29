@@ -11,8 +11,8 @@ namespace LogViewDemo.Views;
 
 public partial class MainWindow : Window
 {
-    private const string CompactLineTemplate = "{Timestamp:HH:mm:ss} [{Level:zh}] {UserMessage}{NewLine}";
-    private const string ContextLineTemplate = "{Timestamp:HH:mm:ss.fff} [{Level:u3}] ({Category}) Event={EventId} Trace={TraceId} {UserMessage} | Message={Message} | Properties={Properties}{NewLine}{Exception}";
+    private const string CompactLineTemplate = "{Timestamp:HH:mm:ss} 【{Level:zh}】 {UserMessage}{NewLine}";
+    private const string ContextLineTemplate = "{Timestamp:HH:mm:ss.fff} 【{Level:u3}】 ({Category}) Event={EventId} Trace={TraceId} {UserMessage} | Message={Message} | Properties={Properties}{NewLine}{Exception}";
     private const string DiagnosticFileTemplate = "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] ({Category}) {Message} {Properties}{NewLine}{Exception}";
     private const string ContextFileTemplate = "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] ({Category}) Event={EventId} Trace={TraceId} {Message} | Properties={Properties} | Scopes={Scopes}{NewLine}{Exception}";
 

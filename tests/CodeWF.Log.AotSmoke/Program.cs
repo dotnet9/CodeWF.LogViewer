@@ -9,7 +9,7 @@ using var services = new ServiceCollection()
         options.BridgeStaticLogger = false;
         options.File.Enabled = false;
         options.Console.Enabled = false;
-        options.LineTemplate = "{Timestamp:O} [{Level:u3}] {UserMessage}{NewLine}";
+        options.LineTemplate = "{Timestamp:O} 【{Level:u3}】 {UserMessage}{NewLine}";
     }))
     .BuildServiceProvider();
 

@@ -12,8 +12,8 @@ namespace SerilogDemo.Views;
 
 public partial class MainWindow : Window
 {
-    private const string CompactTemplate = "{Timestamp:HH:mm:ss} [{Level:zh}] {UserMessage}{NewLine}";
-    private const string ContextTemplate = "{Timestamp:HH:mm:ss.fff} [{Level:u3}] ({Category}) Event={EventId} Trace={TraceId} {UserMessage} | Message={Message} | Properties={Properties}{NewLine}{Exception}";
+    private const string CompactTemplate = "{Timestamp:HH:mm:ss} 【{Level:zh}】 {UserMessage}{NewLine}";
+    private const string ContextTemplate = "{Timestamp:HH:mm:ss.fff} 【{Level:u3}】 ({Category}) Event={EventId} Trace={TraceId} {UserMessage} | Message={Message} | Properties={Properties}{NewLine}{Exception}";
 
     private readonly ILogger<MainWindow> _logger;
     private readonly ILineTemplateController _lineTemplateController;

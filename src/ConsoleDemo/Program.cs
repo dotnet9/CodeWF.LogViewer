@@ -7,7 +7,7 @@ Logger.Initialize(new LoggerOptions
     MinimumLevel = LogLevel.Debug,
     EnableConsole = true,
     EnableEventFeed = false,
-    LineTemplate = "{Timestamp:HH:mm:ss.fff} [{Level:zh}] {UserMessage}{NewLine}",
+    LineTemplate = "{Timestamp:HH:mm:ss.fff} 【{Level:zh}】 {UserMessage}{NewLine}",
     QueueCapacity = 2_000,
     File = new FileLogOptions
     {
