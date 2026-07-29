@@ -235,7 +235,7 @@
             <Grid Grid.Row="1">
                 <Border x:Name="LevelBackground"
                         Classes="levelBackground error"
-                        Height="120"
+                        Height="{DynamicResource CodeWFLogDesktopNotificationLevelSectionHeight}"
                         VerticalAlignment="Top" />
 
                 <Grid Margin="20 12 20 12">
