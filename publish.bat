@@ -16,7 +16,7 @@ if "%~2"=="" (
 rem Optional 3rd arg: space-separated TFMs aligned with project_paths.
 rem Use "default" to keep the platform default TFM for that project.
 set "target_frameworks=%~3"
-set "publish_root=%~dp0publish"
+set "publish_root=%~dp0artifacts\publish"
 set "props_file=%~dp0Directory.Build.props"
 set "props_backup=%TEMP%\CodeWF.LogViewer.Directory.Build.%RANDOM%%RANDOM%.props.bak"
 
