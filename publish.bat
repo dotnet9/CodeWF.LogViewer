@@ -109,11 +109,11 @@ echo All platforms published successfully.
 echo ========================================
 call :restore_props
 echo Removing *.pdb files...
-if exist "%~dp0publish" (
-    for /r "%~dp0publish" %%f in (*.pdb) do del /q "%%f" 2>nul
+if exist "%publish_root%" (
+    for /r "%publish_root%" %%f in (*.pdb) do del /q "%%f" 2>nul
     echo *.pdb files removed.
 )
-explorer "%~dp0publish"
+explorer "%publish_root%"
 call :maybe_pause
 goto :eof
 
