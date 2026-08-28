@@ -11,5 +11,6 @@
              log:LogNotifications.Duration="0:0:10">
   <Application.Styles>
     <FluentTheme />
+    <log:CodeWFLogTheme />
   </Application.Styles>
 </Application>

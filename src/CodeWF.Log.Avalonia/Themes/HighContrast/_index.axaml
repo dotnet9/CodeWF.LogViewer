@@ -1,0 +1,9 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="CodeWFLogViewTimestampForeground">#FFFFFF</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogViewContentForeground">#FFFFFF</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogViewTraceForeground">#00FFFF</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogViewInformationForeground">#00FF00</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogViewWarningForeground">#FFFF00</SolidColorBrush>
+    <SolidColorBrush x:Key="CodeWFLogViewErrorForeground">#FF8080</SolidColorBrush>
+</ResourceDictionary>

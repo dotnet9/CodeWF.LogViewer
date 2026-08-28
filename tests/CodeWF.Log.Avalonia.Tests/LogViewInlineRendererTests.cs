@@ -1,4 +1,5 @@
 using Avalonia.Controls.Documents;
+using Avalonia.Media;
 using CodeWF.Log.Avalonia;
 using CodeWF.Log.Core;
 using Microsoft.Extensions.Logging;
@@ -77,6 +78,31 @@ public sealed class LogViewInlineRendererTests
         Assert.Equal(6_000, inlines.Count);
         for (var index = 0; index < 5_994; index++)
             Assert.Same(originalInlines[index + 6], inlines[index]);
+    }
+
+    [Fact]
+    public void Rebuild_UsesConfiguredPaletteForEachSegmentType()
+    {
+        var palette = new LogViewPalette(
+            Brushes.Gray,
+            Brushes.White,
+            Brushes.Cyan,
+            Brushes.Lime,
+            Brushes.Yellow,
+            Brushes.Red);
+        var renderer = new LogViewInlineRenderer(palette);
+        var inlines = new InlineCollection();
+
+        renderer.Rebuild(
+            inlines,
+            [CreateEvent(1, "first")],
+            "{Timestamp}|{Level:u3}|{UserMessage}{NewLine}",
+            "HH:mm");
+
+        var runs = inlines.OfType<Run>().ToArray();
+        Assert.Same(palette.TimestampForeground, runs.Single(run => run.Text == "12:34").Foreground);
+        Assert.Same(palette.InformationForeground, runs.Single(run => run.Text == "INF").Foreground);
+        Assert.Same(palette.ContentForeground, runs.Single(run => run.Text == "first").Foreground);
     }
 
     private static CodeWFLogEvent CreateEvent(long sequence, string message) => new()

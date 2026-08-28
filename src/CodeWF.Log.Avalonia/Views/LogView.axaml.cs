@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Avalonia.Threading;
 using CodeWF.Log.Avalonia.Extensions;
 using CodeWF.Log.Avalonia.Platform;
@@ -37,6 +38,18 @@ public partial class LogView : UserControl
         AvaloniaProperty.Register<LogView, string>(nameof(TimestampFormat), "yyyy-MM-dd HH:mm:ss.fff");
     public static readonly StyledProperty<string?> LogDirectoryProperty =
         AvaloniaProperty.Register<LogView, string?>(nameof(LogDirectory));
+    public static readonly StyledProperty<IBrush> TimestampForegroundProperty =
+        AvaloniaProperty.Register<LogView, IBrush>(nameof(TimestampForeground), LogViewPalette.Light.TimestampForeground);
+    public static readonly StyledProperty<IBrush> ContentForegroundProperty =
+        AvaloniaProperty.Register<LogView, IBrush>(nameof(ContentForeground), LogViewPalette.Light.ContentForeground);
+    public static readonly StyledProperty<IBrush> TraceForegroundProperty =
+        AvaloniaProperty.Register<LogView, IBrush>(nameof(TraceForeground), LogViewPalette.Light.TraceForeground);
+    public static readonly StyledProperty<IBrush> InformationForegroundProperty =
+        AvaloniaProperty.Register<LogView, IBrush>(nameof(InformationForeground), LogViewPalette.Light.InformationForeground);
+    public static readonly StyledProperty<IBrush> WarningForegroundProperty =
+        AvaloniaProperty.Register<LogView, IBrush>(nameof(WarningForeground), LogViewPalette.Light.WarningForeground);
+    public static readonly StyledProperty<IBrush> ErrorForegroundProperty =
+        AvaloniaProperty.Register<LogView, IBrush>(nameof(ErrorForeground), LogViewPalette.Light.ErrorForeground);
 
     private readonly List<CodeWFLogEvent> _entries = [];
     private readonly LogViewInlineRenderer _inlineRenderer = new();
@@ -49,6 +62,7 @@ public partial class LogView : UserControl
     private long _clearSequence;
     private long _latestSequence;
     private bool _isAttached;
+    private bool _isInitialized;
 
     public LogView()
     {
@@ -56,6 +70,8 @@ public partial class LogView : UserControl
         _textView = this.FindControl<SelectableTextBlock>("LogTextView")!;
         _scrollViewer = this.FindControl<ScrollViewer>("LogScrollViewer")!;
         _contextMenu = this.FindControl<ContextMenu>("LogContextMenu")!;
+        _isInitialized = true;
+        UpdatePalette();
         UpdateLogLineHeight();
     }
 
@@ -67,6 +83,12 @@ public partial class LogView : UserControl
     public TimeSpan RefreshInterval { get => GetValue(RefreshIntervalProperty); set => SetValue(RefreshIntervalProperty, value); }
     public string TimestampFormat { get => GetValue(TimestampFormatProperty); set => SetValue(TimestampFormatProperty, value); }
     public string? LogDirectory { get => GetValue(LogDirectoryProperty); set => SetValue(LogDirectoryProperty, value); }
+    public IBrush TimestampForeground { get => GetValue(TimestampForegroundProperty); set => SetValue(TimestampForegroundProperty, value); }
+    public IBrush ContentForeground { get => GetValue(ContentForegroundProperty); set => SetValue(ContentForegroundProperty, value); }
+    public IBrush TraceForeground { get => GetValue(TraceForegroundProperty); set => SetValue(TraceForegroundProperty, value); }
+    public IBrush InformationForeground { get => GetValue(InformationForegroundProperty); set => SetValue(InformationForegroundProperty, value); }
+    public IBrush WarningForeground { get => GetValue(WarningForegroundProperty); set => SetValue(WarningForegroundProperty, value); }
+    public IBrush ErrorForeground { get => GetValue(ErrorForegroundProperty); set => SetValue(ErrorForegroundProperty, value); }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
@@ -87,12 +109,34 @@ public partial class LogView : UserControl
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
+        if (!_isInitialized) return;
         if (change.Property == SourceProperty) { StopSubscription(); StartSubscription(); return; }
         if (change.Property == FontSizeProperty || change.Property == LogLineHeightMultiplierProperty) { UpdateLogLineHeight(); return; }
         if (change.Property == MinimumLevelProperty || change.Property == MaximumLevelProperty || change.Property == MaxDisplayCountProperty)
         { RebuildFromRecentEntries(); return; }
         if (change.Property == RefreshIntervalProperty) _subscription?.UpdateRefreshInterval(NormalizeRefreshInterval(RefreshInterval));
         if (change.Property == TimestampFormatProperty) RenderEntries();
+        if (IsPaletteProperty(change.Property)) UpdatePalette();
+    }
+
+    private static bool IsPaletteProperty(AvaloniaProperty property) =>
+        property == TimestampForegroundProperty ||
+        property == ContentForegroundProperty ||
+        property == TraceForegroundProperty ||
+        property == InformationForegroundProperty ||
+        property == WarningForegroundProperty ||
+        property == ErrorForegroundProperty;
+
+    private void UpdatePalette()
+    {
+        _inlineRenderer.Palette = new LogViewPalette(
+            TimestampForeground,
+            ContentForeground,
+            TraceForeground,
+            InformationForeground,
+            WarningForeground,
+            ErrorForeground);
+        RenderEntries();
     }
 
     private void StartSubscription()

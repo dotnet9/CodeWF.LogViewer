@@ -7,6 +7,12 @@
     d:DesignHeight="450"
     d:DesignWidth="800"
     MinWidth="0"
+    ContentForeground="{DynamicResource CodeWFLogViewContentForeground}"
+    ErrorForeground="{DynamicResource CodeWFLogViewErrorForeground}"
+    InformationForeground="{DynamicResource CodeWFLogViewInformationForeground}"
+    TimestampForeground="{DynamicResource CodeWFLogViewTimestampForeground}"
+    TraceForeground="{DynamicResource CodeWFLogViewTraceForeground}"
+    WarningForeground="{DynamicResource CodeWFLogViewWarningForeground}"
     mc:Ignorable="d">
     <ScrollViewer
         x:Name="LogScrollViewer"

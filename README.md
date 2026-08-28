@@ -248,7 +248,20 @@ logger.LogUserNotification(
 
 ### 可选的 LogView
 
-需要在应用界面查看实时日志时，再放置 `LogView`。XAML 命名空间保持不变：
+需要在应用界面查看实时日志时，在应用主题中注册 `CodeWFLogTheme`。它会跟随 Avalonia 的 Light、Dark 主题，也提供 `CodeWFLogTheme.HighContrast` 高对比度变体：
+
+```xml
+<Application
+    xmlns="https://github.com/avaloniaui"
+    xmlns:log="https://codewf.com">
+    <Application.Styles>
+        <FluentTheme />
+        <log:CodeWFLogTheme />
+    </Application.Styles>
+</Application>
+```
+
+然后放置 `LogView`，XAML 命名空间保持不变：
 
 ```xml
 <Window
@@ -262,6 +275,8 @@ logger.LogUserNotification(
 ```
 
 `LogView.MinimumLevel` 和 `LogView.MaximumLevel` 都是 `Microsoft.Extensions.Logging.LogLevel`，每个视图可以独立按区间显示完整事件。默认范围为 Information 至 Critical。
+
+主题颜色通过 `LogViewResourceKeys` 中公开的动态资源键提供；需要适配应用品牌色时，可在应用或控件资源中覆盖对应画刷。也可以直接设置 `TimestampForeground`、`ContentForeground`、`TraceForeground`、`InformationForeground`、`WarningForeground` 和 `ErrorForeground`。
 
 右键“查看日志”使用应用级 `LogContext.LogDirectory`，也可由单个 `LogView.LogDirectory` 覆盖。该路径与事件 Source 独立，适合 CodeWF 只负责界面、Serilog 负责文件的多 Provider 场景：
 

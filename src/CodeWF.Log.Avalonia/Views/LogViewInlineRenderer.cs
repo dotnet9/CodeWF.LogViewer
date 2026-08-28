@@ -13,16 +13,11 @@ internal sealed class LogViewInlineRenderer
     private const string LevelOpeningDelimiters = "[【(（<《";
     private const string LevelClosingDelimiters = "]】)）>》:：";
 
-    private static readonly SolidColorBrush TimestampBrush = new(Color.Parse("#8C8C8C"));
-    private static readonly SolidColorBrush ContentBrush = new(Color.Parse("#262626"));
-    private static readonly SolidColorBrush DebugBrush = new(Color.Parse("#1890FF"));
-    private static readonly SolidColorBrush InfoBrush = new(Color.Parse("#52C41A"));
-    private static readonly SolidColorBrush WarnBrush = new(Color.Parse("#FAAD14"));
-    private static readonly SolidColorBrush ErrorBrush = new(Color.Parse("#FF4D4F"));
-    private static readonly SolidColorBrush DefaultBrush = new(Color.Parse("#262626"));
-
     private readonly Queue<int> _inlineCounts = new();
 
+    internal LogViewInlineRenderer(LogViewPalette? palette = null) => Palette = palette ?? LogViewPalette.Light;
+
+    internal LogViewPalette Palette { get; set; }
     internal int RenderedEntryCount => _inlineCounts.Count;
 
     internal void Rebuild(
@@ -90,7 +85,7 @@ internal sealed class LogViewInlineRenderer
         foreach (var count in pendingCounts) _inlineCounts.Enqueue(count);
     }
 
-    private static void AddEntryInlines(
+    private void AddEntryInlines(
         ICollection<Inline> inlines,
         CodeWFLogEvent entry,
         string template,
@@ -101,7 +96,7 @@ internal sealed class LogViewInlineRenderer
             AddSegmentRun(inlines, segments, index, entry.Level);
     }
 
-    private static void AddSegmentRun(
+    private void AddSegmentRun(
         ICollection<Inline> inlines,
         IReadOnlyList<LogTemplateSegment> segments,
         int index,
@@ -112,7 +107,7 @@ internal sealed class LogViewInlineRenderer
 
         if (segment.TokenName == "Timestamp")
         {
-            inlines.Add(CreateRun(segment.Text, TimestampBrush));
+            inlines.Add(CreateRun(segment.Text, Palette.TimestampForeground));
             return;
         }
 
@@ -125,7 +120,7 @@ internal sealed class LogViewInlineRenderer
             return;
         }
 
-        inlines.Add(CreateRun(segment.Text, ContentBrush));
+        inlines.Add(CreateRun(segment.Text, Palette.ContentForeground));
     }
 
     private static bool IsLevelDecoration(IReadOnlyList<LogTemplateSegment> segments, int index)
@@ -147,12 +142,12 @@ internal sealed class LogViewInlineRenderer
             BaselineAlignment = BaselineAlignment.Center
         };
 
-    private static IBrush GetLevelForeground(LogLevel level) => level switch
+    private IBrush GetLevelForeground(LogLevel level) => level switch
     {
-        LogLevel.Trace or LogLevel.Debug => DebugBrush,
-        LogLevel.Information => InfoBrush,
-        LogLevel.Warning => WarnBrush,
-        LogLevel.Error or LogLevel.Critical => ErrorBrush,
-        _ => DefaultBrush
+        LogLevel.Trace or LogLevel.Debug => Palette.TraceForeground,
+        LogLevel.Information => Palette.InformationForeground,
+        LogLevel.Warning => Palette.WarningForeground,
+        LogLevel.Error or LogLevel.Critical => Palette.ErrorForeground,
+        _ => Palette.ContentForeground
     };
 }
