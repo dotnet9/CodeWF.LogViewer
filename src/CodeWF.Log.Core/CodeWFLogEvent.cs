@@ -8,6 +8,8 @@ public sealed record CodeWFLogEvent
     public required long Sequence { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
     public required LogLevel Level { get; init; }
+    /// <summary>日志写入时按当前界面语言快照的级别文本。</summary>
+    public string? LocalizedLevel { get; init; }
     public required string CategoryName { get; init; }
     public EventId EventId { get; init; }
     public string? MessageTemplate { get; init; }

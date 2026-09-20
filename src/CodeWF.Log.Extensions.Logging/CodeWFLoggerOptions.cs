@@ -6,6 +6,8 @@ namespace CodeWF.Log.Extensions.Logging;
 public sealed class CodeWFLoggerOptions
 {
     public string LineTemplate { get; set; } = LineTemplateController.DefaultTemplate;
+    /// <summary>在日志进入队列时生成当前语言的级别文本。</summary>
+    public Func<LogLevel, string?>? LocalizedLevelFormatter { get; set; }
     public bool BridgeStaticLogger { get; set; } = true;
     public CodeWFFileLoggerOptions File { get; set; } = new();
     public CodeWFConsoleLoggerOptions Console { get; set; } = new();
@@ -19,6 +21,7 @@ public sealed class CodeWFLoggerOptions
         return new LoggerOptions
         {
             MinimumLevel = LogLevel.Trace,
+            LocalizedLevelFormatter = LocalizedLevelFormatter,
             LineTemplate = LineTemplate,
             File = File.Enabled ? File.ToCoreOptions(contentRootPath) : null,
             EnableConsole = Console.Enabled,

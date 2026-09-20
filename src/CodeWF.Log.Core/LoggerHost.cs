@@ -60,7 +60,22 @@ internal sealed class LoggerHost : IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(logEvent);
         if (!IsEnabled(logEvent.Level) || Volatile.Read(ref _shutdownStarted) != 0) return;
-        EnqueueLog(new WriteLogCommand(logEvent with { Sequence = 0 }, fileOnly));
+        var localizedLevel = logEvent.LocalizedLevel;
+        if (string.IsNullOrWhiteSpace(localizedLevel) && _options.LocalizedLevelFormatter is { } formatter)
+        {
+            try
+            {
+                localizedLevel = formatter(logEvent.Level);
+            }
+            catch (Exception exception)
+            {
+                LoggerSelfDiagnostics.Report("生成日志级别文本失败。", exception);
+            }
+        }
+
+        EnqueueLog(new WriteLogCommand(
+            logEvent with { Sequence = 0, LocalizedLevel = localizedLevel },
+            fileOnly));
     }
 
     public async Task FlushAsync()

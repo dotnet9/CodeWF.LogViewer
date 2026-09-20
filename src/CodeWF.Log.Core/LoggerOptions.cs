@@ -13,6 +13,8 @@ public enum LogQueueFullMode
 public sealed record LoggerOptions
 {
     public LogLevel MinimumLevel { get; init; } = LogLevel.Information;
+    /// <summary>在日志进入队列时生成级别文本，避免语言切换重绘历史事件。</summary>
+    public Func<LogLevel, string?>? LocalizedLevelFormatter { get; init; }
     public FileLogOptions? File { get; init; }
     public bool EnableConsole { get; init; } = true;
     public ConsoleLogOptions? Console { get; init; }

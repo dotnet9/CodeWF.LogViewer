@@ -154,7 +154,7 @@ public static class LogTemplateFormatter
         return token.TokenName switch
         {
             "Timestamp" => FormatTimestamp(logEvent.Timestamp, token.Format, fallbackTimestampFormat),
-            "Level" => FormatLevel(logEvent.Level, token.Format),
+            "Level" => FormatLevel(logEvent, token.Format),
             "Category" or "CategoryName" => logEvent.CategoryName,
             "EventId" => FormatEventId(logEvent.EventId),
             "EventName" => logEvent.EventId.Name,
@@ -263,7 +263,7 @@ public static class LogTemplateFormatter
             return true;
         }
 
-        if (name == "Level" && format is "zh" or "u3" or "u4")
+        if (name == "Level" && format is "localized" or "zh" or "u3" or "u4")
         {
             error = null;
             return true;
@@ -287,14 +287,17 @@ public static class LogTemplateFormatter
         }
     }
 
-    private static string FormatLevel(LogLevel level, string? format)
+    private static string FormatLevel(CodeWFLogEvent logEvent, string? format)
     {
         return format switch
         {
-            "zh" => level.Description(),
-            "u3" => ToUpperInvariant(level, 3),
-            "u4" => ToUpperInvariant(level, 4),
-            _ => level.ToString()
+            "localized" => string.IsNullOrWhiteSpace(logEvent.LocalizedLevel)
+                ? logEvent.Level.Description()
+                : logEvent.LocalizedLevel,
+            "zh" => logEvent.Level.Description(),
+            "u3" => ToUpperInvariant(logEvent.Level, 3),
+            "u4" => ToUpperInvariant(logEvent.Level, 4),
+            _ => logEvent.Level.ToString()
         };
     }
 

@@ -41,6 +41,32 @@ public sealed class LoggingCoreTests
     }
 
     [Fact]
+    public async Task Host_SnapshotsLocalizedLevelWhenEventsEnterTheQueue()
+    {
+        var localizedLevel = "消息";
+        var feed = new LogEventFeed(10, new LineTemplateController());
+        await using var host = new LoggerHost(new LoggerOptions
+        {
+            MinimumLevel = LogLevel.Trace,
+            EnableConsole = false,
+            EnableEventFeed = true,
+            QueueFullMode = LogQueueFullMode.Wait,
+            LocalizedLevelFormatter = _ => localizedLevel
+        }, feed, feed.LineTemplate);
+
+        host.Write(CreateEvent(1));
+        localizedLevel = "Information";
+        host.Write(CreateEvent(2));
+        await host.FlushAsync();
+
+        var events = feed.GetRecentEvents();
+        Assert.Equal("消息", events[0].LocalizedLevel);
+        Assert.Equal("Information", events[1].LocalizedLevel);
+        Assert.Equal("消息", LogTemplateFormatter.Format(events[0], "{Level:localized}", "O"));
+        Assert.Equal("Information", LogTemplateFormatter.Format(events[1], "{Level:localized}", "O"));
+    }
+
+    [Fact]
     public void Formatter_SegmentsPreserveTemplateOutputAndTokenIdentity()
     {
         var logEvent = CreateEvent() with { Message = "diagnostic", UserMessage = "friendly" };
