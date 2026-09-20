@@ -63,7 +63,7 @@ public sealed record LogExceptionInfo
         if (depth < MaxDepth && remainingCount > 0)
         {
             var source = exception is AggregateException aggregate
-                ? aggregate.InnerExceptions
+                ? (IEnumerable<Exception>)aggregate.InnerExceptions
                 : exception.InnerException is null ? [] : [exception.InnerException];
             foreach (var inner in source)
             {
