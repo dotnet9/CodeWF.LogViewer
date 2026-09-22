@@ -67,6 +67,26 @@ public sealed class LoggingCoreTests
     }
 
     [Fact]
+    public async Task HostBoundsLocalizedLevelFormatterOutput()
+    {
+        var feed = new LogEventFeed(10, new LineTemplateController());
+        await using var host = new LoggerHost(new LoggerOptions
+        {
+            MinimumLevel = LogLevel.Trace,
+            EnableConsole = false,
+            EnableEventFeed = true,
+            QueueFullMode = LogQueueFullMode.Wait,
+            LocalizedLevelFormatter = _ => new string('x', 300_000)
+        }, feed, feed.LineTemplate);
+
+        host.Write(CreateEvent());
+        await host.FlushAsync();
+
+        var logEvent = Assert.Single(feed.GetRecentEvents());
+        Assert.True(logEvent.LocalizedLevel!.Length < 300_000);
+    }
+
+    [Fact]
     public void Formatter_SegmentsPreserveTemplateOutputAndTokenIdentity()
     {
         var logEvent = CreateEvent() with { Message = "diagnostic", UserMessage = "friendly" };

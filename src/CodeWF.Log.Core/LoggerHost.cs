@@ -65,8 +65,7 @@ internal sealed class LoggerHost : IAsyncDisposable
             Health.RecordDropped(logEvent.Level);
             return;
         }
-        var snapshot = LogEventSnapshot.Capture(logEvent);
-        var localizedLevel = snapshot.LocalizedLevel;
+        var localizedLevel = logEvent.LocalizedLevel;
         if (string.IsNullOrWhiteSpace(localizedLevel) && _options.LocalizedLevelFormatter is { } formatter)
         {
             try
@@ -79,8 +78,9 @@ internal sealed class LoggerHost : IAsyncDisposable
             }
         }
 
+        var snapshot = LogEventSnapshot.Capture(logEvent with { LocalizedLevel = localizedLevel });
         EnqueueLog(new WriteLogCommand(
-            snapshot with { Sequence = 0, LocalizedLevel = localizedLevel },
+            snapshot with { Sequence = 0 },
             fileOnly));
     }
 
