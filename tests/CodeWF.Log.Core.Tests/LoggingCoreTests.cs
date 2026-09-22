@@ -246,6 +246,22 @@ public sealed class LoggingCoreTests
     }
 
     [Fact]
+    public async Task HostCountsEventsRejectedAfterShutdown()
+    {
+        await using var host = new LoggerHost(new LoggerOptions
+        {
+            MinimumLevel = LogLevel.Trace,
+            EnableConsole = false,
+            EnableEventFeed = false
+        });
+
+        await host.ShutdownAsync();
+        host.Write(CreateEvent() with { Level = LogLevel.Error });
+
+        Assert.Equal(1, host.Health.DroppedCount);
+    }
+
+    [Fact]
     public async Task EventFeed_ReplaysThenDeliversLiveEventsInOrder()
     {
         var feed = new LogEventFeed(10, new LineTemplateController());

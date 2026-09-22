@@ -59,7 +59,12 @@ internal sealed class LoggerHost : IAsyncDisposable
     public void Write(CodeWFLogEvent logEvent, bool fileOnly = false)
     {
         ArgumentNullException.ThrowIfNull(logEvent);
-        if (!IsEnabled(logEvent.Level) || Volatile.Read(ref _shutdownStarted) != 0) return;
+        if (!IsEnabled(logEvent.Level)) return;
+        if (Volatile.Read(ref _shutdownStarted) != 0)
+        {
+            Health.RecordDropped(logEvent.Level);
+            return;
+        }
         var snapshot = LogEventSnapshot.Capture(logEvent);
         var localizedLevel = snapshot.LocalizedLevel;
         if (string.IsNullOrWhiteSpace(localizedLevel) && _options.LocalizedLevelFormatter is { } formatter)
@@ -133,7 +138,7 @@ internal sealed class LoggerHost : IAsyncDisposable
             _commands.Writer.WriteAsync(command, timeout.Token).AsTask().GetAwaiter().GetResult();
         }
         catch (OperationCanceledException) { Health.RecordDropped(command.LogEvent.Level); }
-        catch (ChannelClosedException) { }
+        catch (ChannelClosedException) { Health.RecordDropped(command.LogEvent.Level); }
     }
 
     private async Task ProcessAsync()
