@@ -2,7 +2,6 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net11.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.11</RuntimeFrameworkVersion>
     <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
     <PublishAot>true</PublishAot>
     <PublishTrimmed>true</PublishTrimmed>
