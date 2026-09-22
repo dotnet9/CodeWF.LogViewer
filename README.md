@@ -67,6 +67,7 @@ builder.Logging.AddCodeWF();
 - 普通 `ILogger` 与 `LogUser*` 都生成完整 `CodeWFLogEvent`，进入启用的 File、Console 和 `LogEventFeed`。
 - `LogUser*` 只额外提供 `UserMessage`；模板中的 `{UserMessage}` 为空白时回退 `{Message}`。
 - File 使用独立 `OutputTemplate`；Console、可选的 LogView 和通知管线共享 `LineTemplate`，默认组合式 DesktopWindow 避免重复显示级别和时间。
+- File 日志文件名包含当前进程 ID；多个进程可以共享日志目录而不会追加到同一个活动文件，保留数量和目录容量清理按当前进程文件执行。
 - 两类模板都可通过各自的 Controller 显式、原子地运行时更新；其他 Pipeline 配置仍需重启生效。
 
 常用配置使用结构化 Options；日志格式由 `OutputTemplate` 决定，不提供 `IncludeEventId`、`IncludeScopes` 这类开关。模板里写了对应占位符就输出，没有写就忽略：

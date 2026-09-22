@@ -7,6 +7,7 @@ internal sealed class FileLogSink : ILogSink
 {
     private readonly FileLogOptions _options;
     private readonly IFileOutputTemplateController _outputTemplate;
+    private readonly string _filePrefix = $"Log_{Environment.ProcessId}_";
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly CancellationTokenSource _flushCancellation = new();
     private readonly Task _flushTask;
@@ -116,7 +117,7 @@ internal sealed class FileLogSink : ILogSink
 
     private string GetAvailableFilePath(DateOnly date, int incomingBytes)
     {
-        var baseName = $"Log_{date:yyyy_MM_dd}";
+        var baseName = $"{_filePrefix}{date:yyyy_MM_dd}";
         for (var sequence = 0; ; sequence++)
         {
             var suffix = sequence == 0 ? string.Empty : $"_{sequence}";
@@ -270,7 +271,7 @@ internal sealed class FileLogSink : ILogSink
             var directory = new DirectoryInfo(_options.DirectoryPath);
             if (!directory.Exists) return;
 
-            var files = directory.GetFiles("Log_*.log")
+            var files = directory.GetFiles($"{_filePrefix}*.log")
                 .OrderBy(file => file.LastWriteTimeUtc)
                 .ToList();
             var cutoff = DateTime.UtcNow.AddDays(-_options.RetentionDays);

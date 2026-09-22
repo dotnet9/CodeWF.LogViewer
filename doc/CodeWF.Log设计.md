@@ -405,7 +405,7 @@ FileSink：
 - 相对路径在 Host 场景下相对 `IHostEnvironment.ContentRootPath`，非 Host 场景下相对 `AppContext.BaseDirectory`。
 - 默认单文件上限为 1000 MB，按日期和大小滚动；`RetentionDays` 默认为 30，自动清理超过 30 天的日志文件。默认不设置目录总容量和文件数量上限，30 天内的文件不会仅因总容量或数量被提前删除。
 - `RetainedFileCountLimit` 和 `MaxDirectorySizeBytes` 默认为空；调用方显式配置后，它们作为额外空间保护，可以提前删除 30 天内最旧的滚动文件。清理失败进入 Self Diagnostics，不中断当前日志写入。
-- 明确单进程写入约束。若允许多进程共享目录，文件名必须包含进程标识并避免滚动竞争；第一版可以声明同一日志文件只支持单进程写入。
+- 文件名包含进程标识，多个进程共享目录时不会追加到同一个活动文件；轮转和保留清理只处理当前进程文件，避免跨进程删除或滚动竞争。
 - 默认目录不可创建或不可写时，启动阶段应给出明确的 Options/初始化错误；运行期故障则降级到 Self Diagnostics，不反向破坏业务流程。
 
 ConsoleSink：
@@ -834,7 +834,7 @@ Demo 的原则是职责单一、界面低负担：不提供手工模板编辑器
 - Host 停止或 LoggerFactory Dispose 时可以 Flush 和 Shutdown；Flush 屏障语义通过并发测试验证。
 - Sink、Formatter、State 快照和订阅者失败不会默认抛回业务线程。
 - Options 非法值在启动阶段给出清晰错误；除 `LineTemplate` 和文件 `OutputTemplate` 的显式原子运行时切换外，pipeline 配置明确为修改后重启生效，不存在部分静默热更新。
-- FileSink 具备有界保留策略，并明确单进程/多进程写入约束。
+- FileSink 具备有界保留策略，并通过进程 ID 文件名支持多个进程共享目录。
 - WebApiDemo 只通过 `appsettings.json` 配置 CodeWF。
 - LogViewDemo 可切换 LineTemplate 与 OutputTemplate；SerilogDemo 只切换 CodeWF LineTemplate。
 - SerilogDemo 验证 Serilog 负责诊断输出、CodeWF 只负责 LogView 和 InApp/DesktopWindow 通知。

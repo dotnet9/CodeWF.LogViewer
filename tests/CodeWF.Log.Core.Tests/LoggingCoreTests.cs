@@ -342,8 +342,8 @@ public sealed class LoggingCoreTests
     {
         var directory = Path.Combine(Path.GetTempPath(), "CodeWF.Log.Tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
-        var oldFile = Path.Combine(directory, "Log_2020_01_01.log");
-        var recentFile = Path.Combine(directory, $"Log_{DateTime.Now:yyyy_MM_dd}.log");
+        var oldFile = Path.Combine(directory, $"Log_{Environment.ProcessId}_2020_01_01.log");
+        var recentFile = Path.Combine(directory, $"Log_{Environment.ProcessId}_{DateTime.Now:yyyy_MM_dd}.log");
         await File.WriteAllTextAsync(oldFile, "old");
         await File.WriteAllTextAsync(recentFile, "recent");
         File.SetLastWriteTimeUtc(oldFile, DateTime.UtcNow.AddDays(-31));

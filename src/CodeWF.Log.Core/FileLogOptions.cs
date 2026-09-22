@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 public sealed record FileLogOptions
 {
     /// <summary>
-    /// 最终日志目录。组件不会再自动追加子目录。
+    /// 最终日志目录。组件不会再自动追加子目录；文件名包含当前进程 ID。
     /// </summary>
     public required string DirectoryPath { get; set; }
 
