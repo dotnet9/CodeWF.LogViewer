@@ -14,12 +14,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace CodeWF.Log.Avalonia;
 
 internal sealed class LogNotificationPresenter : IDisposable
 {
     private const int MaxNotificationContentLength = 4_000;
+    private static readonly TimeSpan HostRetryDelay = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan DefaultDuration = TimeSpan.FromSeconds(10);
 
     private readonly Application _application;
@@ -42,6 +44,7 @@ internal sealed class LogNotificationPresenter : IDisposable
     private int _pendingCount;
     private int _overflowCount;
     private int _dispatchScheduled;
+    private int _retryScheduled;
     private int _disposed;
 
     public LogNotificationPresenter(Application application)
@@ -110,16 +113,20 @@ internal sealed class LogNotificationPresenter : IDisposable
     private void OnLogReceived(CodeWFLogEvent entry)
     {
         if (Volatile.Read(ref _disposed) != 0 || !Accepts(entry)) return;
+        EnqueuePending(entry, Volatile.Read(ref _generation));
+        ScheduleDispatch();
+    }
+
+    private void EnqueuePending(CodeWFLogEvent entry, int generation)
+    {
         if (Interlocked.Increment(ref _pendingCount) > Volatile.Read(ref _queueCapacity))
         {
             Interlocked.Decrement(ref _pendingCount);
             Interlocked.Increment(ref _overflowCount);
-            ScheduleDispatch();
             return;
         }
 
-        _pendingNotifications.Enqueue(new PendingNotification(entry, Volatile.Read(ref _generation)));
-        ScheduleDispatch();
+        _pendingNotifications.Enqueue(new PendingNotification(entry, generation));
     }
 
     private bool Accepts(CodeWFLogEvent entry) =>
@@ -162,22 +169,35 @@ internal sealed class LogNotificationPresenter : IDisposable
             }
 
             if (entries.Count == 0) return;
-            if (_mode == LogNotificationMode.DesktopWindow) ShowDesktopNotifications(entries);
-            else if (_mode == LogNotificationMode.InApp)
-                foreach (var entry in entries) ShowInAppNotification(entry.Entry, entry.Content);
+
+            var delivered = _mode switch
+            {
+                LogNotificationMode.DesktopWindow => ShowDesktopNotifications(entries),
+                LogNotificationMode.InApp => ShowInAppNotifications(entries),
+                _ => true
+            };
+            if (!delivered)
+            {
+                foreach (var entry in entries)
+                    EnqueuePending(entry.Entry, generation);
+                ScheduleRetry();
+            }
         }
         catch (Exception ex) { ClearPendingNotifications(); Trace.TraceError($"显示日志通知失败：{ex}"); }
         finally
         {
             Interlocked.Exchange(ref _dispatchScheduled, 0);
-            if (!_pendingNotifications.IsEmpty && Volatile.Read(ref _disposed) == 0) ScheduleDispatch();
+            if (!_pendingNotifications.IsEmpty &&
+                Volatile.Read(ref _disposed) == 0 &&
+                Volatile.Read(ref _retryScheduled) == 0)
+                ScheduleDispatch();
         }
     }
 
-    private void ShowInAppNotification(CodeWFLogEvent entry, string content)
+    private bool ShowInAppNotifications(IReadOnlyList<(CodeWFLogEvent Entry, string Content)> entries)
     {
         var host = ResolveNotificationHost();
-        if (host is null) return;
+        if (host is null) return false;
         if (!ReferenceEquals(_inAppHost, host))
         {
             _inAppManager?.CloseAll();
@@ -189,29 +209,56 @@ internal sealed class LogNotificationPresenter : IDisposable
             _inAppHost = host;
         }
 
-        _inAppManager?.Show(new Notification(
-            $"{GetApplicationName()} · {entry.Level.Description()} · {entry.Timestamp:HH:mm:ss}",
-            content,
-            GetNotificationType(entry.Level),
-            _duration));
+        foreach (var entry in entries)
+            _inAppManager?.Show(new Notification(
+                $"{GetApplicationName()} · {entry.Entry.Level.Description()} · {entry.Entry.Timestamp:HH:mm:ss}",
+                entry.Content,
+                GetNotificationType(entry.Entry.Level),
+                _duration));
+        return true;
     }
 
-    private void ShowDesktopNotifications(IReadOnlyList<(CodeWFLogEvent Entry, string Content)> entries)
+    private bool ShowDesktopNotifications(IReadOnlyList<(CodeWFLogEvent Entry, string Content)> entries)
     {
         if (_desktopWindow is null || _desktopWindow.IsClosing)
         {
             var owner = ResolveNotificationOwner();
-            if (owner is null) return;
+            if (owner is null) return false;
             var window = new NotificationWindow();
             window.Closed += (_, _) => { if (ReferenceEquals(_desktopWindow, window)) _desktopWindow = null; };
             _desktopWindow = window;
             ConfigureDesktopWindow();
             window.AddLogs(entries);
             window.Show(owner);
-            return;
+            return true;
         }
         ConfigureDesktopWindow();
         _desktopWindow.AddLogs(entries);
+        return true;
+    }
+
+    private void ScheduleRetry()
+    {
+        if (Volatile.Read(ref _disposed) != 0 ||
+            Interlocked.CompareExchange(ref _retryScheduled, 1, 0) != 0) return;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(HostRetryDelay).ConfigureAwait(false);
+                if (Volatile.Read(ref _disposed) == 0)
+                    Dispatcher.UIThread.Post(DrainPendingNotifications);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError($"重试显示日志通知失败：{ex}");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _retryScheduled, 0);
+            }
+        });
     }
 
     private void ConfigureDesktopWindow() => _desktopWindow?.Configure(
