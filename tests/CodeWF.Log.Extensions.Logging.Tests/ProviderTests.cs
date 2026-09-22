@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using Xunit;
 
 namespace CodeWF.Log.Extensions.Logging.Tests;
@@ -39,6 +40,27 @@ public sealed class ProviderTests
         Assert.False(events[1].RequestNotification);
         Assert.Equal("设备 PLC-03 连接失败，需要用户处理。", events[2].UserMessage);
         Assert.True(events[2].RequestNotification);
+    }
+
+    [Fact]
+    public async Task UserLogFormattingPreservesCultureAndAlignment()
+    {
+        using var services = BuildServices();
+        var logger = services.GetRequiredService<ILogger<ProviderTests>>();
+        var feed = services.GetRequiredService<LogEventFeed>();
+        var originalCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+            logger.LogUserInformation("用户消息", "Value {Value,6:N1}", 12.5m);
+
+            var logEvent = (await WaitForEventsAsync(feed, 1))[0];
+            Assert.Equal("Value   12,5", logEvent.Message);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+        }
     }
 
     [Fact]

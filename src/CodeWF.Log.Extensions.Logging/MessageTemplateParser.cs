@@ -28,7 +28,7 @@ internal static class MessageTemplateParser
         {
             builder.Append(messageTemplate, index, placeholder.Start - index);
             if (argumentIndex < args.Count)
-                builder.Append(FormatValue(args[argumentIndex], placeholder.Format));
+                builder.Append(FormatValue(args[argumentIndex], placeholder.Alignment, placeholder.Format));
             else
                 builder.Append(messageTemplate, placeholder.Start, placeholder.Length);
 
@@ -55,8 +55,8 @@ internal static class MessageTemplateParser
             if (end < 0) continue;
 
             var content = messageTemplate[(index + 1)..end];
-            var (name, format) = SplitPlaceholder(content);
-            yield return new Placeholder(index, end - index + 1, name, format);
+            var (name, alignment, format) = SplitPlaceholder(content);
+            yield return new Placeholder(index, end - index + 1, name, alignment, format);
             index = end;
         }
     }
@@ -80,14 +80,21 @@ internal static class MessageTemplateParser
         return -1;
     }
 
-    private static (string Name, string? Format) SplitPlaceholder(string content)
+    private static (string Name, int? Alignment, string? Format) SplitPlaceholder(string content)
     {
-        var separator = content.IndexOfAny([',', ':']);
-        if (separator < 0) return (content.Trim(), null);
+        var colon = content.IndexOf(':');
+        var nameAndAlignment = colon < 0 ? content : content[..colon];
+        var format = colon < 0 ? null : content[(colon + 1)..];
+        var comma = nameAndAlignment.IndexOf(',');
+        if (comma < 0)
+            return (nameAndAlignment.Trim(), null, string.IsNullOrWhiteSpace(format) ? null : format);
 
-        var name = content[..separator].Trim();
-        var format = content[separator] == ':' ? content[(separator + 1)..] : null;
-        return (name, string.IsNullOrWhiteSpace(format) ? null : format);
+        var name = nameAndAlignment[..comma].Trim();
+        var alignmentText = nameAndAlignment[(comma + 1)..].Trim();
+        var alignment = int.TryParse(alignmentText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : (int?)null;
+        return (name, alignment, string.IsNullOrWhiteSpace(format) ? null : format);
     }
 
     private static string NormalizePropertyName(string name)
@@ -98,14 +105,28 @@ internal static class MessageTemplateParser
         return name;
     }
 
-    private static string FormatValue(object? value, string? format)
+    private static string FormatValue(object? value, int? alignment, string? format)
     {
-        if (value is null) return string.Empty;
-        if (!string.IsNullOrWhiteSpace(format) && value is IFormattable formattable)
-            return formattable.ToString(format, CultureInfo.InvariantCulture);
+        var text = value switch
+        {
+            null => string.Empty,
+            IFormattable formattable when !string.IsNullOrWhiteSpace(format) =>
+                formattable.ToString(format, CultureInfo.CurrentCulture) ?? string.Empty,
+            _ => Convert.ToString(value, CultureInfo.CurrentCulture) ?? value.ToString() ?? string.Empty
+        };
 
-        return Convert.ToString(value, CultureInfo.InvariantCulture) ?? value.ToString() ?? string.Empty;
+        return alignment switch
+        {
+            > 0 => text.PadLeft(alignment.Value),
+            < 0 => text.PadRight(-alignment.Value),
+            _ => text
+        };
     }
 
-    private readonly record struct Placeholder(int Start, int Length, string Name, string? Format);
+    private readonly record struct Placeholder(
+        int Start,
+        int Length,
+        string Name,
+        int? Alignment,
+        string? Format);
 }
