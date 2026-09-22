@@ -35,7 +35,7 @@ LoggerHost 单消费者（分配 Sequence）
 
 - 状态：设计基线，当前实现持续对齐中；实现状态见第 17 节
 - 目标版本：CodeWF.Log 全新版本
-- 最低运行时：.NET 10；三个 NuGet 包统一目标框架为 `net10.0`，更高版本 .NET 通过兼容资产使用，不再支持 .NET 8
+- 支持运行时：.NET 8、.NET 10 和 .NET 11；三个 NuGet 包统一提供 `net8.0`、`net10.0` 和 `net11.0` 资产
 - 核心定位：CodeWF 是 `Microsoft.Extensions.Logging` 生态中的一个 Provider，业务代码优先使用标准 `ILogger<T>`。
 - 设计原则：按 .NET 规范设计，约定大于配置，`AddCodeWF()` 零配置可用。
 - 包名：`CodeWF.Log.Core`、`CodeWF.Log.Extensions.Logging`、`CodeWF.Log.Avalonia`。
@@ -732,7 +732,7 @@ public static class CodeWFLoggerExtensions
 
 ## 15. AOT 与 trimming
 
-三个 `net10.0` 包都必须 trim/AOT 友好：
+三个包的 `net8.0`、`net10.0` 和 `net11.0` 资产都必须 trim/AOT 友好：
 
 - 不使用运行时程序集扫描发现 Sink、Formatter 或扩展方法。
 - 不使用动态代码生成、表达式编译、`Reflection.Emit`。
@@ -740,8 +740,8 @@ public static class CodeWFLoggerExtensions
 - Options 类型使用公开无参构造和可设置属性。
 - Provider、Sink、Formatter 通过显式 API 或 DI 注册。
 - 确实需要反射时，必须通过 trim annotation、source generator 或手写绑定消除 AOT 风险。
-- CI 分为两个 SDK 基线：三个 NuGet 库使用稳定版 .NET 10 SDK 完成 build/test/pack，所有 Demo 使用 .NET 11 SDK 完成 build/smoke；不使用一个根 `global.json` 强制两类项目共享同一 SDK。
-- CI 增加 `net10.0` Native AOT 控制台 smoke app，并执行 Avalonia trim/publish smoke test，验证三个 NuGet 包没有不可接受的 trim/AOT 警告。
+- CI 按 `net8.0`、`net10.0` 和 `net11.0` 三个 SDK/TFM 基线完成库构建，并使用 .NET 11 SDK 完成测试、打包和 Demo 验证；不使用一个根 `global.json` 强制所有目标共享同一 SDK。
+- CI 执行 .NET 11 Native AOT 控制台 smoke app，发布后实际运行产物，验证 trim/AOT 失败不会被仅有的发布成功状态掩盖。
 
 ## 16. Demo
 
@@ -807,13 +807,13 @@ Demo 的原则是职责单一、界面低负担：不提供手工模板编辑器
 | FileNotifyDemo | 已实现 | 无 LogView 的文件输出、文件模板、显式通知和通知阈值对比 |
 | LogViewDemo | 已实现 | MEL/DI、多分级 LogView、两类模板和完整事件场景 |
 | SerilogDemo | 已实现 | Serilog 文件/控制台，CodeWF LogView/通知，均由 appsettings 配置 |
-| 自动化测试、trim、Native AOT smoke | 已实现 | 20 项 Core/MEL 测试、稳定 .NET 10 AOT 和 Avalonia trim publish 已通过 |
+| 自动化测试、trim、Native AOT smoke | 已实现 | Core/MEL/Avalonia 测试、三目标框架构建和 Native AOT smoke 已接入验证流程 |
 
 ## 18. 当前版本发布门槛
 
 以下为当前版本发布必须满足的验收标准：
 
-- 三个包统一目标框架为 `net10.0`，使用稳定版 .NET 10 SDK 完成 Release build/test/pack；所有 Demo 使用 .NET 11 SDK 完成构建和 smoke test。
+- 三个包同时提供 `net8.0`、`net10.0` 和 `net11.0` 资产；CI 分别使用对应 SDK 完成 Release 构建，并使用 .NET 11 SDK 完成 test/pack/smoke。
 - MEL Provider 使用实例级 pipeline；多个 Host、多个 `LoggerFactory`、顺序重启和并行测试互不抢占配置与生命周期。
 - legacy `Logger.*` 继续可用；Provider 可通过 `BridgeStaticLogger` 将静态 facade 路由到实例级 Host，但实例生命周期仍由 DI Provider 独立拥有。原 `<log:LogView />` 无 Source 用法仍可回退到 legacy Feed。
 - `ILogger<T>` 的 Trace、Debug、Information、Warning、Error、Critical 均能进入 CodeWF Provider。
@@ -848,7 +848,6 @@ Demo 的原则是职责单一、界面低负担：不提供手工模板编辑器
 - pipeline/sink 配置的原子热重载。
 - EventSource、OpenTelemetry Metrics 或公开 `CodeWFLogHealth` 健康指标。
 - 可插拔自定义 Sink/Formatter 公共扩展契约。
-- 多进程安全的共享日志目录和跨进程滚动协调。
 - 可插拔的属性脱敏与模板输出策略。
 
 ## 20. 实施顺序
@@ -857,12 +856,11 @@ Demo 的原则是职责单一、界面低负担：不提供手工模板编辑器
 
 ### 20.1 工程基线
 
-- 三个 NuGet 包删除 `net8.0`，统一目标框架为 `net10.0`。
-- Avalonia 和 Web API Demo 保持 `net11.0` / `net11.0-windows`，Console Demo 保持 `net11.0`，用于验证 .NET 11 应用引用 `net10.0` 库资产。
-- 不增加强制整个解决方案使用 .NET 10 SDK 的根 `global.json`；库与 Demo 分别使用 .NET 10、.NET 11 SDK 验证，中央包版本继续使用 MEL 10.x。
+- 三个 NuGet 包保留 `net8.0`、`net10.0` 和 `net11.0` 三组资产；Avalonia 和 Web API Demo 保持 `net11.0` / `net11.0-windows`，用于验证 .NET 11 应用引用对应库资产。
+- 不增加强制整个解决方案使用单一 SDK 的根 `global.json`；库按三个目标框架分别验证，Demo 和测试使用 .NET 11 SDK，中央包版本继续使用 MEL 10.x。
 - 在修改公共模型前记录当前 Release 构建和打包基线，保留现有文档改动，不覆盖无关工作区内容。
 
-验收：三个库能在稳定版 .NET 10 SDK 下完成 Release build/test/pack；全部 Demo 能在 .NET 11 SDK 下完成 Release 构建，并确认引用的是三个库的 `net10.0` 资产。
+验收：三个库的 `net8.0`、`net10.0` 和 `net11.0` 资产都能完成 Release 构建；测试、打包和 AOT smoke 能在 .NET 11 SDK 下完成并实际运行产物。
 
 ### 20.2 Core 统一事件模型
 

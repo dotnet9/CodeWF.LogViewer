@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-libraries:
+    name: Build libraries (${{ matrix.tfm }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tfm: net8.0
+            sdk: 8.0.x
+            quality: ga
+          - tfm: net10.0
+            sdk: 10.0.x
+            quality: ga
+          - tfm: net11.0
+            sdk: 11.0.x
+            quality: preview
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ matrix.sdk }}
+          dotnet-quality: ${{ matrix.quality }}
+      - name: Restore library projects
+        shell: pwsh
+        run: |
+          $projects = @(
+            "src/CodeWF.Log.Core/CodeWF.Log.Core.csproj",
+            "src/CodeWF.Log.Extensions.Logging/CodeWF.Log.Extensions.Logging.csproj",
+            "src/CodeWF.Log.Avalonia/CodeWF.Log.Avalonia.csproj"
+          )
+          foreach ($project in $projects) {
+            dotnet restore $project -p:TargetFramework=${{ matrix.tfm }}
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Build library assets
+        shell: pwsh
+        run: |
+          $projects = @(
+            "src/CodeWF.Log.Core/CodeWF.Log.Core.csproj",
+            "src/CodeWF.Log.Extensions.Logging/CodeWF.Log.Extensions.Logging.csproj",
+            "src/CodeWF.Log.Avalonia/CodeWF.Log.Avalonia.csproj"
+          )
+          foreach ($project in $projects) {
+            dotnet build $project -c Release -f ${{ matrix.tfm }} --no-restore
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+  test-and-pack:
+    name: Test and pack
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 11.0.x
+          dotnet-quality: preview
+      - name: Restore solution
+        run: dotnet restore CodeWF.Log.slnx
+      - name: Run tests
+        run: dotnet test CodeWF.Log.slnx -c Release --no-restore --logger "console;verbosity=minimal"
+      - name: Pack libraries
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts/ci-packages | Out-Null
+          $projects = @(
+            "src/CodeWF.Log.Core/CodeWF.Log.Core.csproj",
+            "src/CodeWF.Log.Extensions.Logging/CodeWF.Log.Extensions.Logging.csproj",
+            "src/CodeWF.Log.Avalonia/CodeWF.Log.Avalonia.csproj"
+          )
+          foreach ($project in $projects) {
+            dotnet pack $project -c Release --no-restore -o artifacts/ci-packages
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+  aot-smoke:
+    name: Native AOT smoke
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 11.0.x
+          dotnet-quality: preview
+      - name: Publish and run smoke app
+        shell: pwsh
+        run: |
+          dotnet publish tests/CodeWF.Log.AotSmoke/CodeWF.Log.AotSmoke.csproj `
+            -c Release -r win-x64 --self-contained true `
+            -p:PublishAot=true -p:PublishTrimmed=true
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $exe = Get-ChildItem artifacts/publish/CodeWF.Log.AotSmoke/release_win-x64/*.exe | Select-Object -First 1
+          if ($null -eq $exe) { throw "AOT smoke executable was not produced." }
+          & $exe.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

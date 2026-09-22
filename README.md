@@ -36,7 +36,7 @@ dotnet add package CodeWF.Log.Avalonia
 
 `CodeWF.Log.Extensions.Logging` 和 `CodeWF.Log.Avalonia` 都依赖 `CodeWF.Log.Core`，但二者相互独立。纯 Avalonia 静态 API 场景可以只安装 `CodeWF.Log.Avalonia`；Avalonia + MEL/Serilog 场景需要同时安装后两个包。
 
-三个包当前均面向 `net10.0`。
+三个包当前同时提供 `net8.0`、`net10.0` 和 `net11.0` 资产；应用应按自身运行时选择对应资产。
 
 运行 `pack.bat` 可将三个包输出到 `artifacts/packages`。
 
