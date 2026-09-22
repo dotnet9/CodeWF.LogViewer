@@ -254,6 +254,27 @@ public sealed class LoggingCoreTests
     }
 
     [Fact]
+    public void EventFeed_BoundsSlowSubscriberQueueAndReportsDrops()
+    {
+        var feed = new LogEventFeed(2, new LineTemplateController());
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        using var subscription = feed.Subscribe(_ =>
+        {
+            entered.Set();
+            release.Wait(TimeSpan.FromSeconds(5));
+        }, replayRecent: false);
+
+        feed.Publish(CreateEvent(1));
+        Assert.True(entered.Wait(TimeSpan.FromSeconds(5)));
+        for (var sequence = 2; sequence <= 20; sequence++)
+            feed.Publish(CreateEvent(sequence));
+
+        Assert.True(feed.DroppedSubscriberEventCount > 0);
+        release.Set();
+    }
+
+    [Fact]
     public async Task FileSink_RollsBySizeAndFlushesThroughHostBarrier()
     {
         var directory = Path.Combine(Path.GetTempPath(), "CodeWF.Log.Tests", Guid.NewGuid().ToString("N"));

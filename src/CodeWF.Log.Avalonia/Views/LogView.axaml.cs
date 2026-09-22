@@ -113,7 +113,12 @@ public partial class LogView : UserControl
         if (change.Property == SourceProperty) { StopSubscription(); StartSubscription(); return; }
         if (change.Property == FontSizeProperty || change.Property == LogLineHeightMultiplierProperty) { UpdateLogLineHeight(); return; }
         if (change.Property == MinimumLevelProperty || change.Property == MaximumLevelProperty || change.Property == MaxDisplayCountProperty)
-        { RebuildFromRecentEntries(); return; }
+        {
+            if (change.Property == MaxDisplayCountProperty)
+                _subscription?.UpdatePendingCapacity(GetPendingCapacity());
+            RebuildFromRecentEntries();
+            return;
+        }
         if (change.Property == RefreshIntervalProperty) _subscription?.UpdateRefreshInterval(NormalizeRefreshInterval(RefreshInterval));
         if (change.Property == TimestampFormatProperty) RenderEntries();
         if (IsPaletteProperty(change.Property)) UpdatePalette();
@@ -144,7 +149,11 @@ public partial class LogView : UserControl
         if (_subscription is not null || !_isAttached) return;
         _resolvedSource = Source ?? (Application.Current is { } app ? LogContext.GetSource(app) : null) ?? Logger.Events;
         _resolvedSource.LineTemplate.Changed += LineTemplate_OnChanged;
-        _subscription = new LogViewSubscription(_resolvedSource, ReceiveEntries, NormalizeRefreshInterval(RefreshInterval));
+        _subscription = new LogViewSubscription(
+            _resolvedSource,
+            ReceiveEntries,
+            NormalizeRefreshInterval(RefreshInterval),
+            GetPendingCapacity());
     }
 
     private void StopSubscription()
@@ -231,6 +240,7 @@ public partial class LogView : UserControl
     private static TimeSpan NormalizeRefreshInterval(TimeSpan interval) =>
         interval <= TimeSpan.Zero ? DefaultRefreshInterval : interval > MaximumRefreshInterval ? MaximumRefreshInterval : interval;
     private static string NormalizeTimestampFormat(string? value) => string.IsNullOrWhiteSpace(value) ? "yyyy-MM-dd HH:mm:ss.fff" : value;
+    private int GetPendingCapacity() => Math.Max(256, Math.Max(1, MaxDisplayCount) * 2);
 
     private async void Copy_OnClick(object? sender, RoutedEventArgs e)
     {

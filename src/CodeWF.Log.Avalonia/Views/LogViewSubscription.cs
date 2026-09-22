@@ -15,6 +15,7 @@ internal sealed class LogViewSubscription : IDisposable
     private readonly Action<IReadOnlyList<CodeWFLogEvent>> _receiveEntries;
     private readonly CancellationTokenSource _cancellation = new();
     private readonly IDisposable _subscription;
+    private int _pendingCapacity;
     private long _refreshIntervalTicks;
     private int _dispatchScheduled;
     private int _disposed;
@@ -22,15 +23,23 @@ internal sealed class LogViewSubscription : IDisposable
     public LogViewSubscription(
         LogEventFeed feed,
         Action<IReadOnlyList<CodeWFLogEvent>> receiveEntries,
-        TimeSpan refreshInterval)
+        TimeSpan refreshInterval,
+        int pendingCapacity)
     {
         _receiveEntries = receiveEntries;
         _refreshIntervalTicks = refreshInterval.Ticks;
+        _pendingCapacity = Math.Max(1, pendingCapacity);
         _subscription = feed.Subscribe(OnLogReceived, replayRecent: true);
     }
 
     public void UpdateRefreshInterval(TimeSpan refreshInterval) =>
         Interlocked.Exchange(ref _refreshIntervalTicks, refreshInterval.Ticks);
+
+    public void UpdatePendingCapacity(int pendingCapacity)
+    {
+        Interlocked.Exchange(ref _pendingCapacity, Math.Max(1, pendingCapacity));
+        TrimPendingEntries();
+    }
 
     public void Dispose()
     {
@@ -45,7 +54,14 @@ internal sealed class LogViewSubscription : IDisposable
     {
         if (Volatile.Read(ref _disposed) != 0) return;
         _pendingEntries.Enqueue(entry);
+        TrimPendingEntries();
         TryScheduleDispatch();
+    }
+
+    private void TrimPendingEntries()
+    {
+        var capacity = Volatile.Read(ref _pendingCapacity);
+        while (_pendingEntries.Count > capacity && _pendingEntries.TryDequeue(out _)) { }
     }
 
     private void TryScheduleDispatch()
