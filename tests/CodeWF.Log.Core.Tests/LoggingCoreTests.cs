@@ -204,6 +204,35 @@ public sealed class LoggingCoreTests
     }
 
     [Fact]
+    public async Task HostSnapshotsMutableEventDataAndBoundsPayloadSize()
+    {
+        var feed = new LogEventFeed(10, new LineTemplateController());
+        await using var host = new LoggerHost(new LoggerOptions
+        {
+            MinimumLevel = LogLevel.Trace,
+            EnableConsole = false,
+            EnableEventFeed = true,
+            QueueFullMode = LogQueueFullMode.Wait
+        }, feed, feed.LineTemplate);
+
+        var properties = new List<LogProperty>
+        {
+            new("Original", new ScalarLogValue("original"))
+        };
+        host.Write(CreateEvent() with
+        {
+            Message = new string('x', 400_000),
+            Properties = properties
+        });
+        properties.Clear();
+
+        await host.FlushAsync();
+        var logEvent = Assert.Single(feed.GetRecentEvents());
+        Assert.True(logEvent.Message.Length <= 256 * 1024 + 1);
+        Assert.Contains(logEvent.Properties, property => property.Name == "Original");
+    }
+
+    [Fact]
     public void HealthSnapshotReportsTotalAndPerLevelDrops()
     {
         var health = new CodeWFLogHealth();

@@ -60,7 +60,8 @@ internal sealed class LoggerHost : IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(logEvent);
         if (!IsEnabled(logEvent.Level) || Volatile.Read(ref _shutdownStarted) != 0) return;
-        var localizedLevel = logEvent.LocalizedLevel;
+        var snapshot = LogEventSnapshot.Capture(logEvent);
+        var localizedLevel = snapshot.LocalizedLevel;
         if (string.IsNullOrWhiteSpace(localizedLevel) && _options.LocalizedLevelFormatter is { } formatter)
         {
             try
@@ -74,7 +75,7 @@ internal sealed class LoggerHost : IAsyncDisposable
         }
 
         EnqueueLog(new WriteLogCommand(
-            logEvent with { Sequence = 0, LocalizedLevel = localizedLevel },
+            snapshot with { Sequence = 0, LocalizedLevel = localizedLevel },
             fileOnly));
     }
 
