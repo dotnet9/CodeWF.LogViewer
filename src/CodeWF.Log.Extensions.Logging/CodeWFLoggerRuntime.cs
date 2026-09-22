@@ -8,7 +8,7 @@ namespace CodeWF.Log.Extensions.Logging;
 public sealed class CodeWFLoggerRuntime : IDisposable
 {
     private readonly LoggerHost _host;
-    private readonly bool _ownsStaticBridge;
+    private readonly bool _staticBridgeRegistered;
     private int _disposed;
 
     public CodeWFLoggerRuntime(IOptions<CodeWFLoggerOptions> options, IServiceProvider services)
@@ -26,7 +26,8 @@ public sealed class CodeWFLoggerRuntime : IDisposable
         Health = new CodeWFLogHealth();
         _host = new LoggerHost(coreOptions, Events, LineTemplate, Health);
         FileOutputTemplate = _host.FileOutputTemplate;
-        _ownsStaticBridge = Options.BridgeStaticLogger && Logger.TryAttachHost(_host, Events, coreOptions, Health, this);
+        _staticBridgeRegistered = Options.BridgeStaticLogger &&
+                                  Logger.TryAttachHost(_host, Events, coreOptions, Health, this);
     }
 
     public CodeWFLoggerOptions Options { get; }
@@ -47,7 +48,7 @@ public sealed class CodeWFLoggerRuntime : IDisposable
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-        if (_ownsStaticBridge) Logger.DetachHost(this);
+        if (_staticBridgeRegistered) Logger.DetachHost(this);
         _host.DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 }

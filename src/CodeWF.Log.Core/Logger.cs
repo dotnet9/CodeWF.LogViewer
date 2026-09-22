@@ -7,6 +7,7 @@ public static class Logger
 {
     private static readonly object SyncRoot = new();
     private static readonly object LegacyOwner = new();
+    private static readonly List<StaticHostRegistration> StaticHostRegistrations = [];
     private static LoggerHost? _host;
     private static object? _hostOwner;
     private static LogEventFeed? _events;
@@ -127,11 +128,9 @@ public static class Logger
         lock (SyncRoot)
         {
             if (!ReferenceEquals(_host, host)) return;
-            _host = null;
-            _hostOwner = null;
-            _events = null;
-            _health = null;
-            CurrentOptions = null;
+            ClearHostLocked();
+            if (StaticHostRegistrations.LastOrDefault() is { } next)
+                AttachHostLocked(next);
         }
     }
 
@@ -149,13 +148,11 @@ public static class Logger
         ArgumentNullException.ThrowIfNull(owner);
         lock (SyncRoot)
         {
-            if (_host is not null) return false;
-            _host = host;
-            _hostOwner = owner;
-            _events = events;
-            _health = health;
-            CurrentOptions = options;
-            Volatile.Write(ref _minimumLevel, (int)options.MinimumLevel);
+            if (StaticHostRegistrations.Any(item => ReferenceEquals(item.Owner, owner))) return false;
+
+            var registration = new StaticHostRegistration(host, events, options, health, owner);
+            StaticHostRegistrations.Add(registration);
+            if (_host is null) AttachHostLocked(registration);
             return true;
         }
     }
@@ -165,14 +162,40 @@ public static class Logger
         ArgumentNullException.ThrowIfNull(owner);
         lock (SyncRoot)
         {
+            StaticHostRegistrations.RemoveAll(item => ReferenceEquals(item.Owner, owner));
             if (!ReferenceEquals(_hostOwner, owner)) return;
-            _host = null;
-            _hostOwner = null;
-            _events = null;
-            _health = null;
-            CurrentOptions = null;
+
+            ClearHostLocked();
+            if (StaticHostRegistrations.LastOrDefault() is { } next)
+                AttachHostLocked(next);
         }
     }
+
+    private static void AttachHostLocked(StaticHostRegistration registration)
+    {
+        _host = registration.Host;
+        _hostOwner = registration.Owner;
+        _events = registration.Events;
+        _health = registration.Health;
+        CurrentOptions = registration.Options;
+        Volatile.Write(ref _minimumLevel, (int)registration.Options.MinimumLevel);
+    }
+
+    private static void ClearHostLocked()
+    {
+        _host = null;
+        _hostOwner = null;
+        _events = null;
+        _health = null;
+        CurrentOptions = null;
+    }
+
+    private sealed record StaticHostRegistration(
+        LoggerHost Host,
+        LogEventFeed Events,
+        LoggerOptions Options,
+        CodeWFLogHealth Health,
+        object Owner);
 
     private static void Write(LogLevel level, string message, Exception? exception, string? userMessage,
         bool requestNotification = false, bool fileOnly = false)

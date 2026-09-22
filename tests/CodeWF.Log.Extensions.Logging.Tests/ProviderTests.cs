@@ -124,6 +124,30 @@ public sealed class ProviderTests
     }
 
     [Fact]
+    public async Task StaticLoggerBridgePromotesNextProviderWhenCurrentProviderDisposes()
+    {
+        var first = BuildServices(options => options.BridgeStaticLogger = true);
+        var second = BuildServices(options => options.BridgeStaticLogger = true);
+        try
+        {
+            var firstFeed = first.GetRequiredService<LogEventFeed>();
+            var secondFeed = second.GetRequiredService<LogEventFeed>();
+
+            Logger.Info("first static bridge message");
+            Assert.Equal("first static bridge message", (await WaitForEventsAsync(firstFeed, 1))[0].Message);
+            Assert.Empty(secondFeed.GetRecentEvents());
+
+            first.Dispose();
+            Logger.Info("second static bridge message");
+            Assert.Equal("second static bridge message", (await WaitForEventsAsync(secondFeed, 1))[0].Message);
+        }
+        finally
+        {
+            second.Dispose();
+        }
+    }
+
+    [Fact]
     public void AppSettingsShapeIsBoundWithoutReflectionBinder()
     {
         IConfiguration configuration = new ConfigurationBuilder()
