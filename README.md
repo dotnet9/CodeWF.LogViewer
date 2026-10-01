@@ -323,3 +323,19 @@ logger.LogUserNotification(
 | `FileNotifyDemo` | Avalonia 无 LogView：文件输出、文件模板切换，以及 Error/Critical、长内容、连续追加和通知门槛对比。 |
 | `SerilogDemo` | Avalonia 联合 Provider：Serilog 负责文件/控制台，CodeWF 负责 LogView 和通知。 |
 | `WebApiDemo` | ASP.NET Core：`AddCodeWF()`、配置绑定、Scope、Activity、LoggerMessage 和最近事件接口。 |
+
+## CI/CD：自动发布 NuGet 包
+
+推送 `v*` 标签（例如 `v12.1.3.12`）会触发 [.github/workflows/publish-nuget.yml](.github/workflows/publish-nuget.yml)，一次发布三个包：`CodeWF.Log.Core`、`CodeWF.Log.Extensions.Logging`、`CodeWF.Log.Avalonia`（含 snupkg 符号包），完成后自动创建 GitHub Release。
+
+包版本号以 `Directory.Build.props` 的 `<Version>` 为准，**打标签前先升版本**——nuget.org 拒绝重复的版本号；标签与 `<Version>` 不一致时工作流仅告警不阻断。认证使用 NuGet Trusted Publishing：工作流通过 `nuget/login@v1` 以 OIDC 令牌换取一次性发布凭据，仓库不保存任何 secret。nuget.org 侧的 API key 需绑定本仓库与工作流文件名 `publish-nuget.yml`（Scopes 勾选 Push，Glob 建议收窄为 `CodeWF.*`）；这类 key 创建后 7 天内需成功发布一次才会转永久有效。
+
+手工发布步骤：
+
+```bash
+# 1. 升版本：修改 Directory.Build.props 的 <Version>（或用 UpdateAssemblyVersion.ps1）并提交
+# 2. 打标签并推送，触发发布
+git tag -a v12.1.3.13 -m "CodeWF.Log v12.1.3.13"
+git push origin v12.1.3.13
+# 3. 在 GitHub Actions 观察 publish-nuget 运行，完成后到 nuget.org 核对三个包的新版本
+```
